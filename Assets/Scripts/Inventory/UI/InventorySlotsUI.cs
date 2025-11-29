@@ -62,7 +62,7 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         lastClickTime = 0f;
     }
 
-    void SetItem(ItemData newItem, int newQuantity)
+    public void SetItem(ItemData newItem, int newQuantity)
     {
         itemData = newItem;
         quantity = newQuantity;
