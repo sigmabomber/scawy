@@ -9,5 +9,5 @@ public class ItemData : ScriptableObject
     public string itemName;
     public int maxStack;
 
-    
+    public GameObject prefab;
 }

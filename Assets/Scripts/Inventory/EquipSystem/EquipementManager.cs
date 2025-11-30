@@ -1,3 +1,5 @@
+using System.Collections;
+using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -16,15 +18,24 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
 
+
+    [Header("Bobbing Settings")]
+    private Vector3 originalEquipPointPosition;
+    public float effectIntensity, effectIntensityX, effectSpeed, SinTime;
+
+    private Vector3 lastPlayerPosition;
+    private float playerVelocity;
+
     [Header("References")]
     [SerializeField] private InventorySystem inventorySystem;
     [SerializeField] private GameObject reticleUI;
+    [SerializeField] private TMP_Text itemNameText;
 
     [Header("Outline Settings")]
     [SerializeField] private Color outlineColor = Color.yellow;
     [SerializeField] private float outlineWidth = 5f;
 
-    private IEquippable currentlyEquippedItem;
+    public  IEquippable currentlyEquippedItem;
     private Camera playerCamera;
     private Quaternion targetRotation;
     private Vector3 targetPosition;
@@ -33,13 +44,14 @@ public class EquipmentManager : MonoBehaviour
     private void Start()
     {
         playerCamera = Camera.main;
-
+        lastPlayerPosition = playerCamera.transform.position;
         if (equipPoint == null)
         {
             equipPoint = CreateEquipPoint("EquipPoint", new Vector3(0.5f, -0.3f, 0.5f));
         }
 
-        // Find inventory system if not assigned
+        originalEquipPointPosition = equipPoint.localPosition;
+
         if (inventorySystem == null)
         {
             inventorySystem = FindObjectOfType<InventorySystem>();
@@ -52,6 +64,7 @@ public class EquipmentManager : MonoBehaviour
         if (reticleUI != null)
         {
             reticleUI.SetActive(false);
+            itemNameText.gameObject.SetActive(false);
         }
     }
 
@@ -76,10 +89,27 @@ public class EquipmentManager : MonoBehaviour
         // Apply weapon sway
         if (currentlyEquippedItem != null)
         {
+            playerVelocity = (playerCamera.transform.position - lastPlayerPosition).magnitude / Time.deltaTime;
+            lastPlayerPosition = playerCamera.transform.position;
             ApplyWeaponSway();
-        }
-    }
 
+            if (playerVelocity > 0.1f)   // Moving?
+                ApplyWeaponBobbing();
+            else
+                ResetBobbingPosition();
+
+        }
+
+    }
+    private void ResetBobbingPosition()
+    {
+        equipPoint.localPosition = Vector3.Lerp(
+            equipPoint.localPosition,
+            originalEquipPointPosition,
+            Time.deltaTime * 6f
+        );
+        SinTime = 0f;
+    }
     private void CheckForPickableItem()
     {
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
@@ -95,6 +125,8 @@ public class EquipmentManager : MonoBehaviour
                 if (reticleUI != null)
                 {
                     reticleUI.SetActive(true);
+                    itemNameText.text = itemPickup.itemData.itemName;
+                    itemNameText.gameObject.SetActive(true);
                 }
 
                 // Add outline to the object
@@ -112,6 +144,7 @@ public class EquipmentManager : MonoBehaviour
         if (reticleUI != null)
         {
             reticleUI.SetActive(false);
+            itemNameText.gameObject.SetActive(false);
         }
         RemoveOutline();
     }
@@ -172,6 +205,25 @@ public class EquipmentManager : MonoBehaviour
         );
     }
 
+    private void ApplyWeaponBobbing()
+    {
+        // Increase time based on speed
+        SinTime += Time.deltaTime * effectSpeed;
+
+        // Calculate bobbing offsets
+        float bobX = Mathf.Sin(SinTime) * effectIntensityX;
+        float bobY = Mathf.Abs(Mathf.Cos(SinTime)) * effectIntensity;
+
+        // Apply movement
+        Vector3 bobOffset = new Vector3(bobX, bobY, 0);
+
+        equipPoint.localPosition = Vector3.Lerp(
+            equipPoint.localPosition,
+            originalEquipPointPosition + bobOffset,
+            Time.deltaTime * 6f
+        );
+    }
+
     private void TryPickupItem()
     {
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
@@ -188,7 +240,9 @@ public class EquipmentManager : MonoBehaviour
                 if (inventorySystem != null && inventorySystem.AddItem(itemPickup.itemData, itemPickup.quantity))
                 {
                     Debug.Log($"Picked up {itemPickup.itemData.name}");
-                    Destroy(hit.collider.gameObject);
+
+                    // Start coroutine to move item to player before destroying
+                    StartCoroutine(MoveItemToPlayerThenDestroy(hit.collider.gameObject));
                 }
                 else
                 {
@@ -196,6 +250,30 @@ public class EquipmentManager : MonoBehaviour
                 }
             }
         }
+    }
+
+    private IEnumerator MoveItemToPlayerThenDestroy(GameObject itemObject)
+    {
+        Collider itemCollider = itemObject.GetComponent<Collider>();
+        if (itemCollider != null)
+            itemCollider.enabled = false;
+
+        float duration = 0.3f;
+        float elapsedTime = 0f;
+        Vector3 startPosition = itemObject.transform.position;
+        Vector3 playerPosition = transform.position;
+
+        while (elapsedTime < duration)
+        {
+            if (itemObject == null) yield break;
+
+            itemObject.transform.position = Vector3.Lerp(startPosition, playerPosition, elapsedTime / duration);
+            elapsedTime += Time.deltaTime;
+            yield return null;
+        }
+
+        if (itemObject != null)
+            Destroy(itemObject);
     }
 
     public void EquipItem(IEquippable item)
@@ -216,6 +294,8 @@ public class EquipmentManager : MonoBehaviour
             currentlyEquippedItem.OnUnequip();
             currentlyEquippedItem = null;
         }
+        else
+            print(":()");
     }
 
     private Transform CreateEquipPoint(string name, Vector3 localPosition)

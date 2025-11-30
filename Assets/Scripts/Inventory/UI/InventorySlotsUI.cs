@@ -40,6 +40,9 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     private bool isEquipped = false;
 
 
+
+
+
     void Awake()
     {
         canvas = GetComponentInParent<Canvas>();
@@ -128,30 +131,43 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             return;
         }
 
-        if (itemData is FlashlightItemData flashlightData)
+        // NEW: Find and properly unequip the currently equipped item's slot
+        if (equipmentManager.currentlyEquippedItem != null)
         {
-            // Instantiate the flashlight prefab if not already created
-            if (instantiatedPrefab == null && flashlightData.flashlightPrefab != null)
+            // Find the slot that has the currently equipped item
+            InventorySlotsUI[] allSlots = FindObjectsOfType<InventorySlotsUI>();
+            foreach (var slot in allSlots)
             {
-                instantiatedPrefab = Instantiate(flashlightData.flashlightPrefab);
-                instantiatedPrefab.SetActive(true);
+                if (slot.isEquipped && slot != this)
+                {
+                    slot.OnUnequip(); 
+                    break;
+                }
             }
-
-            instantiatedPrefab.SetActive(true);
-            // Get the equippable component and equip it
-            IEquippable equippable = instantiatedPrefab.GetComponent<IEquippable>();
-            if (equippable != null)
-            {
-                equipmentManager.EquipItem(equippable);
-                isEquipped = true;
-            }
-
-            // Handle usable interface (for flashlight on/off functionality)
-            var usable = instantiatedPrefab.GetComponent<IItemUsable>();
-            usable?.OnEquip(this);
         }
-    }
 
+        if (instantiatedPrefab == null && itemData.prefab != null)
+        {
+            instantiatedPrefab = Instantiate(itemData.prefab);
+            instantiatedPrefab.SetActive(true);
+        }
+
+        instantiatedPrefab.SetActive(true);
+
+        if (instantiatedPrefab.layer != LayerMask.NameToLayer("PickedUpItem"))
+            instantiatedPrefab.layer = LayerMask.NameToLayer("PickedUpItem");
+
+        // Get the equippable component and equip it
+        IEquippable equippable = instantiatedPrefab.GetComponent<IEquippable>();
+        if (equippable != null)
+        {
+            equipmentManager.EquipItem(equippable);
+            isEquipped = true; 
+        }
+
+        var usable = instantiatedPrefab.GetComponent<IItemUsable>();
+        usable?.OnEquip(this);
+    }
     public void UseItem()
     {
         if (instantiatedPrefab == null) return;
@@ -188,7 +204,12 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     // Double click handler
     public void OnPointerClick(PointerEventData eventData)
     {
-        if (itemData == null) return;
+        if (itemData == null)
+        {
+            print(":;");
+            return;
+        }
+        print(":)");
 
         float timeSinceLastClick = Time.time - lastClickTime;
 
@@ -201,6 +222,7 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             }
             else
             {
+                print(":eqauipping;");
                 OnEquip();
             }
 
@@ -213,15 +235,7 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         }
     }
 
-    private void Update()
-    {
-        if (useItem)
-        {
-            useItem = false;
-            UseItem();
-        }
-    }
-
+ 
     // Draggable events 
     public void OnBeginDrag(PointerEventData eventData)
     {
@@ -230,6 +244,7 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         dragIcon = new GameObject("DragIcon");
         dragIcon.transform.SetParent(canvas.transform, false);
         dragIcon.transform.SetAsLastSibling();
+        
 
         var img = dragIcon.AddComponent<Image>();
         img.sprite = icon.sprite;

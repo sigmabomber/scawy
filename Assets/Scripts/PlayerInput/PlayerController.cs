@@ -18,6 +18,7 @@ public class PlayerController : MonoBehaviour
 
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
+    [SerializeField] private CameraRecoil cameraRecoil;
 
     private CharacterController characterController;
 
@@ -38,6 +39,11 @@ public class PlayerController : MonoBehaviour
             cameraTransform = Camera.main?.transform;
         }
 
+        if (cameraRecoil == null && cameraTransform != null)
+        {
+            cameraRecoil = cameraTransform.GetComponent<CameraRecoil>();
+        }
+
         InitializeController();
     }
 
@@ -54,8 +60,8 @@ public class PlayerController : MonoBehaviour
     {
         HandleMovementState();
         HandleMovement();
-        if(Time.timeScale >0)
-        HandleMouseLook();
+        if (Time.timeScale > 0)
+            HandleMouseLook();
         HandleHeightTransition();
     }
 
@@ -117,7 +123,7 @@ public class PlayerController : MonoBehaviour
     {
         if (characterController.isGrounded && verticalVelocity < 0)
         {
-            verticalVelocity = -2f; 
+            verticalVelocity = -2f;
         }
         else
         {
@@ -137,7 +143,15 @@ public class PlayerController : MonoBehaviour
 
         if (cameraTransform != null)
         {
-            cameraTransform.localRotation = Quaternion.Euler(cameraPitch, 0f, 0f);
+            // Apply camera pitch + recoil
+            Vector3 recoilRotation = Vector3.zero;
+            if (cameraRecoil != null)
+            {
+                recoilRotation = cameraRecoil.CurrentRecoilRotation;
+            }
+
+            // Combine base camera rotation with recoil
+            cameraTransform.localRotation = Quaternion.Euler(cameraPitch + recoilRotation.x, recoilRotation.y, recoilRotation.z);
         }
     }
 

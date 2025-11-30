@@ -3,11 +3,11 @@ using System.Collections.Generic;
 using UnityEngine;
 
 
-[CreateAssetMenu(menuName = "Item/Consumables/EnergyDrink")]
+[CreateAssetMenu(menuName = "Item/Consumables/Stamina")]
 public class StaminaItemData : ItemData
 {
     public float amountToReplenish;
-    public int maxUses; 
+    public int maxUses;
 
     public GameObject staminaItemPrefab;
 }

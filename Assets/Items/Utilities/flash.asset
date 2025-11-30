@@ -15,6 +15,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 9993e537573f6734e98fa985b36d4d97, type: 3}
   itemName: Flashlight
   maxStack: 0
+  prefab: {fileID: 2628411124726292064, guid: 95aed6fad28521549b6337f4312997e2, type: 3}
   maxBattery: 100
   batteryDrainage: 1
   destroyOnZero: 0

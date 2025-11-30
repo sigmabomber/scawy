@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 9111735121369542915}
   - component: {fileID: 6208137685677139936}
   - component: {fileID: 7622242254823085915}
-  m_Layer: 7
+  m_Layer: 8
   m_Name: Flashlight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -129,8 +129,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   itemData: {fileID: 11400000, guid: 29987ed74da75eb4ca8e6fb90167d407, type: 2}
   quantity: 1
-  rotateItem: 1
-  rotationSpeed: 50
 --- !u!64 &7622242254823085915
 MeshCollider:
   m_ObjectHideFlags: 0
@@ -163,7 +161,7 @@ GameObject:
   m_Component:
   - component: {fileID: 2341727807944582829}
   - component: {fileID: 740916208380539650}
-  m_Layer: 7
+  m_Layer: 8
   m_Name: Spot Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
