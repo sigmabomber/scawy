@@ -53,7 +53,6 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
     {
         if (SpotLightObj == null) return;
         isOn = !isOn;
-        print(isOn);
         SpotLightObj.SetActive(isOn);
     }
     public void OnEquip(InventorySlotsUI slotUI)
@@ -100,7 +99,6 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
             if (EventSystem.current.IsPointerOverGameObject())
                 return;
 
-            print("Clicked");
             ToggleFlashlight();
         }
 

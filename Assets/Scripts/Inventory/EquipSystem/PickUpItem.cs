@@ -6,6 +6,6 @@ public class ItemPickup : MonoBehaviour
     public ItemData itemData;
     public int quantity = 1;
 
-
+    public SlotPriority slotPriority = SlotPriority.Normal;
    
 }

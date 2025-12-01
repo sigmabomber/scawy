@@ -10,7 +10,7 @@ GameObject:
   m_Component:
   - component: {fileID: 912779951257517403}
   - component: {fileID: 8596926086768041853}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Point Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -103,7 +103,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3559235492102199210}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Handle
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -139,7 +139,7 @@ GameObject:
   m_Component:
   - component: {fileID: 5458413790089698795}
   - component: {fileID: 6599246196652992710}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: GameObject
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -223,7 +223,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1888700663919545986}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: round barrel_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -254,7 +254,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 6532345588331059914}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: backthingy
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -287,7 +287,7 @@ GameObject:
   m_Component:
   - component: {fileID: 3972647652714788478}
   - component: {fileID: 837671632301165194}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: rev_dulo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -383,7 +383,8 @@ GameObject:
   - component: {fileID: 6823926099438378509}
   - component: {fileID: -9101295362616403008}
   - component: {fileID: -2075765808759555459}
-  m_Layer: 8
+  - component: {fileID: 7487701827249835685}
+  m_Layer: 7
   m_Name: Revolver
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -400,7 +401,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
   m_LocalPosition: {x: 54.532, y: 170.29968, z: 41.144234}
-  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_LocalScale: {x: 0.4, y: 0.4, z: 0.4}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2567825431846039949}
@@ -710,6 +711,27 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!65 &7487701827249835685
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3675215914822228637}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.51, y: 2.12, z: 4.21}
+  m_Center: {x: 0, y: 1.72, z: 0}
 --- !u!1 &3995528148061258671
 GameObject:
   m_ObjectHideFlags: 0
@@ -719,7 +741,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1831194423330018590}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: round barrel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -751,7 +773,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4150516135175164493}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: bullet
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -783,7 +805,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3727643039165275454}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Stvol
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -816,7 +838,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 1693065737482893858}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: trigger
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -848,7 +870,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3488605990990515751}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: backthingy_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -879,7 +901,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5930335030861853771}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: trigger_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -910,7 +932,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2567825431846039949}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Gun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -942,7 +964,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8067886597646525780}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: bullet_end
   m_TagString: Untagged
   m_Icon: {fileID: 0}

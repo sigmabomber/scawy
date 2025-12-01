@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 
 public class InventorySystem : MonoBehaviour
@@ -15,19 +16,41 @@ public class InventorySystem : MonoBehaviour
 
     // Container for slots
     [Header("Slot Container")]
-    [SerializeField] private Transform slotsContainer;
+    [SerializeField] private Transform normalSlotsContainer;
+    [SerializeField] private Transform dedicatedSlotsContainer;
 
     // List to track all inventory slots
-    private List<InventorySlotsUI> inventorySlots = new List<InventorySlotsUI>();
+    private List<InventorySlotsUI> normalInventorySlots = new();
+    private List<InventorySlotsUI> dedicatedInventorySlots = new();
 
     void Start()
     {
-        // Find all existing inventory slots
-        if (slotsContainer != null)
+        if (normalSlotsContainer != null)
         {
-            inventorySlots.AddRange(slotsContainer.GetComponentsInChildren<InventorySlotsUI>());
+            InventorySlotsUI[] slots = normalSlotsContainer.GetComponentsInChildren<InventorySlotsUI>();
+            foreach (var slot in slots)
+            {
+                if (slot.slotPriority == SlotPriority.Normal)
+                {
+                    normalInventorySlots.Add(slot);
+                }
+            }
         }
+
+        if (dedicatedSlotsContainer != null)
+        {
+            InventorySlotsUI[] slots = dedicatedSlotsContainer.GetComponentsInChildren<InventorySlotsUI>();
+            foreach (var slot in slots)
+            {
+                if (slot.slotPriority == SlotPriority.Dedicated)
+                {
+                    dedicatedInventorySlots.Add(slot);
+                }
+            }
+        }
+
     }
+
 
     void Update()
     {
@@ -51,7 +74,7 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    public bool AddItem(ItemData itemData, int quantity = 1)
+    public bool AddItem(ItemData itemData, int quantity = 1, SlotPriority slotPriority = SlotPriority.Normal)
     {
         if (itemData == null)
         {
@@ -59,44 +82,77 @@ public class InventorySystem : MonoBehaviour
             return false;
         }
 
-        // Check if item can stack and if we already have it
-        if (itemData.maxStack > 1)
+        switch (slotPriority)
         {
-            // Try to stack with existing items
-            foreach (var slot in inventorySlots)
-            {
-                if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
+            case SlotPriority.Normal:
+                if (itemData.maxStack > 1)
                 {
-                    int spaceLeft = itemData.maxStack - slot.quantity;
-                    int amountToAdd = Mathf.Min(spaceLeft, quantity);
-                    slot.UpdateQuantity(slot.quantity + amountToAdd);
+                    foreach (var slot in normalInventorySlots)
+                    {
+                        if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
+                        {
+                            int spaceLeft = itemData.maxStack - slot.quantity;
+                            int amountToAdd = Mathf.Min(spaceLeft, quantity);
+                            slot.UpdateQuantity(slot.quantity + amountToAdd);
 
-                    quantity -= amountToAdd;
+                            quantity -= amountToAdd;
 
-                    if (quantity <= 0)
-                        return true;
+                            if (quantity <= 0)
+                                return true;
+                        }
+                    }
                 }
-            }
-        }
 
-        // Find empty slot for remaining items
-        foreach (var slot in inventorySlots)
-        {
-            if (slot.itemData == null)
-            {
-                slot.SetItem(itemData, quantity);
-                return true;
-            }
-        }
+                foreach (var slot in normalInventorySlots)
+                {
+                    if (slot.itemData == null)
+                    {
+                        slot.SetItem(itemData, quantity);
+                        return true;
+                    }
+                }
 
-        Debug.Log("Inventory is full!");
-        return false;
+                return false;
+
+            case SlotPriority.Dedicated:
+                if (itemData.maxStack > 1)
+                {
+                    foreach (var slot in dedicatedInventorySlots)
+                    {
+                        if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
+                        {
+                            int spaceLeft = itemData.maxStack - slot.quantity;
+                            int amountToAdd = Mathf.Min(spaceLeft, quantity);
+                            slot.UpdateQuantity(slot.quantity + amountToAdd);
+
+                            quantity -= amountToAdd;
+
+                            if (quantity <= 0)
+                                return true;
+                        }
+                    }
+                }
+
+                foreach (var slot in dedicatedInventorySlots)
+                {
+                    if (slot.itemData == null)
+                    {
+                        slot.SetItem(itemData, quantity);
+                        return true;
+                    }
+                }
+
+                return false;
+
+            default:
+                Debug.LogWarning("Unknown slot priority!");
+                return false;
+        }
     }
-
     // Remove item from inventory
     public bool RemoveItem(ItemData itemData, int quantity = 1)
     {
-        foreach (var slot in inventorySlots)
+        foreach (var slot in normalInventorySlots)
         {
             if (slot.itemData == itemData)
             {
@@ -120,7 +176,7 @@ public class InventorySystem : MonoBehaviour
     {
         int totalCount = 0;
 
-        foreach (var slot in inventorySlots)
+        foreach (var slot in normalInventorySlots)
         {
             if (slot.itemData == itemData)
             {
@@ -139,7 +195,7 @@ public class InventorySystem : MonoBehaviour
     {
         int count = 0;
 
-        foreach (var slot in inventorySlots)
+        foreach (var slot in normalInventorySlots)
         {
             if (slot.itemData == itemData)
             {

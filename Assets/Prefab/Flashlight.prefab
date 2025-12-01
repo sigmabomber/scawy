@@ -15,7 +15,7 @@ GameObject:
   - component: {fileID: 9111735121369542915}
   - component: {fileID: 6208137685677139936}
   - component: {fileID: 7622242254823085915}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Flashlight
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -32,7 +32,7 @@ Transform:
   serializedVersion: 2
   m_LocalRotation: {x: -0.7069834, y: 0, z: 0, w: 0.7072302}
   m_LocalPosition: {x: 38.4784, y: 170.87576, z: 33.49518}
-  m_LocalScale: {x: 77.451195, y: 77.4512, z: 77.4512}
+  m_LocalScale: {x: 34.97696, y: 34.976963, z: 34.976963}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2341727807944582829}
@@ -161,13 +161,13 @@ GameObject:
   m_Component:
   - component: {fileID: 2341727807944582829}
   - component: {fileID: 740916208380539650}
-  m_Layer: 8
+  m_Layer: 7
   m_Name: Spot Light
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!4 &2341727807944582829
 Transform:
   m_ObjectHideFlags: 0

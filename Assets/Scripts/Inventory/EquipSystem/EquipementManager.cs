@@ -10,14 +10,15 @@ public class EquipmentManager : MonoBehaviour
 
     [Header("Settings")]
     [SerializeField] private KeyCode pickupKey = KeyCode.E;
-    [SerializeField] private KeyCode unequipKey = KeyCode.Q;
+    [SerializeField] private KeyCode unequipKey = KeyCode.None;
     [SerializeField] private float pickupRange = 3f;
     [SerializeField] private LayerMask itemLayer;
+
+    public SlotPriority slotPriority = SlotPriority.Normal;
 
     [Header("Sway Settings")]
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
-
 
     [Header("Bobbing Settings")]
     private Vector3 originalEquipPointPosition;
@@ -35,7 +36,10 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private Color outlineColor = Color.yellow;
     [SerializeField] private float outlineWidth = 5f;
 
-    public  IEquippable currentlyEquippedItem;
+    private Color originalTextColor;
+    private bool isShowingFeedback = false;
+
+    public IEquippable currentlyEquippedItem;
     private Camera playerCamera;
     private Quaternion targetRotation;
     private Vector3 targetPosition;
@@ -45,6 +49,10 @@ public class EquipmentManager : MonoBehaviour
     {
         playerCamera = Camera.main;
         lastPlayerPosition = playerCamera.transform.position;
+
+        if (itemNameText != null)
+            originalTextColor = itemNameText.color;
+
         if (equipPoint == null)
         {
             equipPoint = CreateEquipPoint("EquipPoint", new Vector3(0.5f, -0.3f, 0.5f));
@@ -60,7 +68,6 @@ public class EquipmentManager : MonoBehaviour
         targetRotation = equipPoint.localRotation;
         targetPosition = equipPoint.localPosition;
 
-        // Hide reticle by default
         if (reticleUI != null)
         {
             reticleUI.SetActive(false);
@@ -70,7 +77,6 @@ public class EquipmentManager : MonoBehaviour
 
     private void Update()
     {
-        // Check if looking at pickable item
         CheckForPickableItem();
 
         if (Input.GetKeyDown(pickupKey))
@@ -86,21 +92,19 @@ public class EquipmentManager : MonoBehaviour
             }
         }
 
-        // Apply weapon sway
         if (currentlyEquippedItem != null)
         {
             playerVelocity = (playerCamera.transform.position - lastPlayerPosition).magnitude / Time.deltaTime;
             lastPlayerPosition = playerCamera.transform.position;
             ApplyWeaponSway();
 
-            if (playerVelocity > 0.1f)   // Moving?
+            if (playerVelocity > 0.1f)   
                 ApplyWeaponBobbing();
             else
                 ResetBobbingPosition();
-
         }
-
     }
+
     private void ResetBobbingPosition()
     {
         equipPoint.localPosition = Vector3.Lerp(
@@ -110,18 +114,39 @@ public class EquipmentManager : MonoBehaviour
         );
         SinTime = 0f;
     }
+
     private void CheckForPickableItem()
     {
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, pickupRange, itemLayer))
+        if (isShowingFeedback)
         {
-            ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+            RaycastHit hit;
+
+            if (!Physics.Raycast(ray, out hit, pickupRange, itemLayer))
+            {
+                StopAllCoroutines();
+                isShowingFeedback = false;
+                itemNameText.color = originalTextColor;
+
+                if (reticleUI != null)
+                {
+                    reticleUI.SetActive(false);
+                    itemNameText.gameObject.SetActive(false);
+                }
+                RemoveOutline();
+            }
+            return;
+        }
+
+        Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        RaycastHit checkHit;
+
+        if (Physics.Raycast(checkRay, out checkHit, pickupRange, itemLayer))
+        {
+            ItemPickup itemPickup = checkHit.collider.GetComponent<ItemPickup>();
 
             if (itemPickup != null && itemPickup.itemData != null)
             {
-                // Show reticle
                 if (reticleUI != null)
                 {
                     reticleUI.SetActive(true);
@@ -129,18 +154,16 @@ public class EquipmentManager : MonoBehaviour
                     itemNameText.gameObject.SetActive(true);
                 }
 
-                // Add outline to the object
-                if (currentHighlightedObject != hit.collider.gameObject)
+                if (currentHighlightedObject != checkHit.collider.gameObject)
                 {
                     RemoveOutline();
-                    AddOutline(hit.collider.gameObject);
+                    AddOutline(checkHit.collider.gameObject);
                 }
 
                 return;
             }
         }
 
-        // Hide reticle and remove outline when not looking at item
         if (reticleUI != null)
         {
             reticleUI.SetActive(false);
@@ -153,7 +176,6 @@ public class EquipmentManager : MonoBehaviour
     {
         currentHighlightedObject = obj;
 
-        // Try to get or add Outline component
         Outline outline = obj.GetComponent<Outline>();
 
         if (outline == null)
@@ -184,7 +206,6 @@ public class EquipmentManager : MonoBehaviour
 
     private void OnDisable()
     {
-        // Clean up outline when script is disabled
         RemoveOutline();
     }
 
@@ -207,14 +228,11 @@ public class EquipmentManager : MonoBehaviour
 
     private void ApplyWeaponBobbing()
     {
-        // Increase time based on speed
         SinTime += Time.deltaTime * effectSpeed;
 
-        // Calculate bobbing offsets
         float bobX = Mathf.Sin(SinTime) * effectIntensityX;
         float bobY = Mathf.Abs(Mathf.Cos(SinTime)) * effectIntensity;
 
-        // Apply movement
         Vector3 bobOffset = new Vector3(bobX, bobY, 0);
 
         equipPoint.localPosition = Vector3.Lerp(
@@ -231,22 +249,60 @@ public class EquipmentManager : MonoBehaviour
 
         if (Physics.Raycast(ray, out hit, pickupRange, itemLayer))
         {
-            // Try to get ItemPickup component
             ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
 
             if (itemPickup != null && itemPickup.itemData != null)
             {
-                // Add to inventory
-                if (inventorySystem != null && inventorySystem.AddItem(itemPickup.itemData, itemPickup.quantity))
-                {
-                    Debug.Log($"Picked up {itemPickup.itemData.name}");
+                SlotPriority priority = SlotPriority.Normal;
 
-                    // Start coroutine to move item to player before destroying
+                var itemDataType = itemPickup.itemData.GetType();
+                var priorityField = itemDataType.GetField("preferredSlotType");
+                if (priorityField != null)
+                {
+                    priority = (SlotPriority)priorityField.GetValue(itemPickup.itemData);
+                }
+                else
+                {
+                    priority = itemPickup.slotPriority;
+                }
+
+                if (inventorySystem != null && inventorySystem.AddItem(itemPickup.itemData, itemPickup.quantity, priority))
+                {
                     StartCoroutine(MoveItemToPlayerThenDestroy(hit.collider.gameObject));
                 }
                 else
                 {
-                    Debug.Log("Inventory is full!");
+                    StartCoroutine(ShowFeedback("Backpack Full!", Color.red));
+                }
+            }
+        }
+    }
+
+    private IEnumerator ShowFeedback(string message, Color textColor)
+    {
+        if (itemNameText != null)
+        {
+            isShowingFeedback = true;
+
+            Color originalColor = itemNameText.color;
+            itemNameText.text = message;
+            itemNameText.color = textColor;
+
+            yield return new WaitForSeconds(1.5f);
+
+            isShowingFeedback = false;
+
+            itemNameText.color = originalColor;
+
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+            RaycastHit hit;
+
+            if (Physics.Raycast(ray, out hit, pickupRange, itemLayer))
+            {
+                ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
+                if (itemPickup != null && itemPickup.itemData != null)
+                {
+                    itemNameText.text = itemPickup.itemData.itemName;
                 }
             }
         }

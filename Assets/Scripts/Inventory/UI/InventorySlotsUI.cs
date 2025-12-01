@@ -41,18 +41,16 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
 
 
-
+    public SlotPriority slotPriority;
 
     void Awake()
     {
         canvas = GetComponentInParent<Canvas>();
         SetItem(itemData, quantity);
 
-        // Initialize the drag manager once
         if (_dragManager == null)
             _dragManager = new DragHandlerManager();
 
-        // Find equipment manager if not assigned
         if (equipmentManager == null)
         {
             equipmentManager = FindObjectOfType<EquipmentManager>();
@@ -61,7 +59,6 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     private void Start()
     {
-        // Don't auto-equip at start, wait for player interaction
         lastClickTime = 0f;
     }
 
@@ -70,13 +67,11 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         itemData = newItem;
         quantity = newQuantity;
 
-        // Disable all then re-enable only the necessary objects
         usageSlider.gameObject.SetActive(false);
         quantityText.gameObject.SetActive(false);
         icon.gameObject.SetActive(true);
         if (itemData == null) return;
 
-        // if item max stack is over 1 and isnt a flashlight
         if (itemData.maxStack > 1 && itemData is not FlashlightItemData)
         {
             quantityText.gameObject.SetActive(true);
@@ -112,7 +107,6 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     public void ClearSlot()
     {
-        // Unequip before clearing
         if(isEquipped)
          OnUnequip();
 
@@ -131,10 +125,8 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             return;
         }
 
-        // NEW: Find and properly unequip the currently equipped item's slot
         if (equipmentManager.currentlyEquippedItem != null)
         {
-            // Find the slot that has the currently equipped item
             InventorySlotsUI[] allSlots = FindObjectsOfType<InventorySlotsUI>();
             foreach (var slot in allSlots)
             {
@@ -157,7 +149,6 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         if (instantiatedPrefab.layer != LayerMask.NameToLayer("PickedUpItem"))
             instantiatedPrefab.layer = LayerMask.NameToLayer("PickedUpItem");
 
-        // Get the equippable component and equip it
         IEquippable equippable = instantiatedPrefab.GetComponent<IEquippable>();
         if (equippable != null)
         {
@@ -180,21 +171,18 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     {
         if (equipmentManager == null) return;
 
-        // Unequip from equipment manager
         if (equipmentManager.IsEquipped())
         {
             equipmentManager.UnequipItem();
             isEquipped = false;
         }
 
-        // Call the usable interface unequip
         if (instantiatedPrefab != null)
         {
             var usable = instantiatedPrefab.GetComponent<IItemUsable>();
             usable?.OnUnequip(this);
         }
 
-        // Destroy the instantiated prefab
         if (instantiatedPrefab != null)
         {
             instantiatedPrefab.SetActive(false);
@@ -206,31 +194,26 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
     {
         if (itemData == null)
         {
-            print(":;");
             return;
         }
-        print(":)");
 
         float timeSinceLastClick = Time.time - lastClickTime;
 
         if (timeSinceLastClick <= doubleClickThreshold)
         {
-            // Double click detected - toggle equip/unequip
             if (isEquipped)
             {
                 OnUnequip();
             }
             else
             {
-                print(":eqauipping;");
                 OnEquip();
             }
 
-            lastClickTime = 0f; // Reset to prevent triple-click issues
+            lastClickTime = 0f;
         }
         else
         {
-            // First click
             lastClickTime = Time.time;
         }
     }

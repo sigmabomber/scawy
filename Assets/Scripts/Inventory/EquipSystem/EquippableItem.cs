@@ -1,6 +1,5 @@
 using UnityEngine;
 
-// Interface for equippable items
 
 public class EquippableItem : MonoBehaviour, IEquippable
 {
@@ -8,7 +7,6 @@ public class EquippableItem : MonoBehaviour, IEquippable
     [SerializeField] private Vector3 equippedPosition = new Vector3(0.5f, -0.3f, 0.5f);
     [SerializeField] private Vector3 equippedRotation = new Vector3(0, 0, 0);
     [SerializeField] private Vector3 equippedScale = Vector3.one;
-    
     private Transform originalParent;
     private Vector3 originalPosition;
     private Quaternion originalRotation;
@@ -24,7 +22,6 @@ public class EquippableItem : MonoBehaviour, IEquippable
     
     public void OnEquip(Transform equipPoint)
     {
-        // Save original transform
         originalParent = transform.parent;
         originalPosition = transform.localPosition;
         originalRotation = transform.localRotation;
