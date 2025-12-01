@@ -272,6 +272,10 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: tinnitusFadeInTime
+      value: 0.01
+      objectReference: {fileID: 0}
     - target: {fileID: 3675215914822228637, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_Name
       value: Revolver
