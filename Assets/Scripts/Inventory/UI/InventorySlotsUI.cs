@@ -119,6 +119,8 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
 
     public void OnEquip()
     {
+
+        if (itemData.prefab == null) return;
         if (equipmentManager == null)
         {
             Debug.LogWarning("EquipmentManager not found!");
@@ -138,6 +140,7 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
             }
         }
 
+
         if (instantiatedPrefab == null && itemData.prefab != null)
         {
             instantiatedPrefab = Instantiate(itemData.prefab);
@@ -147,7 +150,12 @@ public class InventorySlotsUI : MonoBehaviour, IBeginDragHandler, IDragHandler, 
         instantiatedPrefab.SetActive(true);
 
         if (instantiatedPrefab.layer != LayerMask.NameToLayer("PickedUpItem"))
-            instantiatedPrefab.layer = LayerMask.NameToLayer("PickedUpItem");
+        {
+            foreach (Transform t in instantiatedPrefab.GetComponentsInChildren<Transform>(true))
+            {
+                t.gameObject.layer = LayerMask.NameToLayer("PickedUpItem");
+            }
+        }
 
         IEquippable equippable = instantiatedPrefab.GetComponent<IEquippable>();
         if (equippable != null)

@@ -20,7 +20,7 @@ public class InventorySystem : MonoBehaviour
     [SerializeField] private Transform dedicatedSlotsContainer;
 
     // List to track all inventory slots
-    private List<InventorySlotsUI> normalInventorySlots = new();
+    public List<InventorySlotsUI> normalInventorySlots = new();
     private List<InventorySlotsUI> dedicatedInventorySlots = new();
 
     void Start()

@@ -2,6 +2,11 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+public interface IRevolverHit
+{
+    void OnRevolverHit();
+}
+
 public class RevolverBehavior : MonoBehaviour, IItemUsable
 {
     // Animator hashes
@@ -18,6 +23,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public int ammoPerShot = 1;
     public float reloadTimePerBullet = 0.5f;
 
+    [Header("Raycast Settings")]
+    public Camera playerCamera;
+    public float maxRaycastDistance = 100f;
+    public LayerMask raycastMask = ~0;
+
+
     [Header("Audio")]
     public AudioSource audioSource;
     public AudioSource tinnitusAudioSource; // Separate audio source for tinnitus
@@ -27,6 +38,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public AudioClip shootSound;
     public AudioClip reloadSound;
     public AudioClip tinnitusSound; // Tinnitus sound effect
+    public AudioClip headshotSound;
 
     [Header("Tinnitus Settings")]
     [Tooltip("How long the tinnitus effect lasts after shooting")]
@@ -92,6 +104,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
+
+        // Get player camera if not assigned
+        if (playerCamera == null)
+            playerCamera = Camera.main;
 
         // Create tinnitus audio source if not assigned
         if (tinnitusAudioSource == null)
@@ -225,9 +241,36 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         PlaySound(shootSound);
 
+        
 
         CancelInvoke(nameof(ResetShootingFlags));
         Invoke(nameof(ResetShootingFlags), shootingTimeout);
+    }
+
+    private void PerformRaycast()
+    {
+        if (playerCamera == null) return;
+
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+        if (Physics.Raycast(ray, out RaycastHit hit, maxRaycastDistance, raycastMask))
+        {
+            HandleHit(hit);
+        }
+    }
+
+    private void HandleHit(RaycastHit hit)
+    {
+        IRevolverHit revolverHit = hit.collider.GetComponent<IRevolverHit>();
+
+        if (revolverHit != null)
+        {
+
+           
+
+            revolverHit.OnRevolverHit();
+        }
+       
     }
 
     public void OnShootComplete()
@@ -455,6 +498,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void ApplyRecoil()
     {
+        PerformRaycast();
         if (cameraRecoil != null)
         {
             float randomX = Random.Range(-recoilVariation, recoilVariation);
@@ -475,7 +519,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             cameraRecoil.ApplyRecoil(finalRotationRecoil, finalPositionRecoil);
         }
 
-        // Start tinnitus effect
         StartCoroutine(StartTinnitus());
     }
 
@@ -567,7 +610,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         GUILayout.Label($"Fade In: {isFadingIn}", style);
         GUILayout.Label($"Fade Out: {isFadingOut}", style);
         GUILayout.Label($"Tinnitus Timer: {tinnitusTimer:F2}", style);
-
         GUILayout.EndVertical();
     }
 

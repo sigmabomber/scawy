@@ -1,7 +1,4 @@
-using System.Collections;
-using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 
 public class EquipmentManager : MonoBehaviour
 {
@@ -9,49 +6,33 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private Transform equipPoint;
 
     [Header("Settings")]
-    [SerializeField] private KeyCode pickupKey = KeyCode.E;
-    [SerializeField] private KeyCode unequipKey = KeyCode.None;
-    [SerializeField] private float pickupRange = 3f;
-    [SerializeField] private LayerMask itemLayer;
-
-    public SlotPriority slotPriority = SlotPriority.Normal;
+    [SerializeField] private KeyCode unequipKey = KeyCode.G;
 
     [Header("Sway Settings")]
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
 
     [Header("Bobbing Settings")]
-    private Vector3 originalEquipPointPosition;
-    public float effectIntensity, effectIntensityX, effectSpeed, SinTime;
+    [SerializeField] private float effectIntensity = 0.02f;
+    [SerializeField] private float effectIntensityX = 0.01f;
+    [SerializeField] private float effectSpeed = 10f;
 
+    private Vector3 originalEquipPointPosition;
+    private float sinTime;
     private Vector3 lastPlayerPosition;
     private float playerVelocity;
 
-    [Header("References")]
-    [SerializeField] private InventorySystem inventorySystem;
-    [SerializeField] private GameObject reticleUI;
-    [SerializeField] private TMP_Text itemNameText;
-
-    [Header("Outline Settings")]
-    [SerializeField] private Color outlineColor = Color.yellow;
-    [SerializeField] private float outlineWidth = 5f;
-
-    private Color originalTextColor;
-    private bool isShowingFeedback = false;
-
-    public IEquippable currentlyEquippedItem;
+    public IEquippable currentlyEquippedItem { get; private set; }
     private Camera playerCamera;
     private Quaternion targetRotation;
-    private Vector3 targetPosition;
-    private GameObject currentHighlightedObject;
+
+    [Header("References")]
+    private InteractionSystem interactionSystem;
 
     private void Start()
     {
         playerCamera = Camera.main;
         lastPlayerPosition = playerCamera.transform.position;
-
-        if (itemNameText != null)
-            originalTextColor = itemNameText.color;
 
         if (equipPoint == null)
         {
@@ -59,31 +40,18 @@ public class EquipmentManager : MonoBehaviour
         }
 
         originalEquipPointPosition = equipPoint.localPosition;
-
-        if (inventorySystem == null)
-        {
-            inventorySystem = FindObjectOfType<InventorySystem>();
-        }
-
         targetRotation = equipPoint.localRotation;
-        targetPosition = equipPoint.localPosition;
 
-        if (reticleUI != null)
+        // Get or add InteractionSystem
+        interactionSystem = GetComponent<InteractionSystem>();
+        if (interactionSystem == null)
         {
-            reticleUI.SetActive(false);
-            itemNameText.gameObject.SetActive(false);
+            interactionSystem = gameObject.AddComponent<InteractionSystem>();
         }
     }
 
     private void Update()
     {
-        CheckForPickableItem();
-
-        if (Input.GetKeyDown(pickupKey))
-        {
-            TryPickupItem();
-        }
-
         if (Input.GetKeyDown(unequipKey))
         {
             if (currentlyEquippedItem != null)
@@ -98,7 +66,7 @@ public class EquipmentManager : MonoBehaviour
             lastPlayerPosition = playerCamera.transform.position;
             ApplyWeaponSway();
 
-            if (playerVelocity > 0.1f)   
+            if (playerVelocity > 0.1f)
                 ApplyWeaponBobbing();
             else
                 ResetBobbingPosition();
@@ -112,101 +80,7 @@ public class EquipmentManager : MonoBehaviour
             originalEquipPointPosition,
             Time.deltaTime * 6f
         );
-        SinTime = 0f;
-    }
-
-    private void CheckForPickableItem()
-    {
-        if (isShowingFeedback)
-        {
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-            RaycastHit hit;
-
-            if (!Physics.Raycast(ray, out hit, pickupRange, itemLayer))
-            {
-                StopAllCoroutines();
-                isShowingFeedback = false;
-                itemNameText.color = originalTextColor;
-
-                if (reticleUI != null)
-                {
-                    reticleUI.SetActive(false);
-                    itemNameText.gameObject.SetActive(false);
-                }
-                RemoveOutline();
-            }
-            return;
-        }
-
-        Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit checkHit;
-
-        if (Physics.Raycast(checkRay, out checkHit, pickupRange, itemLayer))
-        {
-            ItemPickup itemPickup = checkHit.collider.GetComponent<ItemPickup>();
-
-            if (itemPickup != null && itemPickup.itemData != null)
-            {
-                if (reticleUI != null)
-                {
-                    reticleUI.SetActive(true);
-                    itemNameText.text = itemPickup.itemData.itemName;
-                    itemNameText.gameObject.SetActive(true);
-                }
-
-                if (currentHighlightedObject != checkHit.collider.gameObject)
-                {
-                    RemoveOutline();
-                    AddOutline(checkHit.collider.gameObject);
-                }
-
-                return;
-            }
-        }
-
-        if (reticleUI != null)
-        {
-            reticleUI.SetActive(false);
-            itemNameText.gameObject.SetActive(false);
-        }
-        RemoveOutline();
-    }
-
-    private void AddOutline(GameObject obj)
-    {
-        currentHighlightedObject = obj;
-
-        Outline outline = obj.GetComponent<Outline>();
-
-        if (outline == null)
-        {
-            outline = obj.AddComponent<Outline>();
-        }
-
-        outline.OutlineMode = Outline.Mode.OutlineAll;
-        outline.OutlineColor = outlineColor;
-        outline.OutlineWidth = outlineWidth;
-        outline.enabled = true;
-    }
-
-    private void RemoveOutline()
-    {
-        if (currentHighlightedObject != null)
-        {
-            Outline outline = currentHighlightedObject.GetComponent<Outline>();
-
-            if (outline != null)
-            {
-                outline.enabled = false;
-            }
-
-            currentHighlightedObject = null;
-        }
-    }
-
-    private void OnDisable()
-    {
-        RemoveOutline();
+        sinTime = 0f;
     }
 
     private void ApplyWeaponSway()
@@ -228,10 +102,10 @@ public class EquipmentManager : MonoBehaviour
 
     private void ApplyWeaponBobbing()
     {
-        SinTime += Time.deltaTime * effectSpeed;
+        sinTime += Time.deltaTime * effectSpeed;
 
-        float bobX = Mathf.Sin(SinTime) * effectIntensityX;
-        float bobY = Mathf.Abs(Mathf.Cos(SinTime)) * effectIntensity;
+        float bobX = Mathf.Sin(sinTime) * effectIntensityX;
+        float bobY = Mathf.Abs(Mathf.Cos(sinTime)) * effectIntensity;
 
         Vector3 bobOffset = new Vector3(bobX, bobY, 0);
 
@@ -240,96 +114,6 @@ public class EquipmentManager : MonoBehaviour
             originalEquipPointPosition + bobOffset,
             Time.deltaTime * 6f
         );
-    }
-
-    private void TryPickupItem()
-    {
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
-
-        if (Physics.Raycast(ray, out hit, pickupRange, itemLayer))
-        {
-            ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
-
-            if (itemPickup != null && itemPickup.itemData != null)
-            {
-                SlotPriority priority = SlotPriority.Normal;
-
-                var itemDataType = itemPickup.itemData.GetType();
-                var priorityField = itemDataType.GetField("preferredSlotType");
-                if (priorityField != null)
-                {
-                    priority = (SlotPriority)priorityField.GetValue(itemPickup.itemData);
-                }
-                else
-                {
-                    priority = itemPickup.slotPriority;
-                }
-
-                if (inventorySystem != null && inventorySystem.AddItem(itemPickup.itemData, itemPickup.quantity, priority))
-                {
-                    StartCoroutine(MoveItemToPlayerThenDestroy(hit.collider.gameObject));
-                }
-                else
-                {
-                    StartCoroutine(ShowFeedback("Backpack Full!", Color.red));
-                }
-            }
-        }
-    }
-
-    private IEnumerator ShowFeedback(string message, Color textColor)
-    {
-        if (itemNameText != null)
-        {
-            isShowingFeedback = true;
-
-            Color originalColor = itemNameText.color;
-            itemNameText.text = message;
-            itemNameText.color = textColor;
-
-            yield return new WaitForSeconds(1.5f);
-
-            isShowingFeedback = false;
-
-            itemNameText.color = originalColor;
-
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-            RaycastHit hit;
-
-            if (Physics.Raycast(ray, out hit, pickupRange, itemLayer))
-            {
-                ItemPickup itemPickup = hit.collider.GetComponent<ItemPickup>();
-                if (itemPickup != null && itemPickup.itemData != null)
-                {
-                    itemNameText.text = itemPickup.itemData.itemName;
-                }
-            }
-        }
-    }
-
-    private IEnumerator MoveItemToPlayerThenDestroy(GameObject itemObject)
-    {
-        Collider itemCollider = itemObject.GetComponent<Collider>();
-        if (itemCollider != null)
-            itemCollider.enabled = false;
-
-        float duration = 0.3f;
-        float elapsedTime = 0f;
-        Vector3 startPosition = itemObject.transform.position;
-        Vector3 playerPosition = transform.position;
-
-        while (elapsedTime < duration)
-        {
-            if (itemObject == null) yield break;
-
-            itemObject.transform.position = Vector3.Lerp(startPosition, playerPosition, elapsedTime / duration);
-            elapsedTime += Time.deltaTime;
-            yield return null;
-        }
-
-        if (itemObject != null)
-            Destroy(itemObject);
     }
 
     public void EquipItem(IEquippable item)
@@ -351,7 +135,9 @@ public class EquipmentManager : MonoBehaviour
             currentlyEquippedItem = null;
         }
         else
-            print(":()");
+        {
+            Debug.Log("No item equipped");
+        }
     }
 
     private Transform CreateEquipPoint(string name, Vector3 localPosition)
@@ -365,4 +151,5 @@ public class EquipmentManager : MonoBehaviour
 
     public IEquippable GetEquippedItem() => currentlyEquippedItem;
     public bool IsEquipped() => currentlyEquippedItem != null;
+    public Transform GetEquipPoint() => equipPoint;
 }
