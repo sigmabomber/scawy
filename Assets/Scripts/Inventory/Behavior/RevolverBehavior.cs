@@ -28,7 +28,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float maxRaycastDistance = 100f;
     public LayerMask raycastMask = ~0;
 
-
     [Header("Audio")]
     public AudioSource audioSource;
     public AudioSource tinnitusAudioSource; // Separate audio source for tinnitus
@@ -49,8 +48,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float tinnitusFadeOutTime = 0.5f;
     [Tooltip("Volume of the tinnitus sound (0-1)")]
     [Range(0f, 1f)] public float tinnitusVolume = 0.3f;
-   
-     public float soundDampening = 0.3f;
+
+    public float soundDampening = 0.3f;
     [Tooltip("Low-pass filter cutoff frequency during tinnitus (Hz)")]
     public float lowPassCutoff = 1500f;
     [Tooltip("How much to reduce pitch of other sounds during tinnitus")]
@@ -89,6 +88,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private bool isFadingIn = false;
     private bool isFadingOut = false;
 
+    // State tracking
+    private ItemStateTracker stateTracker;
+    private bool canUpdate = false;
+
     private void Awake()
     {
         // Cache animator hashes
@@ -99,26 +102,30 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void Start()
     {
+        // Get or add ItemStateTracker
+        stateTracker = GetComponent<ItemStateTracker>();
+        if (stateTracker == null)
+        {
+            stateTracker = gameObject.AddComponent<ItemStateTracker>();
+        }
+
         if (animator == null)
             animator = GetComponent<Animator>();
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        // Get player camera if not assigned
         if (playerCamera == null)
             playerCamera = Camera.main;
 
-        // Create tinnitus audio source if not assigned
         if (tinnitusAudioSource == null)
         {
             tinnitusAudioSource = gameObject.AddComponent<AudioSource>();
-            tinnitusAudioSource.spatialBlend = 0f; // Make it 2D
+            tinnitusAudioSource.spatialBlend = 0f;
             tinnitusAudioSource.loop = true;
-            tinnitusAudioSource.volume = 0f; // Start at 0
+            tinnitusAudioSource.volume = 0f;
         }
 
-        // Add low-pass filter for distant sound effect
         if (audioSource != null)
         {
             lowPassFilter = audioSource.GetComponent<AudioLowPassFilter>();
@@ -128,12 +135,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
             lowPassFilter.enabled = false;
 
-            // Store original audio settings
             originalAudioSourceVolume = audioSource.volume;
             originalAudioSourcePitch = audioSource.pitch;
         }
 
-        // Try to find CameraRecoil if not assigned
         if (cameraRecoil == null)
         {
             cameraRecoil = Camera.main?.GetComponent<CameraRecoil>();
@@ -142,16 +147,150 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 Debug.LogWarning("CameraRecoil not found! Please add CameraRecoil script to your main camera.");
             }
         }
+
+        // Initialize based on current state
+        UpdateBehaviorBasedOnState();
     }
 
     private void Update()
     {
-        if (equippedSlot == null) return;
+        // Only run update logic if we're allowed to (equipped)
+        if (!canUpdate || equippedSlot == null) return;
 
         HandleReloadInput();
         HandleShootInput();
         UpdateTinnitusFade();
     }
+
+    #region IItemUsable State Tracking Methods
+
+    public void OnItemStateChanged(ItemState previousState, ItemState newState)
+    {
+
+        // Update behavior based on new state
+        UpdateBehaviorBasedOnState();
+
+        // Specific state handling
+        if (newState == ItemState.Equipped)
+        {
+            canUpdate = true;
+
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            // Ensure the gun is active
+            if (gameObject != null)
+                gameObject.SetActive(true);
+        }
+        else if (newState == ItemState.InWorld)
+        {
+            // Revolver was dropped in world
+            Debug.Log("Revolver dropped in world - disabling behavior");
+            canUpdate = false;
+
+            // Stop all active processes
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+            CancelInvoke();
+
+            // Reset references
+            equippedSlot = null;
+
+            // Deactivate the gun if it's not the original prefab
+            if (gameObject != null)
+                gameObject.SetActive(false);
+        }
+        else if (newState == ItemState.InInventory)
+        {
+            // Revolver is in inventory
+            Debug.Log("Revolver in inventory - disabling behavior");
+            canUpdate = false;
+
+            // Stop all active processes
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+            CancelInvoke();
+        }
+    }
+
+    public void OnPickedUp()
+    {
+        Debug.Log("Revolver picked up");
+        // Reset any pickup-specific states if needed
+    }
+
+    public void OnDroppedInWorld()
+    {
+        Debug.Log("Revolver dropped in world");
+        // Add any drop-specific effects here
+        // e.g., play drop sound, add slight random rotation, etc.
+
+        // Ensure all audio is stopped
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+
+        if (tinnitusAudioSource != null && tinnitusAudioSource.isPlaying)
+        {
+            tinnitusAudioSource.Stop();
+        }
+    }
+
+    private void UpdateBehaviorBasedOnState()
+    {
+        if (stateTracker == null) return;
+
+        // Enable/disable Update logic based on state
+        if (stateTracker.IsEquipped)
+        {
+            canUpdate = true;
+        }
+        else
+        {
+            canUpdate = false;
+
+            // Stop all active processes when not equipped
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+        }
+    }
+
+    #endregion
 
     #region Input Handling
 
@@ -200,6 +339,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 initialized = true;
             }
 
+            // Update state tracker
+            if (stateTracker != null)
+            {
+                stateTracker.SetState(ItemState.Equipped);
+            }
+
             gameObject.SetActive(true);
         }
     }
@@ -210,6 +355,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (equippedSlot == slotUI)
         {
+            // Update state tracker
+            if (stateTracker != null)
+            {
+                stateTracker.SetState(ItemState.InInventory);
+            }
+
             isReloading = false;
             isShooting = false;
             StopTinnitus(); // Stop tinnitus when unequipping
@@ -225,6 +376,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void TryShoot()
     {
+        // Only allow shooting if equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (isShooting || isReloading) return;
 
         if (currentAmmoCount < ammoPerShot)
@@ -240,8 +394,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             animator.SetTrigger(ShootHash);
 
         PlaySound(shootSound);
-
-        
 
         CancelInvoke(nameof(ResetShootingFlags));
         Invoke(nameof(ResetShootingFlags), shootingTimeout);
@@ -265,12 +417,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         if (revolverHit != null)
         {
-
-           
-
             revolverHit.OnRevolverHit();
         }
-       
     }
 
     public void OnShootComplete()
@@ -290,6 +438,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private IEnumerator StartTinnitus()
     {
+        // Only start tinnitus if equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) yield break;
+
         yield return new WaitForSeconds(0.2f);
 
         if (hasTinnitus)
@@ -340,6 +491,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void StartFadeOut()
     {
+        // Only process if still equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         isFadingIn = false;
         isFadingOut = true;
         tinnitusFadeProgress = 0f;
@@ -473,6 +627,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void StartReload()
     {
+        // Only allow reloading if equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (isReloading || currentAmmoCount >= maxAmmo) return;
 
         isReloading = true;
@@ -498,6 +655,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void ApplyRecoil()
     {
+        // Only apply recoil if equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         PerformRaycast();
         if (cameraRecoil != null)
         {
@@ -572,6 +732,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void PlaySound(AudioClip clip)
     {
+        // Only play sounds if equipped
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (audioSource != null && clip != null)
         {
             audioSource.PlayOneShot(clip);
@@ -610,6 +773,14 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         GUILayout.Label($"Fade In: {isFadingIn}", style);
         GUILayout.Label($"Fade Out: {isFadingOut}", style);
         GUILayout.Label($"Tinnitus Timer: {tinnitusTimer:F2}", style);
+
+        // Add state info
+        if (stateTracker != null)
+        {
+            GUILayout.Label($"State: {stateTracker.CurrentState}", style);
+            GUILayout.Label($"Can Update: {canUpdate}", style);
+        }
+
         GUILayout.EndVertical();
     }
 

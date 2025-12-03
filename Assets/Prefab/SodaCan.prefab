@@ -13,7 +13,8 @@ GameObject:
   - component: {fileID: 8158591390947171672}
   - component: {fileID: 7471801707359864307}
   - component: {fileID: 9208659188726642050}
-  m_Layer: 0
+  - component: {fileID: 4993759324634375923}
+  m_Layer: 7
   m_Name: SodaCan
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -28,13 +29,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 3877245823159775160}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+  m_LocalRotation: {x: -0.7069834, y: 0, z: 0, w: 0.7072302}
   m_LocalPosition: {x: 59.838406, y: 171.076, z: 22.252901}
   m_LocalScale: {x: 21.643705, y: 21.643707, z: 21.643705}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -89.98, y: 0, z: 0}
 --- !u!33 &506548586416788470
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -102,6 +103,7 @@ MonoBehaviour:
   slotPriority: 0
   interactionIcon: {fileID: 21300000, guid: 752794d4c2ea0e049900517dd9cb608c, type: 3}
   inventorySystem: {fileID: 0}
+  isBeingPickedUp: 0
 --- !u!65 &9208659188726642050
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -115,7 +117,7 @@ BoxCollider:
     m_Bits: 0
   m_ExcludeLayers:
     serializedVersion: 2
-    m_Bits: 0
+    m_Bits: 64
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
@@ -123,3 +125,30 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.019999998, y: 0.019999994, z: 0.037136286}
   m_Center: {x: 0, y: 0, z: 0.0003089783}
+--- !u!54 &4993759324634375923
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3877245823159775160}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 0
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 112
+  m_CollisionDetection: 0

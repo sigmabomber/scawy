@@ -1,6 +1,5 @@
 using System.Collections;
 using TMPro;
-using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -25,13 +24,13 @@ public class InteractionSystem : MonoBehaviour
     private Color originalTextColor;
     private bool isShowingFeedback = false;
 
-
     public static InteractionSystem Instance;
 
     private void Start()
     {
         playerCamera = Camera.main;
         Instance = this;
+
         if (interactionText != null)
             originalTextColor = interactionText.color;
 
@@ -54,13 +53,11 @@ public class InteractionSystem : MonoBehaviour
 
     private void CheckForInteractable()
     {
-        // If showing feedback, don't check for new interactables yet
         if (isShowingFeedback)
         {
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
             RaycastHit hit;
 
-            // If no longer looking at an item, end feedback early
             if (!Physics.Raycast(ray, out hit, interactionRange, interactableLayer))
             {
                 StopAllCoroutines();
@@ -73,17 +70,46 @@ public class InteractionSystem : MonoBehaviour
         Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         RaycastHit checkHit;
 
-        // Debug raycast
         Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
 
         if (Physics.Raycast(checkRay, out checkHit, interactionRange, interactableLayer))
         {
-
             IInteractable interactable = checkHit.collider.GetComponent<IInteractable>();
 
             if (interactable == null)
             {
-                Debug.LogWarning($"Object {checkHit.collider.name} has no IInteractable component!");
+                interactable = checkHit.collider.GetComponentInParent<IInteractable>();
+
+                if (interactable == null)
+                {
+                    GameObject hitObject = checkHit.collider.gameObject;
+
+                    ItemStateTracker stateTracker = hitObject.GetComponent<ItemStateTracker>();
+                    if (stateTracker != null && stateTracker.IsInWorld)
+                    {
+                        ItemPickupInteractable pickup = hitObject.GetComponent<ItemPickupInteractable>();
+                        if (pickup == null)
+                        {
+                            ItemData itemData = GetItemDataFromObject(hitObject);
+                            if (itemData != null)
+                            {
+                                pickup = hitObject.AddComponent<ItemPickupInteractable>();
+                                pickup.itemData = itemData;
+                                pickup.quantity = 1;
+                                interactable = pickup;
+                            }
+                        }
+                        else
+                        {
+                            interactable = pickup;
+                        }
+                    }
+                }
+
+                if (interactable == null)
+                {
+                    Debug.LogWarning($"Object {checkHit.collider.name} has no IInteractable component and cannot be made interactable!");
+                }
             }
 
             if (interactable != null && interactable.CanInteract())
@@ -91,14 +117,15 @@ public class InteractionSystem : MonoBehaviour
                 Sprite interactIcon = interactable.GetInteractionIcon();
 
                 if (interactIcon == null)
-
                 {
                     reticleUI.gameObject.SetActive(false);
                 }
                 else
                 {
                     reticleUI.sprite = interactIcon;
+                    reticleUI.gameObject.SetActive(true);
                 }
+
                 if (currentInteractable != interactable)
                 {
                     currentInteractable = interactable;
@@ -122,6 +149,15 @@ public class InteractionSystem : MonoBehaviour
         }
     }
 
+    private ItemData GetItemDataFromObject(GameObject obj)
+    {
+        ItemDataComponent dataComp = obj.GetComponent<ItemDataComponent>();
+        if (dataComp != null)
+            return dataComp.itemData;
+
+
+        return null;
+    }
     private void UpdateUI(string prompt)
     {
         if (reticleUI != null)
@@ -191,7 +227,6 @@ public class InteractionSystem : MonoBehaviour
     {
         isShowingFeedback = true;
 
-        Color originalColor = interactionText.color;
         interactionText.text = message;
         interactionText.color = textColor;
 
@@ -199,9 +234,8 @@ public class InteractionSystem : MonoBehaviour
 
         isShowingFeedback = false;
 
-        interactionText.color = originalColor;
+        interactionText.color = originalTextColor;
 
-        // Check if still looking at an interactable
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
         RaycastHit hit;
 
@@ -211,6 +245,45 @@ public class InteractionSystem : MonoBehaviour
             if (interactable != null && interactable.CanInteract())
             {
                 interactionText.text = interactable.GetInteractionPrompt();
+            }
+        }
+    }
+
+    // Helper method to validate if an object should be interactable
+    public bool IsObjectInteractable(GameObject obj)
+    {
+        if (obj == null) return false;
+
+        IInteractable interactable = obj.GetComponent<IInteractable>();
+        if (interactable == null)
+        {
+            interactable = obj.GetComponentInParent<IInteractable>();
+        }
+
+        if (interactable != null)
+        {
+            return interactable.CanInteract();
+        }
+
+        return false;
+    }
+
+    // Public method to force refresh the current interactable
+    public void RefreshCurrentInteractable()
+    {
+        if (currentHighlightedObject != null)
+        {
+            IInteractable interactable = currentHighlightedObject.GetComponent<IInteractable>();
+            if (interactable != null && interactable.CanInteract())
+            {
+                currentInteractable = interactable;
+                UpdateUI(interactable.GetInteractionPrompt());
+            }
+            else
+            {
+                currentInteractable = null;
+                HideUI();
+                RemoveOutline();
             }
         }
     }

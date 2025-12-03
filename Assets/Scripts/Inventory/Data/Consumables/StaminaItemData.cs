@@ -9,5 +9,4 @@ public class StaminaItemData : ItemData
     public float amountToReplenish;
     public int maxUses;
 
-    public GameObject staminaItemPrefab;
 }

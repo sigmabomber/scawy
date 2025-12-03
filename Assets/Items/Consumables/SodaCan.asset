@@ -15,7 +15,6 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: 1af7ef7a95366bb4082c84781bb7d11d, type: 3}
   itemName: Soda Can
   maxStack: 0
-  prefab: {fileID: 0}
+  prefab: {fileID: 3877245823159775160, guid: 9c988426beee8bc4092ce1ef04ac8abc, type: 3}
   amountToReplenish: 0
   maxUses: 0
-  staminaItemPrefab: {fileID: 3877245823159775160, guid: 9c988426beee8bc4092ce1ef04ac8abc, type: 3}

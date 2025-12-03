@@ -2,6 +2,9 @@ using UnityEngine;
 
 public class EquipmentManager : MonoBehaviour
 {
+
+    // Singleton
+    public static EquipmentManager Instance { get; private set; }
     [Header("Equipment Point")]
     [SerializeField] private Transform equipPoint;
 
@@ -28,6 +31,15 @@ public class EquipmentManager : MonoBehaviour
 
     [Header("References")]
     private InteractionSystem interactionSystem;
+
+
+    void Awake()
+    {
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+    }
 
     private void Start()
     {

@@ -1,0 +1,36 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 30e4f8e53e33f7e419abbdff3b0015bd, type: 3}
+  m_Name: ItemDatabase
+  m_EditorClassIdentifier: 
+  items:
+  - id: sodacan
+    itemData: {fileID: 11400000, guid: 7c441839457697c47a14ab57f9423e68, type: 2}
+    slotPriority: 0
+  - id: battery
+    itemData: {fileID: 11400000, guid: cc529a2005718ff408a0b512d758fcf7, type: 2}
+    slotPriority: 0
+  - id: bandage
+    itemData: {fileID: 11400000, guid: 724091abe4c562543b724746c91d076c, type: 2}
+    slotPriority: 0
+  - id: ammo
+    itemData: {fileID: 11400000, guid: abedd256f88b2ac459b6fc292153818c, type: 2}
+    slotPriority: 0
+  - id: flashlight
+    itemData: {fileID: 11400000, guid: 29987ed74da75eb4ca8e6fb90167d407, type: 2}
+    slotPriority: 0
+  - id: fencekey
+    itemData: {fileID: 11400000, guid: f893e06a1296a00479b40c37147098fa, type: 2}
+    slotPriority: 0
+  - id: revolver
+    itemData: {fileID: 11400000, guid: 0d27ef2b1db6202439ff1e81147759af, type: 2}
+    slotPriority: 1

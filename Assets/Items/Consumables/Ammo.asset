@@ -14,6 +14,6 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   icon: {fileID: 21300000, guid: 2113edc7aa1818f4790bab585974287c, type: 3}
   itemName: Ammo
-  maxStack: 0
+  maxStack: 68
   prefab: {fileID: 3364318055041882371, guid: 1a98364076db58c4c98ae235c15e6be7, type: 3}
   amount: 0

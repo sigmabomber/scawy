@@ -6,7 +6,8 @@ using UnityEngine;
 public class InventorySystem : MonoBehaviour
 {
     public GameObject inventory;
-
+    public InventorySlotsUI currentlyEquippedSlot;
+    public static InventorySystem Instance;
     // Variables
     public int maxSlots = 3;
 
@@ -22,7 +23,13 @@ public class InventorySystem : MonoBehaviour
     // List to track all inventory slots
     public List<InventorySlotsUI> normalInventorySlots = new();
     private List<InventorySlotsUI> dedicatedInventorySlots = new();
-
+    private void Awake()
+    {
+        if(Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
+    }
     void Start()
     {
         if (normalSlotsContainer != null)
@@ -74,13 +81,16 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    public bool AddItem(ItemData itemData, int quantity = 1, SlotPriority slotPriority = SlotPriority.Normal)
+    public bool AddItem(ItemData itemData, int quantity = 1, SlotPriority slotPriority = SlotPriority.Normal, GameObject itemObj = null)
     {
         if (itemData == null)
         {
             Debug.LogWarning("Trying to add null item to inventory!");
             return false;
         }
+
+        bool success = false;
+        int remainingQuantity = quantity;
 
         switch (slotPriority)
         {
@@ -92,27 +102,39 @@ public class InventorySystem : MonoBehaviour
                         if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
                         {
                             int spaceLeft = itemData.maxStack - slot.quantity;
-                            int amountToAdd = Mathf.Min(spaceLeft, quantity);
+                            int amountToAdd = Mathf.Min(spaceLeft, remainingQuantity);
                             slot.UpdateQuantity(slot.quantity + amountToAdd);
 
-                            quantity -= amountToAdd;
+                            remainingQuantity -= amountToAdd;
 
-                            if (quantity <= 0)
-                                return true;
+                            if (remainingQuantity <= 0)
+                            {
+                                success = true;
+                                break;
+                            }
                         }
                     }
                 }
 
-                foreach (var slot in normalInventorySlots)
+                // If we still have quantity to add, look for empty slots
+                if (remainingQuantity > 0)
                 {
-                    if (slot.itemData == null)
+                    foreach (var slot in normalInventorySlots)
                     {
-                        slot.SetItem(itemData, quantity);
-                        return true;
+                        if (slot.itemData == null)
+                        {
+                            slot.SetItem(itemData, remainingQuantity, itemObj);
+                            remainingQuantity = 0;
+                            success = true;
+                            break;
+                        }
                     }
                 }
-
-                return false;
+                else if (remainingQuantity == 0)
+                {
+                    success = true;
+                }
+                break;
 
             case SlotPriority.Dedicated:
                 if (itemData.maxStack > 1)
@@ -122,32 +144,69 @@ public class InventorySystem : MonoBehaviour
                         if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
                         {
                             int spaceLeft = itemData.maxStack - slot.quantity;
-                            int amountToAdd = Mathf.Min(spaceLeft, quantity);
+                            int amountToAdd = Mathf.Min(spaceLeft, remainingQuantity);
                             slot.UpdateQuantity(slot.quantity + amountToAdd);
 
-                            quantity -= amountToAdd;
+                            remainingQuantity -= amountToAdd;
 
-                            if (quantity <= 0)
-                                return true;
+                            if (remainingQuantity <= 0)
+                            {
+                                success = true;
+                                break;
+                            }
                         }
                     }
                 }
 
-                foreach (var slot in dedicatedInventorySlots)
+                // If we still have quantity to add, look for empty slots
+                if (remainingQuantity > 0)
                 {
-                    if (slot.itemData == null)
+                    foreach (var slot in dedicatedInventorySlots)
                     {
-                        slot.SetItem(itemData, quantity);
-                        return true;
+                        if (slot.itemData == null)
+                        {
+                            slot.SetItem(itemData, remainingQuantity, itemObj);
+                            remainingQuantity = 0;
+                            success = true;
+                            break;
+                        }
                     }
                 }
-
-                return false;
+                else if (remainingQuantity == 0)
+                {
+                    success = true;
+                }
+                break;
 
             default:
                 Debug.LogWarning("Unknown slot priority!");
-                return false;
+                success = false;
+                break;
         }
+
+        // DO NOT disable the item here - let ItemPickupInteractable handle it after the coroutine
+        // Only prepare the item for inventory if successful
+        if (success && itemObj != null)
+        {
+            ItemPickupInteractable pickup = itemObj.GetComponent<ItemPickupInteractable>();
+            if (pickup != null)
+            {
+                pickup.enabled = false; // Disable the pickup script
+            }
+
+            Collider col = itemObj.GetComponent<Collider>();
+            if (col != null) col.enabled = false;
+
+            // Update item state to inventory
+            ItemStateTracker stateTracker = itemObj.GetComponent<ItemStateTracker>();
+            if (stateTracker != null)
+            {
+                stateTracker.SetState(ItemState.InInventory);
+            }
+
+        }
+
+        return success;
     }
     // Remove item from inventory
     public bool RemoveItem(ItemData itemData, int quantity = 1)
