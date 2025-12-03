@@ -49,8 +49,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float tinnitusFadeOutTime = 0.5f;
     [Tooltip("Volume of the tinnitus sound (0-1)")]
     [Range(0f, 1f)] public float tinnitusVolume = 0.3f;
-    [Tooltip("How much to dampen other sounds during tinnitus (0-1)")]
-    [Range(0f, 1f)] public float soundDampening = 0.3f;
+   
+     public float soundDampening = 0.3f;
     [Tooltip("Low-pass filter cutoff frequency during tinnitus (Hz)")]
     public float lowPassCutoff = 1500f;
     [Tooltip("How much to reduce pitch of other sounds during tinnitus")]

@@ -2059,6 +2059,58 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: animator
+      value: 
+      objectReference: {fileID: 1612691675}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: audioSource
+      value: 
+      objectReference: {fileID: 1612691671}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: cameraRecoil
+      value: 
+      objectReference: {fileID: 963194230}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: playerCamera
+      value: 
+      objectReference: {fileID: 963194227}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: lowPassCutoff
+      value: 500
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: pitchReduction
+      value: 0.129
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: soundDampening
+      value: 50
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: tinnitusFadeInTime
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: tinnitusAudioSource
+      value: 
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: fadeCurve.m_Curve.Array.data[0].inSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: fadeCurve.m_Curve.Array.data[1].inSlope
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: fadeCurve.m_Curve.Array.data[0].outSlope
+      value: 2
+      objectReference: {fileID: 0}
+    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: fadeCurve.m_Curve.Array.data[1].outSlope
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 3675215914822228637, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_Name
       value: Revolver (2)
@@ -2984,6 +3036,16 @@ Transform:
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 1509484830552821841, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
   m_PrefabInstance: {fileID: 1804767280}
+  m_PrefabAsset: {fileID: 0}
+--- !u!82 &1612691671 stripped
+AudioSource:
+  m_CorrespondingSourceObject: {fileID: -9101295362616403008, guid: 248395507a831ab4981c077443c16be0, type: 3}
+  m_PrefabInstance: {fileID: 1067162796}
+  m_PrefabAsset: {fileID: 0}
+--- !u!95 &1612691675 stripped
+Animator:
+  m_CorrespondingSourceObject: {fileID: 313172334609579312, guid: 248395507a831ab4981c077443c16be0, type: 3}
+  m_PrefabInstance: {fileID: 1067162796}
   m_PrefabAsset: {fileID: 0}
 --- !u!1 &1653103347
 GameObject:
@@ -4088,7 +4150,7 @@ PrefabInstance:
     - target: {fileID: 4267841888986225138, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
       propertyPath: itemData
       value: 
-      objectReference: {fileID: 0}
+      objectReference: {fileID: 11400000, guid: 0d27ef2b1db6202439ff1e81147759af, type: 2}
     - target: {fileID: 4267841888986225138, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
       propertyPath: slotPriority
       value: 1
@@ -4353,7 +4415,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   interactKey: 101
-  interactionRange: 3
+  interactionRange: 1
   interactableLayer:
     serializedVersion: 2
     m_Bits: 128
