@@ -444,7 +444,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 0}
   maxAmmo: 6
-  currentAmmoCount: 1
+  currentAmmoCount: 5
   ammoPerShot: 1
   reloadTimePerBullet: 1
   playerCamera: {fileID: 0}
@@ -452,6 +452,14 @@ MonoBehaviour:
   raycastMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  aimKey: 324
+  aimFOV: 40
+  normalFOV: 60
+  aimSpeed: 8
+  aimPosition: {x: -0.47, y: -0.29, z: 0.92}
+  normalPosition: {x: 0.47499847, y: -0.6000061, z: 0.55200005}
+  aimMovementSpeedMultiplier: 0.5
+  aimSensitivityMultiplier: 0.6
   audioSource: {fileID: 0}
   tinnitusAudioSource: {fileID: 0}
   reloadIntroSound: {fileID: 8300000, guid: 33eb9bc53ebdd8b47872bcc80e380076, type: 3}
@@ -495,6 +503,7 @@ MonoBehaviour:
   recoilRotation: {x: -6, y: 0, z: 0}
   recoilPosition: {x: 0, y: 0, z: -0.2}
   recoilVariation: 0.7
+  aimRecoilMultiplier: 0.6
   isReloading: 0
   isShooting: 0
 --- !u!114 &1420075229565130237
@@ -529,6 +538,7 @@ MonoBehaviour:
   slotPriority: 1
   interactionIcon: {fileID: 21300000, guid: 752794d4c2ea0e049900517dd9cb608c, type: 3}
   inventorySystem: {fileID: 0}
+  isBeingPickedUp: 0
 --- !u!82 &-9101295362616403008
 AudioSource:
   m_ObjectHideFlags: 0
