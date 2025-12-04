@@ -10,5 +10,4 @@ public class HealingItemData : ItemData
     public int maxUses;
 
 
-    public GameObject healPrefab;
 }

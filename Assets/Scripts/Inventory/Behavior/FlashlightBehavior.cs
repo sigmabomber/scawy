@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 
 public class FlashlightBehavior : MonoBehaviour, IItemUsable
 {
-    private float currentBattery;
+    public float currentBattery;
     private bool isOn = false;
     private FlashlightItemData flashlightData;
     private InventorySlotsUI slot;
@@ -15,28 +15,45 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
     private GameObject SpotLightObj;
     private Light flashlightLight;
 
-    private bool initialized = false;
+    public bool initialized = false;
 
     private float maxIntensity;
     private float minIntensity = 0.3f;
 
     private float flickerSpeed;
+
+    // State tracking
+    private ItemStateTracker stateTracker;
+    private bool canUpdate = false;
+
     private void Start()
     {
-        SpotLightObj = transform.Find("Spot Light").gameObject;
-
-        if(SpotLightObj != null)
+        stateTracker = GetComponent<ItemStateTracker>();
+        if (stateTracker == null)
         {
-            SpotLightObj.SetActive(false);
-            flashlightLight = SpotLightObj.GetComponent<Light>();
+            stateTracker = gameObject.AddComponent<ItemStateTracker>();
+        }
 
-            maxIntensity = flashlightLight.intensity;
+        if (gameObject.activeInHierarchy)
+        {
+            SpotLightObj = transform.Find("Spot Light").gameObject;
+
+            if (SpotLightObj != null)
+            {
+                SpotLightObj.SetActive(false);
+                flashlightLight = SpotLightObj.GetComponent<Light>();
+
+                maxIntensity = flashlightLight.intensity;
+            }
+
+            UpdateBehaviorBasedOnState();
         }
     }
 
-
+    // IItemUsable methods
     public void OnUse(InventorySlotsUI slotUI)
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
 
         if (!initialized)
         {
@@ -44,21 +61,13 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
         }
         else
         {
-
             ToggleFlashlight();
         }
     }
 
-    void ToggleFlashlight()
-    {
-        if (SpotLightObj == null) return;
-        isOn = !isOn;
-        SpotLightObj.SetActive(isOn);
-    }
     public void OnEquip(InventorySlotsUI slotUI)
     {
         slot = slotUI;
-
 
         if (slot.itemData is FlashlightItemData flashlight)
         {
@@ -66,51 +75,141 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
             flickerSpeed = flashlightData.flickerSpeed;
             if (!initialized)
             {
-                currentBattery = flashlight.maxBattery;
-                initialized = true;
+                Initialize(flashlight);
             }
-            if (currentBattery > 0) 
-            {
 
+            if (currentBattery > 0 && stateTracker != null && stateTracker.IsEquipped)
+            {
                 ToggleFlashlight();
             }
 
             slot.UpdateUsage(currentBattery);
         }
     }
+    public void Initialize(FlashlightItemData data)
+    {
+        if (initialized) return;
+        flashlightData = data;
+        currentBattery = flashlightData.maxBattery;
+        initialized = true;
+
+    }
     public void OnUnequip(InventorySlotsUI slotUI)
     {
-        isOn = false;
+        if (isOn)
+        {
+            ToggleFlashlight();
+        }
+    }
+
+    public void OnItemStateChanged(ItemState previousState, ItemState newState)
+    {
+
+        UpdateBehaviorBasedOnState();
+
+        // Specific state handling
+        if (newState == ItemState.Equipped)
+        {
+            canUpdate = true;
+
+            if (isOn)
+            {
+                ToggleFlashlight();
+            }
+        }
+        else if (newState == ItemState.InWorld)
+        {
+            canUpdate = false;
+
+            if (isOn)
+            {
+                ToggleFlashlight();
+            }
+
+            slot = null;
+            flashlightData = null;
+        }
+        else if (newState == ItemState.InInventory)
+        {
+            canUpdate = false;
+
+            if (isOn)
+            {
+                ToggleFlashlight();
+            }
+        }
+    }
+
+    public void OnPickedUp()
+    {
+        Debug.Log("Flashlight picked up");
+        // Reset any pickup-specific states if needed
+    }
+
+    public void OnDroppedInWorld()
+    {
+      
+        if (isOn)
+        {
+            ToggleFlashlight();
+        }
+    }
+
+    private void UpdateBehaviorBasedOnState()
+    {
+        if (stateTracker == null) return;
+
+        if (stateTracker.IsEquipped)
+        {
+            canUpdate = true;
+        }
+        else
+        {
+            canUpdate = false;
+
+            if (isOn)
+            {
+                ToggleFlashlight();
+            }
+        }
+    }
+
+    void ToggleFlashlight()
+    {
+        if (SpotLightObj == null) return;
+
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
+        isOn = !isOn;
         SpotLightObj.SetActive(isOn);
+
     }
 
     private void Update()
     {
+        if (!canUpdate || flashlightData == null || !initialized) return;
 
-       
-        if ( flashlightData == null || !initialized) return;
-
-        if(isOn)
+        if (isOn)
             DrainBattery();
 
-
-        if (Input.GetMouseButtonUp(0) && currentBattery > 0)
+        if (stateTracker != null && stateTracker.IsEquipped)
         {
-            if (EventSystem.current.IsPointerOverGameObject())
-                return;
+            if (Input.GetMouseButtonUp(0) && currentBattery > 0)
+            {
+                if (EventSystem.current.IsPointerOverGameObject())
+                    return;
 
-            ToggleFlashlight();
+                ToggleFlashlight();
+            }
         }
-
     }
-
 
     private void FlickerLight()
     {
         if (flashlightLight == null || !isOn) return;
 
         flickerTimer -= Time.deltaTime;
-        
+
         if (flickerTimer <= 0)
         {
             flashlightLight.intensity = Random.Range(minIntensity, maxIntensity);
@@ -120,27 +219,31 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
 
     private void DrainBattery()
     {
+        if (flashlightData == null || slot == null) return;
+
         float drainPerSecond = flashlightData.batteryDrainage;
         float deltaBattery = drainPerSecond * Time.deltaTime;
         currentBattery -= drainPerSecond * Time.deltaTime;
         currentBattery = Mathf.Max(currentBattery, 0);
-        slot.UpdateUsage(Mathf.RoundToInt(currentBattery));
 
+        if (slot != null)
+            slot.UpdateUsage(Mathf.RoundToInt(currentBattery));
 
         if (currentBattery <= 0)
         {
             isOn = false;
-            SpotLightObj.SetActive(isOn);
+            if (SpotLightObj != null)
+                SpotLightObj.SetActive(isOn);
         }
 
-        if(currentBattery / flashlightData.maxBattery <= flashlightData.flickerThreshhold && isOn)
+        if (currentBattery / flashlightData.maxBattery <= flashlightData.flickerThreshhold && isOn)
         {
             FlickerLight();
-
         }
         else
         {
-            flashlightLight.intensity = maxIntensity;
+            if (flashlightLight != null)
+                flashlightLight.intensity = maxIntensity;
         }
     }
 
@@ -158,11 +261,18 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
             slot.UpdateUsage(Mathf.RoundToInt(currentBattery));
     }
 
-
-
     public float GetCurrentBattery()
     {
+       
+
         return currentBattery;
     }
 
+    private void OnDestroy()
+    {
+        if (isOn && SpotLightObj != null)
+        {
+            SpotLightObj.SetActive(false);
+        }
+    }
 }

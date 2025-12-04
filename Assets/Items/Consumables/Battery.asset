@@ -15,4 +15,5 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: e27a898b11f4d35449afb740e0558629, type: 3}
   itemName: Battery
   maxStack: 0
+  prefab: {fileID: 6752415349115052067, guid: db83630043d5c414281c4c1a67b1dba9, type: 3}
   chargeAmount: 50

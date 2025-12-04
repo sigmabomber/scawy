@@ -3,6 +3,11 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
+
+    // Singleton
+
+    public static PlayerController Instance { get; private set; }
+
     [Header("Movement Settings")]
     [SerializeField] private float walkSpeed = 5f;
     [SerializeField] private float sprintSpeed = 7.5f;
@@ -43,6 +48,13 @@ public class PlayerController : MonoBehaviour
         {
             cameraRecoil = cameraTransform.GetComponent<CameraRecoil>();
         }
+
+     
+            if (Instance == null)
+                Instance = this;
+            else
+                Destroy(gameObject);
+        
 
         InitializeController();
     }

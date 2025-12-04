@@ -2,6 +2,11 @@ using System.Collections;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
+public interface IRevolverHit
+{
+    void OnRevolverHit();
+}
+
 public class RevolverBehavior : MonoBehaviour, IItemUsable
 {
     // Animator hashes
@@ -18,15 +23,32 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public int ammoPerShot = 1;
     public float reloadTimePerBullet = 0.5f;
 
+    [Header("Raycast Settings")]
+    public Camera playerCamera;
+    public float maxRaycastDistance = 100f;
+    public LayerMask raycastMask = ~0;
+
+    [Header("Aiming Settings")]
+    [SerializeField] private KeyCode aimKey = KeyCode.Mouse1;
+    [SerializeField] private float aimFOV = 40f;
+    [SerializeField] private float normalFOV = 60f;
+    [SerializeField] private float aimSpeed = 8f;
+    [SerializeField] private Vector3 aimPosition = new Vector3(0f, -0.15f, 0.3f);
+    [SerializeField] private Quaternion aimRotation = new Quaternion(0.795179367f, 180, 6.1392501e-07f, 0);
+    [SerializeField] private Quaternion normalRotation;
+    [SerializeField] private Vector3 normalPosition = new Vector3(0.5f, -0.3f, 0.5f);
+    [SerializeField] private float aimMovementSpeedMultiplier = 0.5f;
+    [SerializeField] private float aimSensitivityMultiplier = 0.6f;
+
     [Header("Audio")]
     public AudioSource audioSource;
-    public AudioSource tinnitusAudioSource; // Separate audio source for tinnitus
-
+    public AudioSource tinnitusAudioSource;
     public AudioClip reloadIntroSound;
     public AudioClip reloadOutroSound;
     public AudioClip shootSound;
     public AudioClip reloadSound;
-    public AudioClip tinnitusSound; // Tinnitus sound effect
+    public AudioClip tinnitusSound;
+    public AudioClip headshotSound;
 
     [Header("Tinnitus Settings")]
     [Tooltip("How long the tinnitus effect lasts after shooting")]
@@ -37,8 +59,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float tinnitusFadeOutTime = 0.5f;
     [Tooltip("Volume of the tinnitus sound (0-1)")]
     [Range(0f, 1f)] public float tinnitusVolume = 0.3f;
-    [Tooltip("How much to dampen other sounds during tinnitus (0-1)")]
-    [Range(0f, 1f)] public float soundDampening = 0.3f;
+    public float soundDampening = 0.3f;
     [Tooltip("Low-pass filter cutoff frequency during tinnitus (Hz)")]
     public float lowPassCutoff = 1500f;
     [Tooltip("How much to reduce pitch of other sounds during tinnitus")]
@@ -54,32 +75,37 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public Vector3 recoilPosition = new Vector3(0f, 0f, -0.15f);
     [Tooltip("Random variation in recoil")]
     public float recoilVariation = 0.5f;
+    [Tooltip("Reduced recoil when aiming")]
+    public float aimRecoilMultiplier = 0.6f;
 
     [Header("State")]
     public bool isReloading = false;
     public bool isShooting = false;
+    private bool isAiming = false;
     private bool hasTinnitus = false;
     private bool initialized = false;
 
     private InventorySlotsUI equippedSlot;
-
-    // Safety timeout for shooting
+    private Transform equipPoint;
     private float shootingTimeout = 1f;
 
-    // Original audio settings
+    // Original values
     private float originalAudioSourceVolume;
     private float originalAudioSourcePitch;
     private AudioLowPassFilter lowPassFilter;
 
-    // Tinnitus fade coroutine tracking
+    // Tinnitus fade tracking
     private float tinnitusTimer = 0f;
     private float tinnitusFadeProgress = 0f;
     private bool isFadingIn = false;
     private bool isFadingOut = false;
 
+    // State tracking
+    private ItemStateTracker stateTracker;
+    private bool canUpdate = false;
+
     private void Awake()
     {
-        // Cache animator hashes
         StartReloadingHash = Animator.StringToHash("StartReloading");
         EndReloadingHash = Animator.StringToHash("EndReload");
         ShootHash = Animator.StringToHash("Shoot");
@@ -87,22 +113,35 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void Start()
     {
+        stateTracker = GetComponent<ItemStateTracker>();
+        if (stateTracker == null)
+        {
+            stateTracker = gameObject.AddComponent<ItemStateTracker>();
+        }
+
         if (animator == null)
             animator = GetComponent<Animator>();
 
         if (audioSource == null)
             audioSource = GetComponent<AudioSource>();
 
-        // Create tinnitus audio source if not assigned
+        if (playerCamera == null)
+            playerCamera = Camera.main;
+
+        // Store normal FOV
+        if (playerCamera != null)
+        {
+            normalFOV = playerCamera.fieldOfView;
+        }
+
         if (tinnitusAudioSource == null)
         {
             tinnitusAudioSource = gameObject.AddComponent<AudioSource>();
-            tinnitusAudioSource.spatialBlend = 0f; // Make it 2D
+            tinnitusAudioSource.spatialBlend = 0f;
             tinnitusAudioSource.loop = true;
-            tinnitusAudioSource.volume = 0f; // Start at 0
+            tinnitusAudioSource.volume = 0f;
         }
 
-        // Add low-pass filter for distant sound effect
         if (audioSource != null)
         {
             lowPassFilter = audioSource.GetComponent<AudioLowPassFilter>();
@@ -112,12 +151,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
             lowPassFilter.enabled = false;
 
-            // Store original audio settings
             originalAudioSourceVolume = audioSource.volume;
             originalAudioSourcePitch = audioSource.pitch;
         }
 
-        // Try to find CameraRecoil if not assigned
         if (cameraRecoil == null)
         {
             cameraRecoil = Camera.main?.GetComponent<CameraRecoil>();
@@ -126,16 +163,193 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 Debug.LogWarning("CameraRecoil not found! Please add CameraRecoil script to your main camera.");
             }
         }
+
+        // Get equip point from EquipmentManager
+        if (EquipmentManager.Instance != null)
+        {
+            equipPoint = EquipmentManager.Instance.GetEquipPoint();
+            if (equipPoint != null)
+            {
+                normalPosition = equipPoint.localPosition;
+            }
+        }
+
+        UpdateBehaviorBasedOnState();
     }
 
     private void Update()
     {
-        if (equippedSlot == null) return;
+        if (!canUpdate || equippedSlot == null) return;
 
+        HandleAimInput();
         HandleReloadInput();
         HandleShootInput();
         UpdateTinnitusFade();
+        UpdateAiming();
     }
+
+    #region Aiming
+
+    private void HandleAimInput()
+    {
+        if (Input.GetKey(aimKey) && !isReloading)
+        {
+            isAiming = true;
+        }
+        else
+        {
+            isAiming = false;
+        }
+    }
+
+    private void UpdateAiming()
+    {
+        if (equipPoint == null || playerCamera == null) return;
+
+        // Smoothly transition FOV
+        float targetFOV = isAiming ? aimFOV : normalFOV;
+        playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, aimSpeed * Time.deltaTime);
+
+        // Smoothly transition weapon position
+        Vector3 targetPosition = isAiming ? aimPosition : normalPosition;
+        Quaternion targetRotation = isAiming ? aimRotation : normalRotation;
+        equipPoint.localPosition = Vector3.Lerp(equipPoint.localPosition, targetPosition, aimSpeed * Time.deltaTime);
+        equipPoint.localRotation = Quaternion.Lerp(equipPoint.localRotation, targetRotation, aimSpeed * Time.deltaTime);
+      
+        
+        if (PlayerController.Instance != null && isAiming)
+        {
+           
+        }
+    }
+
+    public bool IsAiming() => isAiming;
+    public float GetAimMovementMultiplier() => isAiming ? aimMovementSpeedMultiplier : 1f;
+    public float GetAimSensitivityMultiplier() => isAiming ? aimSensitivityMultiplier : 1f;
+
+    #endregion
+
+    #region IItemUsable State Tracking Methods
+
+    public void OnItemStateChanged(ItemState previousState, ItemState newState)
+    {
+        UpdateBehaviorBasedOnState();
+
+        if (newState == ItemState.Equipped)
+        {
+            canUpdate = true;
+
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            // Reset aiming state
+            isAiming = false;
+            if (playerCamera != null)
+            {
+                playerCamera.fieldOfView = normalFOV;
+            }
+
+            if (gameObject != null)
+                gameObject.SetActive(true);
+        }
+        else if (newState == ItemState.InWorld)
+        {
+            canUpdate = false;
+
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+            isAiming = false;
+            CancelInvoke();
+
+            equippedSlot = null;
+
+            if (gameObject != null)
+                gameObject.SetActive(false);
+        }
+        else if (newState == ItemState.InInventory)
+        {
+            canUpdate = false;
+
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+            isAiming = false;
+            CancelInvoke();
+        }
+    }
+
+    public void OnPickedUp()
+    {
+        Debug.Log("Revolver picked up");
+    }
+
+    public void OnDroppedInWorld()
+    {
+        Debug.Log("Revolver dropped in world");
+
+        if (audioSource != null && audioSource.isPlaying)
+        {
+            audioSource.Stop();
+        }
+
+        if (tinnitusAudioSource != null && tinnitusAudioSource.isPlaying)
+        {
+            tinnitusAudioSource.Stop();
+        }
+    }
+
+    private void UpdateBehaviorBasedOnState()
+    {
+        if (stateTracker == null) return;
+
+        if (stateTracker.IsEquipped)
+        {
+            canUpdate = true;
+        }
+        else
+        {
+            canUpdate = false;
+
+            if (isReloading)
+            {
+                CancelReload();
+            }
+
+            if (hasTinnitus)
+            {
+                StopTinnitus();
+            }
+
+            isShooting = false;
+            isAiming = false;
+        }
+    }
+
+    #endregion
 
     #region Input Handling
 
@@ -184,6 +398,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 initialized = true;
             }
 
+            if (stateTracker != null)
+            {
+                stateTracker.SetState(ItemState.Equipped);
+            }
+
             gameObject.SetActive(true);
         }
     }
@@ -194,10 +413,23 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (equippedSlot == slotUI)
         {
+            if (stateTracker != null)
+            {
+                stateTracker.SetState(ItemState.InInventory);
+            }
+
             isReloading = false;
             isShooting = false;
-            StopTinnitus(); // Stop tinnitus when unequipping
+            isAiming = false;
+            StopTinnitus();
             CancelInvoke();
+
+            // Reset FOV when unequipping
+            if (playerCamera != null)
+            {
+                playerCamera.fieldOfView = normalFOV;
+            }
+
             gameObject.SetActive(false);
             equippedSlot = null;
         }
@@ -209,6 +441,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void TryShoot()
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (isShooting || isReloading) return;
 
         if (currentAmmoCount < ammoPerShot)
@@ -225,9 +459,30 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         PlaySound(shootSound);
 
-
         CancelInvoke(nameof(ResetShootingFlags));
         Invoke(nameof(ResetShootingFlags), shootingTimeout);
+    }
+
+    private void PerformRaycast()
+    {
+        if (playerCamera == null) return;
+
+        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+
+        if (Physics.Raycast(ray, out RaycastHit hit, maxRaycastDistance, raycastMask))
+        {
+            HandleHit(hit);
+        }
+    }
+
+    private void HandleHit(RaycastHit hit)
+    {
+        IRevolverHit revolverHit = hit.collider.GetComponent<IRevolverHit>();
+
+        if (revolverHit != null)
+        {
+            revolverHit.OnRevolverHit();
+        }
     }
 
     public void OnShootComplete()
@@ -247,28 +502,23 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private IEnumerator StartTinnitus()
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) yield break;
+
         yield return new WaitForSeconds(0.2f);
 
         if (hasTinnitus)
         {
-            // Reset the timer to extend the duration
             tinnitusTimer = 0f;
-
-            // Cancel any existing fade out and schedule a new one
             CancelInvoke(nameof(StartFadeOut));
             Invoke(nameof(StartFadeOut), tinnitusDuration - tinnitusFadeOutTime);
-
             yield break;
         }
 
-        // First time - start fresh
         hasTinnitus = true;
         tinnitusTimer = 0f;
 
-        // Start fade in
         StartFadeIn();
 
-        // Schedule fade out
         CancelInvoke(nameof(StartFadeOut));
         Invoke(nameof(StartFadeOut), tinnitusDuration - tinnitusFadeOutTime);
     }
@@ -279,7 +529,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         isFadingOut = false;
         tinnitusFadeProgress = 0f;
 
-        // Start tinnitus sound if not already playing
         if (tinnitusAudioSource != null && tinnitusSound != null && !tinnitusAudioSource.isPlaying)
         {
             tinnitusAudioSource.clip = tinnitusSound;
@@ -287,16 +536,17 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             tinnitusAudioSource.Play();
         }
 
-        // Enable low-pass filter for distant sound effect
         if (lowPassFilter != null)
         {
             lowPassFilter.enabled = true;
-            lowPassFilter.cutoffFrequency = 22000f; // Start at normal
+            lowPassFilter.cutoffFrequency = 22000f;
         }
     }
 
     private void StartFadeOut()
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         isFadingIn = false;
         isFadingOut = true;
         tinnitusFadeProgress = 0f;
@@ -308,27 +558,23 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         tinnitusTimer += Time.deltaTime;
 
-        // Handle fade in
         if (isFadingIn)
         {
             tinnitusFadeProgress += Time.deltaTime / tinnitusFadeInTime;
             float fadeAmount = fadeCurve.Evaluate(Mathf.Clamp01(tinnitusFadeProgress));
 
-            // Fade in tinnitus volume
             if (tinnitusAudioSource != null)
             {
                 tinnitusAudioSource.volume = Mathf.Lerp(0f, tinnitusVolume, fadeAmount);
             }
 
-            // Apply sound dampening effects
             ApplySoundEffects(fadeAmount);
 
-            // Check if fade in is complete
             if (tinnitusFadeProgress >= 1f)
             {
                 isFadingIn = false;
                 tinnitusAudioSource.volume = tinnitusVolume;
-                ApplySoundEffects(1f); // Apply full effect
+                ApplySoundEffects(1f);
             }
         }
 
@@ -337,13 +583,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             tinnitusFadeProgress += Time.deltaTime / tinnitusFadeOutTime;
             float fadeAmount = Mathf.Clamp01(tinnitusFadeProgress);
 
-            // Fade out tinnitus volume
             if (tinnitusAudioSource != null)
             {
                 tinnitusAudioSource.volume = Mathf.Lerp(tinnitusVolume, 0f, fadeAmount);
             }
 
-            // Remove sound dampening effects
             RemoveSoundEffects(fadeAmount);
 
             if (tinnitusFadeProgress >= 1f)
@@ -352,7 +596,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
         }
 
-        // Safety check - if tinnitus duration exceeded, start fade out
         if (tinnitusTimer >= tinnitusDuration && !isFadingOut)
         {
             StartFadeOut();
@@ -363,14 +606,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (audioSource != null)
         {
-            // Reduce volume
             audioSource.volume = Mathf.Lerp(originalAudioSourceVolume, originalAudioSourceVolume * soundDampening, progress);
-
-            // Slightly lower pitch for muffled/distant effect
             audioSource.pitch = Mathf.Lerp(originalAudioSourcePitch, originalAudioSourcePitch * (1f - pitchReduction), progress);
         }
 
-        // Apply low-pass filter (makes sounds feel more distant)
         if (lowPassFilter != null)
         {
             lowPassFilter.cutoffFrequency = Mathf.Lerp(22000f, lowPassCutoff, progress);
@@ -381,7 +620,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (audioSource != null)
         {
-            // progress goes from 0 to 1, so we interpolate from dampened to original
             audioSource.volume = Mathf.Lerp(originalAudioSourceVolume * soundDampening, originalAudioSourceVolume, progress);
             audioSource.pitch = Mathf.Lerp(originalAudioSourcePitch * (1f - pitchReduction), originalAudioSourcePitch, progress);
         }
@@ -401,25 +639,22 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         isFadingOut = false;
         tinnitusTimer = 0f;
 
-        // Stop tinnitus sound FIRST, before restoring audio
         if (tinnitusAudioSource != null && tinnitusAudioSource.isPlaying)
         {
             tinnitusAudioSource.Stop();
             tinnitusAudioSource.volume = 0f;
         }
 
-        // THEN restore original audio settings
         if (audioSource != null)
         {
             audioSource.volume = originalAudioSourceVolume;
             audioSource.pitch = originalAudioSourcePitch;
         }
 
-        // Disable low-pass filter
         if (lowPassFilter != null)
         {
             lowPassFilter.enabled = false;
-            lowPassFilter.cutoffFrequency = 22000f; // Reset to default
+            lowPassFilter.cutoffFrequency = 22000f;
         }
 
         CancelInvoke(nameof(StartFadeOut));
@@ -430,6 +665,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void StartReload()
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (isReloading || currentAmmoCount >= maxAmmo) return;
 
         isReloading = true;
@@ -455,27 +692,32 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void ApplyRecoil()
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
+        PerformRaycast();
         if (cameraRecoil != null)
         {
-            float randomX = Random.Range(-recoilVariation, recoilVariation);
-            float randomY = Random.Range(-recoilVariation * 0.5f, recoilVariation * 0.5f);
+            // Reduce recoil when aiming
+            float recoilMultiplier = isAiming ? aimRecoilMultiplier : 1f;
+
+            float randomX = Random.Range(-recoilVariation, recoilVariation) * recoilMultiplier;
+            float randomY = Random.Range(-recoilVariation * 0.5f, recoilVariation * 0.5f) * recoilMultiplier;
 
             Vector3 finalRotationRecoil = new Vector3(
-                recoilRotation.x + randomX,
-                recoilRotation.y + randomY,
-                recoilRotation.z
+                (recoilRotation.x + randomX) * recoilMultiplier,
+                (recoilRotation.y + randomY) * recoilMultiplier,
+                recoilRotation.z * recoilMultiplier
             );
 
             Vector3 finalPositionRecoil = new Vector3(
-                recoilPosition.x,
-                recoilPosition.y,
-                recoilPosition.z + Random.Range(-0.02f, 0.02f)
+                recoilPosition.x * recoilMultiplier,
+                recoilPosition.y * recoilMultiplier,
+                (recoilPosition.z + Random.Range(-0.02f, 0.02f)) * recoilMultiplier
             );
 
             cameraRecoil.ApplyRecoil(finalRotationRecoil, finalPositionRecoil);
         }
 
-        // Start tinnitus effect
         StartCoroutine(StartTinnitus());
     }
 
@@ -529,6 +771,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void PlaySound(AudioClip clip)
     {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
         if (audioSource != null && clip != null)
         {
             audioSource.PlayOneShot(clip);
@@ -563,10 +807,14 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         GUILayout.Label($"Ammo: {currentAmmoCount}/{maxAmmo}", style);
         GUILayout.Label($"Reloading (R): {isReloading}", style);
         GUILayout.Label($"Shooting (M1): {isShooting}", style);
+        GUILayout.Label($"Aiming (M2): {isAiming}", style);
         GUILayout.Label($"Tinnitus: {hasTinnitus}", style);
-        GUILayout.Label($"Fade In: {isFadingIn}", style);
-        GUILayout.Label($"Fade Out: {isFadingOut}", style);
-        GUILayout.Label($"Tinnitus Timer: {tinnitusTimer:F2}", style);
+
+        if (stateTracker != null)
+        {
+            GUILayout.Label($"State: {stateTracker.CurrentState}", style);
+            GUILayout.Label($"Can Update: {canUpdate}", style);
+        }
 
         GUILayout.EndVertical();
     }

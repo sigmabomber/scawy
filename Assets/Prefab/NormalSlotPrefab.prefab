@@ -144,7 +144,7 @@ MonoBehaviour:
 
 '
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
@@ -208,7 +208,7 @@ MonoBehaviour:
   m_margin: {x: 0, y: 0, z: 0, w: 0}
   m_isUsingLegacyAnimationComponent: 0
   m_isVolumetricText: 0
-  m_hasFontAssetChanged: 0
+  m_hasFontAssetChanged: 1
   m_baseMaterial: {fileID: 0}
   m_maskOffset: {x: 0, y: 0, z: 0, w: 0}
 --- !u!1 &5728552733918393511
@@ -225,7 +225,7 @@ GameObject:
   - component: {fileID: 8921023856622833288}
   m_Layer: 5
   m_Name: NormalSlotPrefab
-  m_TagString: Untagged
+  m_TagString: Inventory
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
@@ -302,10 +302,12 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5bd1a6fdbd03dda44b46e28424d6e1be, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemData: {fileID: 11400000, guid: 29987ed74da75eb4ca8e6fb90167d407, type: 2}
+  itemData: {fileID: 0}
   quantity: 0
   usage: 0
   equipmentManager: {fileID: 0}
+  dropDistance: 2
+  playerTransform: {fileID: 0}
   quantityText: {fileID: 5584416827906607639}
   usageSlider: {fileID: 4178543400765382974}
   instantiatedPrefab: {fileID: 0}
@@ -313,6 +315,7 @@ MonoBehaviour:
   isDragging: {r: 1, g: 1, b: 1, a: 0.5}
   Original: {r: 1, g: 1, b: 1, a: 1}
   useItem: 0
+  slotPriority: 0
 --- !u!1 &6909831477600448233
 GameObject:
   m_ObjectHideFlags: 0
@@ -642,7 +645,7 @@ GameObject:
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0
-  m_IsActive: 1
+  m_IsActive: 0
 --- !u!224 &2223342656801609024
 RectTransform:
   m_ObjectHideFlags: 0
