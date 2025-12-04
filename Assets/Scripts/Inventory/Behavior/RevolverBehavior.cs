@@ -39,6 +39,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     [SerializeField] private Vector3 normalPosition = new Vector3(0.5f, -0.3f, 0.5f);
     [SerializeField] private float aimMovementSpeedMultiplier = 0.5f;
     [SerializeField] private float aimSensitivityMultiplier = 0.6f;
+    [SerializeField] private Transform aimReticle;
 
     [Header("Audio")]
     public AudioSource audioSource;
@@ -164,7 +165,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
         }
 
-        // Get equip point from EquipmentManager
+        if(aimReticle == null)
+        {
+            GameObject temp = GameObject.Find("PlayerHud");
+            aimReticle = temp.transform.Find("AimReticle");
+        }
         if (EquipmentManager.Instance != null)
         {
             equipPoint = EquipmentManager.Instance.GetEquipPoint();
@@ -195,32 +200,45 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (Input.GetKey(aimKey) && !isReloading)
         {
             isAiming = true;
+            aimReticle.gameObject.SetActive(true);
+
+            if (PlayerController.Instance != null && isAiming)
+            {
+                PlayerController.Instance.walkSpeed = 2f;
+                PlayerController.Instance.canSprint = false;
+
+                PlayerController.Instance.mouseSensitivity = .5f;
+            }
         }
         else
         {
             isAiming = false;
+            aimReticle.gameObject.SetActive(false);
+
+            if (PlayerController.Instance != null && !isAiming)
+            {
+                PlayerController.Instance.walkSpeed = 5f;
+                PlayerController.Instance.mouseSensitivity = 2f;
+                PlayerController.Instance.canSprint = true;
+            }
         }
+
     }
 
     private void UpdateAiming()
     {
         if (equipPoint == null || playerCamera == null) return;
 
-        // Smoothly transition FOV
         float targetFOV = isAiming ? aimFOV : normalFOV;
         playerCamera.fieldOfView = Mathf.Lerp(playerCamera.fieldOfView, targetFOV, aimSpeed * Time.deltaTime);
 
-        // Smoothly transition weapon position
         Vector3 targetPosition = isAiming ? aimPosition : normalPosition;
         Quaternion targetRotation = isAiming ? aimRotation : normalRotation;
         equipPoint.localPosition = Vector3.Lerp(equipPoint.localPosition, targetPosition, aimSpeed * Time.deltaTime);
         equipPoint.localRotation = Quaternion.Lerp(equipPoint.localRotation, targetRotation, aimSpeed * Time.deltaTime);
       
         
-        if (PlayerController.Instance != null && isAiming)
-        {
-           
-        }
+       
     }
 
     public bool IsAiming() => isAiming;

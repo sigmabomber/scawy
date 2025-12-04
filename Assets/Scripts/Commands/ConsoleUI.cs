@@ -2,24 +2,38 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine.EventSystems;
+using Debugging; // ADDED - This is needed to find CommandRegistry
 
 public class ConsoleUI : MonoBehaviour
 {
     public static ConsoleUI Instance { get; private set; }
 
     [Header("Main UI Components")]
-    [SerializeField] private GameObject consolePanel;
+    [SerializeField] public GameObject consolePanel;
     [SerializeField] private TMP_InputField inputField;
     [SerializeField] private TMP_Text outputText;
     [SerializeField] private ScrollRect outputScrollRect;
     [SerializeField] private RectTransform outputContent;
     [SerializeField] private Image backgroundImage;
 
+    [Header("Suggestions UI")]
+    [SerializeField] private GameObject suggestionsPanel;
+    [SerializeField] private RectTransform suggestionsContent;
+    [SerializeField] private TMP_Text suggestionPrefab;
+    [SerializeField] private int maxSuggestions = 5;
+    [SerializeField] private Color suggestionNormalColor = new Color(0.9f, 0.9f, 0.9f);
+    [SerializeField] private Color suggestionSelectedColor = new Color(0.2f, 0.4f, 0.8f);
+    [SerializeField] private Color suggestionDescriptionColor = new Color(0.7f, 0.7f, 0.7f);
+
     [Header("Settings")]
-    [SerializeField] private KeyCode toggleKey = KeyCode.BackQuote; // ` key
+    [SerializeField] private KeyCode toggleKey = KeyCode.BackQuote;
     [SerializeField] private bool startHidden = true;
     [SerializeField] private int maxOutputLines = 100;
+    [SerializeField] private bool showCommandDescriptions = true;
+    [SerializeField] private float suggestionUpdateDelay = 0.1f;
+    [SerializeField] private bool enableCommandSuggestions = true;
 
     [Header("Colors")]
     [SerializeField] private Color defaultTextColor = Color.white;
@@ -33,13 +47,36 @@ public class ConsoleUI : MonoBehaviour
     [SerializeField] private bool autoScrollToBottom = true;
     [SerializeField] private bool scrollWithMouseWheel = true;
     [SerializeField] private float mouseWheelSensitivity = 0.1f;
-    [SerializeField] private float lineHeight = 24f; // Approximate height of one line
 
+    // Registry cache
+    private CommandRegistry cachedRegistry = null;
+    private float lastRegistryCheckTime = 0f;
+    private const float REGISTRY_CHECK_INTERVAL = 1f;
+
+    // Private fields
     private List<string> outputLines = new List<string>();
     private List<string> commandHistory = new List<string>();
     private int historyIndex = -1;
     private string currentInput = "";
-    private bool needsScrollUpdate = false;
+    private string lastInputForSuggestions = "";
+    private float lastSuggestionUpdateTime = 0f;
+
+    // Suggestion system
+    private List<TMP_Text> suggestionItems = new List<TMP_Text>();
+    private List<CommandRegistry.CommandData> currentSuggestions = new List<CommandRegistry.CommandData>();
+    private int selectedSuggestionIndex = -1;
+    private bool isSuggestionPanelActive = false;
+
+    // Scroll system
+    private const float SCROLL_UPDATE_DELAY = 0.05f;
+    private bool isDraggingScrollbar = false;
+    private float lastScrollbarValue = 0f; // Start at bottom
+    private bool isMouseOverScrollbar = false;
+    private bool userHasScrolled = false; // Track if user manually scrolled
+
+    // Performance optimization
+    private bool isInitialized = false;
+    private bool isCommandRegistryAvailable = false;
 
     void Awake()
     {
@@ -66,117 +103,477 @@ public class ConsoleUI : MonoBehaviour
             OpenConsole();
         }
 
-        // Ensure content is properly set up
         if (outputScrollRect != null && outputContent == null)
         {
             outputContent = outputScrollRect.content;
         }
+
+        InitializeSuggestions();
+        isInitialized = true;
     }
 
     void Update()
     {
-        // Toggle console
         if (Input.GetKeyDown(toggleKey))
         {
             ToggleConsole();
         }
 
-        // Handle console-specific input
-        if (consolePanel.activeInHierarchy)
+        if (consolePanel != null && consolePanel.activeInHierarchy)
         {
-            // Command history navigation
-            if (Input.GetKeyDown(KeyCode.UpArrow))
-            {
-                NavigateHistory(-1);
-            }
-            else if (Input.GetKeyDown(KeyCode.DownArrow))
-            {
-                NavigateHistory(1);
-            }
+            HandleConsoleInput();
+            HandleMouseScrollbarInteraction();
 
-            // Clear input with Escape
-            if (Input.GetKeyDown(KeyCode.Escape))
+            if (enableCommandSuggestions)
             {
-                if (!string.IsNullOrEmpty(inputField.text))
+                var registry = GetCommandRegistry();
+                if (registry != null)
                 {
-                    inputField.text = "";
-                }
-                else
-                {
-                    CloseConsole();
-                }
-            }
-
-            // Mouse wheel scrolling
-            if (scrollWithMouseWheel && outputScrollRect != null)
-            {
-                float scroll = Input.GetAxis("Mouse ScrollWheel");
-                if (Mathf.Abs(scroll) > 0.01f)
-                {
-                    outputScrollRect.verticalNormalizedPosition += scroll * mouseWheelSensitivity;
-                    outputScrollRect.verticalNormalizedPosition = Mathf.Clamp01(outputScrollRect.verticalNormalizedPosition);
-                }
-            }
-
-            // Auto-focus input field
-            if (!inputField.isFocused)
-            {
-                if (Input.anyKeyDown && !Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1))
-                {
-                    inputField.Select();
-                    inputField.ActivateInputField();
+                    UpdateSuggestions();
                 }
             }
         }
 
-        // Update scroll if needed
-        if (needsScrollUpdate && outputScrollRect != null)
+        // Update scroll more frequently
+        if (outputScrollRect != null)
         {
             UpdateScrollContent();
-            needsScrollUpdate = false;
         }
     }
 
-    void LateUpdate()
+    private CommandRegistry GetCommandRegistry()
     {
-        // Ensure scrolling works properly
-        if (autoScrollToBottom && outputScrollRect != null && outputContent != null)
+        if (cachedRegistry != null)
+            return cachedRegistry;
+
+        if (Time.time - lastRegistryCheckTime < REGISTRY_CHECK_INTERVAL)
+            return null;
+
+        lastRegistryCheckTime = Time.time;
+        cachedRegistry = FindObjectOfType<CommandRegistry>();
+
+        if (cachedRegistry != null)
         {
-            // Check if we're near the bottom (within 0.01 of bottom)
-            if (outputScrollRect.verticalNormalizedPosition < 0.01f)
+            isCommandRegistryAvailable = true;
+        }
+
+        return cachedRegistry;
+    }
+
+    private void HandleConsoleInput()
+    {
+        if (Input.GetKeyDown(KeyCode.UpArrow))
+        {
+            if (isSuggestionPanelActive && selectedSuggestionIndex >= 0)
             {
-                outputScrollRect.verticalNormalizedPosition = 0f;
+                NavigateSuggestions(-1);
             }
+            else
+            {
+                NavigateHistory(-1);
+            }
+        }
+        else if (Input.GetKeyDown(KeyCode.DownArrow))
+        {
+            if (isSuggestionPanelActive && currentSuggestions.Count > 0)
+            {
+                NavigateSuggestions(1);
+            }
+            else
+            {
+                NavigateHistory(1);
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Tab))
+        {
+            if (isSuggestionPanelActive && selectedSuggestionIndex >= 0)
+            {
+                ApplySelectedSuggestion();
+            }
+            else if (isCommandRegistryAvailable)
+            {
+                ApplyTabCompletion();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Escape))
+        {
+            if (isSuggestionPanelActive)
+            {
+                HideSuggestions();
+            }
+            else if (!string.IsNullOrEmpty(inputField.text))
+            {
+                inputField.text = "";
+                HideSuggestions();
+            }
+            else
+            {
+                CloseConsole();
+            }
+        }
+
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.KeypadEnter))
+        {
+            if (isSuggestionPanelActive && selectedSuggestionIndex >= 0)
+            {
+                ApplySelectedSuggestion();
+                return;
+            }
+        }
+
+        // Mouse wheel scrolling
+        if (scrollWithMouseWheel && outputScrollRect != null)
+        {
+            float scroll = Input.GetAxis("Mouse ScrollWheel");
+            if (Mathf.Abs(scroll) > 0.01f)
+            {
+                userHasScrolled = true;
+                autoScrollToBottom = false;
+
+                outputScrollRect.verticalNormalizedPosition += scroll * mouseWheelSensitivity;
+                outputScrollRect.verticalNormalizedPosition = Mathf.Clamp01(outputScrollRect.verticalNormalizedPosition);
+                lastScrollbarValue = outputScrollRect.verticalNormalizedPosition;
+            }
+        }
+
+        // Auto-focus input field
+        if (!inputField.isFocused)
+        {
+            if (Input.anyKeyDown && !Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1) && !Input.GetMouseButtonDown(2))
+            {
+                inputField.Select();
+                inputField.ActivateInputField();
+            }
+        }
+    }
+
+    private void HandleMouseScrollbarInteraction()
+    {
+        if (outputScrollRect == null || outputScrollRect.verticalScrollbar == null)
+            return;
+
+        RectTransform scrollbarRect = outputScrollRect.verticalScrollbar.GetComponent<RectTransform>();
+        if (scrollbarRect == null) return;
+
+        Vector2 mousePos = Input.mousePosition;
+        Vector2 localMousePos = scrollbarRect.InverseTransformPoint(mousePos);
+
+        isMouseOverScrollbar = scrollbarRect.rect.Contains(localMousePos);
+
+        if (Input.GetMouseButtonDown(0) && isMouseOverScrollbar)
+        {
+            isDraggingScrollbar = true;
+            userHasScrolled = true;
+            autoScrollToBottom = false;
+        }
+
+        if (Input.GetMouseButtonUp(0))
+        {
+            isDraggingScrollbar = false;
+        }
+
+        if (isDraggingScrollbar)
+        {
+            lastScrollbarValue = outputScrollRect.verticalNormalizedPosition;
         }
     }
 
     private void InitializeConsole()
     {
-        // Set up input field callback
         if (inputField != null)
         {
             inputField.onSubmit.AddListener(OnSubmitCommand);
             inputField.onValueChanged.AddListener(OnInputChanged);
+            inputField.onSelect.AddListener(OnInputFieldSelected);
+            inputField.onDeselect.AddListener(OnInputFieldDeselected);
         }
 
-        // Set up output text
         if (outputText != null)
         {
             outputText.text = "";
             outputText.overflowMode = TextOverflowModes.Overflow;
             outputText.enableWordWrapping = true;
+            outputText.raycastTarget = false;
         }
 
-        // Ensure content is properly set up
-        if (outputScrollRect != null && outputContent == null)
+        if (outputScrollRect != null)
         {
-            outputContent = outputScrollRect.content;
+            if (outputContent == null)
+            {
+                outputContent = outputScrollRect.content;
+            }
+
+            // CRITICAL: Configure ScrollRect properly
+            outputScrollRect.vertical = true;
+            outputScrollRect.horizontal = false;
+            outputScrollRect.movementType = ScrollRect.MovementType.Clamped;
+            outputScrollRect.scrollSensitivity = 30f;
+
+            // Make sure scrollbar is always enabled
+            if (outputScrollRect.verticalScrollbar != null)
+            {
+                outputScrollRect.verticalScrollbar.gameObject.SetActive(true);
+            }
+
+            // Set up proper layout
+            var layoutGroup = outputContent.GetComponent<VerticalLayoutGroup>();
+            if (layoutGroup == null)
+            {
+                layoutGroup = outputContent.gameObject.AddComponent<VerticalLayoutGroup>();
+            }
+            layoutGroup.childControlHeight = false;
+            layoutGroup.childControlWidth = true;
+            layoutGroup.childForceExpandHeight = false;
+            layoutGroup.childForceExpandWidth = true;
+            layoutGroup.spacing = 2;
+            layoutGroup.padding = new RectOffset(10, 10, 10, 10);
+            layoutGroup.childAlignment = TextAnchor.UpperLeft;
+
+            var sizeFitter = outputContent.GetComponent<ContentSizeFitter>();
+            if (sizeFitter == null)
+            {
+                sizeFitter = outputContent.gameObject.AddComponent<ContentSizeFitter>();
+            }
+            sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
+            sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
+
+            // Set content anchors properly
+            outputContent.anchorMin = new Vector2(0, 1);
+            outputContent.anchorMax = new Vector2(1, 1);
+            outputContent.pivot = new Vector2(0, 1);
         }
 
-        // Add welcome message
         AddOutputLine("=== Debug Console ===", systemColor);
         AddOutputLine("Type 'help' for available commands", systemColor);
         AddOutputLine("Press '`' to show/hide console", systemColor);
+        AddOutputLine("Type part of a command and press Tab for suggestions", systemColor);
+    }
+
+    private void InitializeSuggestions()
+    {
+        if (suggestionPrefab == null || suggestionsContent == null)
+            return;
+
+        for (int i = 0; i < maxSuggestions; i++)
+        {
+            TMP_Text suggestion = Instantiate(suggestionPrefab, suggestionsContent);
+            suggestion.gameObject.SetActive(false);
+            suggestionItems.Add(suggestion);
+
+            var button = suggestion.gameObject.AddComponent<Button>();
+            int index = i;
+            button.onClick.AddListener(() => OnSuggestionClicked(index));
+
+            var trigger = suggestion.gameObject.AddComponent<EventTrigger>();
+            var entryEnter = new EventTrigger.Entry();
+            entryEnter.eventID = EventTriggerType.PointerEnter;
+            entryEnter.callback.AddListener((data) => { OnSuggestionHoverEnter(index); });
+            trigger.triggers.Add(entryEnter);
+        }
+
+        HideSuggestions();
+    }
+
+    private void UpdateSuggestions()
+    {
+        if (!enableCommandSuggestions || !consolePanel.activeInHierarchy || inputField == null || !inputField.isFocused)
+        {
+            if (isSuggestionPanelActive)
+                HideSuggestions();
+            return;
+        }
+
+        if (cachedRegistry == null)
+        {
+            HideSuggestions();
+            return;
+        }
+
+        string currentText = inputField.text;
+        if (currentText == lastInputForSuggestions && Time.time - lastSuggestionUpdateTime < suggestionUpdateDelay)
+            return;
+
+        lastInputForSuggestions = currentText;
+        lastSuggestionUpdateTime = Time.time;
+
+        if (string.IsNullOrWhiteSpace(currentText))
+        {
+            HideSuggestions();
+            return;
+        }
+
+        try
+        {
+            var suggestions = cachedRegistry.GetCommandSuggestions(currentText)
+                .Take(maxSuggestions)
+                .ToList();
+
+            if (suggestions.Count == 0)
+            {
+                HideSuggestions();
+                return;
+            }
+
+            currentSuggestions.Clear();
+            foreach (var suggestion in suggestions)
+            {
+                var cmd = cachedRegistry.GetCommand(suggestion);
+                if (cmd != null)
+                    currentSuggestions.Add(cmd);
+            }
+
+            UpdateSuggestionDisplay();
+            ShowSuggestions();
+        }
+        catch (System.Exception e)
+        {
+            Debug.LogWarning($"Error updating suggestions: {e.Message}");
+            HideSuggestions();
+        }
+    }
+
+    private void UpdateSuggestionDisplay()
+    {
+        if (suggestionsPanel == null || suggestionItems.Count == 0)
+            return;
+
+        for (int i = 0; i < suggestionItems.Count; i++)
+        {
+            var suggestionItem = suggestionItems[i];
+
+            if (i < currentSuggestions.Count)
+            {
+                var command = currentSuggestions[i];
+
+                if (showCommandDescriptions && !string.IsNullOrEmpty(command.description))
+                {
+                    suggestionItem.text = $"{command.name} - <color=#{ColorUtility.ToHtmlStringRGB(suggestionDescriptionColor)}>{command.description}</color>";
+                }
+                else
+                {
+                    suggestionItem.text = command.name;
+                }
+
+                suggestionItem.color = (i == selectedSuggestionIndex) ? suggestionSelectedColor : suggestionNormalColor;
+                suggestionItem.gameObject.SetActive(true);
+            }
+            else
+            {
+                suggestionItem.gameObject.SetActive(false);
+            }
+        }
+
+        if (selectedSuggestionIndex >= currentSuggestions.Count)
+        {
+            selectedSuggestionIndex = currentSuggestions.Count - 1;
+        }
+    }
+
+    private void ShowSuggestions()
+    {
+        if (suggestionsPanel != null && currentSuggestions.Count > 0)
+        {
+            suggestionsPanel.SetActive(true);
+            isSuggestionPanelActive = true;
+
+            if (inputField != null)
+            {
+                RectTransform inputRect = inputField.GetComponent<RectTransform>();
+                RectTransform panelRect = suggestionsPanel.GetComponent<RectTransform>();
+
+                if (inputRect != null && panelRect != null)
+                {
+                    Vector3 position = inputRect.position;
+                    position.y -= inputRect.rect.height;
+                    panelRect.position = position;
+                    panelRect.SetParent(inputField.transform.parent, true);
+                }
+            }
+
+            selectedSuggestionIndex = -1;
+        }
+    }
+
+    private void HideSuggestions()
+    {
+        if (suggestionsPanel != null)
+        {
+            suggestionsPanel.SetActive(false);
+            isSuggestionPanelActive = false;
+            selectedSuggestionIndex = -1;
+        }
+    }
+
+    private void NavigateSuggestions(int direction)
+    {
+        if (currentSuggestions.Count == 0)
+            return;
+
+        selectedSuggestionIndex += direction;
+
+        if (selectedSuggestionIndex < 0)
+            selectedSuggestionIndex = currentSuggestions.Count - 1;
+        else if (selectedSuggestionIndex >= currentSuggestions.Count)
+            selectedSuggestionIndex = 0;
+
+        UpdateSuggestionDisplay();
+    }
+
+    private void ApplySelectedSuggestion()
+    {
+        if (selectedSuggestionIndex < 0 || selectedSuggestionIndex >= currentSuggestions.Count)
+            return;
+
+        var command = currentSuggestions[selectedSuggestionIndex];
+        inputField.text = command.name + " ";
+        inputField.caretPosition = inputField.text.Length;
+        HideSuggestions();
+    }
+
+    private void ApplyTabCompletion()
+    {
+        if (cachedRegistry == null || string.IsNullOrEmpty(inputField.text))
+            return;
+
+        string completed = cachedRegistry.GetTabCompletion(inputField.text);
+        if (!string.IsNullOrEmpty(completed) && completed != inputField.text)
+        {
+            inputField.text = completed + " ";
+            inputField.caretPosition = inputField.text.Length;
+        }
+    }
+
+    private void OnSuggestionClicked(int index)
+    {
+        selectedSuggestionIndex = index;
+        ApplySelectedSuggestion();
+    }
+
+    private void OnSuggestionHoverEnter(int index)
+    {
+        selectedSuggestionIndex = index;
+        UpdateSuggestionDisplay();
+    }
+
+    private void OnInputFieldSelected(string text = "")
+    {
+        lastInputForSuggestions = "";
+        lastSuggestionUpdateTime = 0f;
+    }
+
+    private void OnInputFieldDeselected(string text = "")
+    {
+        Invoke("HideSuggestionsDelayed", 0.1f);
+    }
+
+    private void HideSuggestionsDelayed()
+    {
+        if (!inputField.isFocused)
+        {
+            HideSuggestions();
+        }
     }
 
     public void ToggleConsole()
@@ -195,58 +592,99 @@ public class ConsoleUI : MonoBehaviour
     {
         consolePanel.SetActive(true);
 
-        // Set cursor state
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
 
-        // Focus input field
         if (inputField != null)
         {
             inputField.Select();
             inputField.ActivateInputField();
         }
 
-        // Force update of scroll content
-        needsScrollUpdate = true;
+        if (cachedRegistry == null)
+        {
+            StartCoroutine(FindRegistryCoroutine());
+        }
+
+        // Scroll to bottom when opening
+        Canvas.ForceUpdateCanvases();
+        if (outputScrollRect != null)
+        {
+            outputScrollRect.verticalNormalizedPosition = 0f;
+        }
+    }
+
+    private System.Collections.IEnumerator FindRegistryCoroutine()
+    {
+        cachedRegistry = FindObjectOfType<CommandRegistry>();
+
+        if (cachedRegistry != null)
+        {
+            isCommandRegistryAvailable = true;
+            yield break;
+        }
+
+        yield return null;
+
+        cachedRegistry = FindObjectOfType<CommandRegistry>();
+
+        if (cachedRegistry != null)
+        {
+            isCommandRegistryAvailable = true;
+        }
     }
 
     public void CloseConsole()
     {
         consolePanel.SetActive(false);
+        HideSuggestions();
 
-        // Restore cursor state
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
 
-    private void OnSubmitCommand(string command)
+    private async void OnSubmitCommand(string command)
     {
         if (string.IsNullOrWhiteSpace(command))
             return;
 
-        // Add to output with input styling
+        HideSuggestions();
         AddOutputLine($"> {command}", inputColor);
-
-        // Add to command history
         AddToHistory(command);
 
-        // Execute the command
-        bool success = ExecuteCommand(command);
+        bool success = false;
+        if (cachedRegistry != null)
+        {
+            success = await cachedRegistry.ExecuteCommandAsync(command);
+        }
+        else
+        {
+            AddOutputLine("Command system not initialized!", errorColor);
+        }
 
-        // Clear input field
+        cachedRegistry?.ResetTabCompletion();
+
         inputField.text = "";
-
-        // Refocus input field
         inputField.Select();
         inputField.ActivateInputField();
 
-        // Reset history navigation
         historyIndex = -1;
+
+        if (success)
+        {
+            userHasScrolled = false;
+            autoScrollToBottom = true;
+        }
     }
 
     private void OnInputChanged(string text)
     {
         currentInput = text;
+
+        if (isSuggestionPanelActive)
+        {
+            UpdateSuggestions();
+        }
     }
 
     private void NavigateHistory(int direction)
@@ -254,7 +692,8 @@ public class ConsoleUI : MonoBehaviour
         if (commandHistory.Count == 0)
             return;
 
-        // Save current input if we're starting navigation
+        HideSuggestions();
+
         if (historyIndex == -1 && !string.IsNullOrEmpty(inputField.text))
         {
             currentInput = inputField.text;
@@ -265,59 +704,44 @@ public class ConsoleUI : MonoBehaviour
 
         if (historyIndex == -1)
         {
-            // Back to current input
             inputField.text = currentInput;
         }
         else
         {
-            // Set to history item
             inputField.text = commandHistory[commandHistory.Count - 1 - historyIndex];
         }
 
-        // Move cursor to end
         inputField.caretPosition = inputField.text.Length;
     }
 
     private void AddToHistory(string command)
     {
+        if (commandHistory.Count > 0 && commandHistory[commandHistory.Count - 1] == command)
+            return;
+
         commandHistory.Add(command);
 
-        // Limit history size
         if (commandHistory.Count > 50)
         {
             commandHistory.RemoveAt(0);
         }
     }
 
-    private bool ExecuteCommand(string command)
-    {
-        if (CommandRegistry.Instance != null)
-        {
-            return CommandRegistry.Instance.ExecuteCommand(command);
-        }
-
-        AddOutputLine("Command system not initialized!", errorColor);
-        return false;
-    }
-
     #region Public Output Methods
 
     public void AddOutputLine(string text, Color color)
     {
-        // Convert color to hex for rich text
         string colorHex = ColorUtility.ToHtmlStringRGB(color);
         string coloredText = $"<color=#{colorHex}>{EscapeRichText(text)}</color>";
 
         outputLines.Add(coloredText);
 
-        // Trim if too many lines
         if (outputLines.Count > maxOutputLines)
         {
             outputLines.RemoveAt(0);
         }
 
         UpdateOutputDisplay();
-        needsScrollUpdate = true;
     }
 
     public void AddOutputLine(string text)
@@ -357,8 +781,6 @@ public class ConsoleUI : MonoBehaviour
         if (outputText != null)
         {
             outputText.text = string.Join("\n", outputLines);
-
-            // Force text mesh update
             outputText.ForceMeshUpdate();
         }
     }
@@ -368,43 +790,70 @@ public class ConsoleUI : MonoBehaviour
         if (outputScrollRect == null || outputContent == null || outputText == null)
             return;
 
-        // Calculate required height based on line count
-        float requiredHeight = outputLines.Count * lineHeight + 10f;
+        // Force canvas update
+        Canvas.ForceUpdateCanvases();
+
+        // Get preferred height
+        float preferredHeight = outputText.preferredHeight;
+        float padding = 20f;
 
         // Update content size
-        outputContent.sizeDelta = new Vector2(outputContent.sizeDelta.x, Mathf.Max(requiredHeight, outputScrollRect.viewport.rect.height));
+        float viewportHeight = outputScrollRect.viewport.rect.height;
+        float contentHeight = Mathf.Max(preferredHeight + padding, viewportHeight);
 
-        // Auto-scroll to bottom if enabled
-        if (autoScrollToBottom)
+        outputContent.sizeDelta = new Vector2(outputContent.sizeDelta.x, contentHeight);
+
+        // Position text at top of content
+        RectTransform textRect = outputText.GetComponent<RectTransform>();
+        if (textRect != null)
+        {
+            textRect.anchorMin = new Vector2(0, 1);
+            textRect.anchorMax = new Vector2(1, 1);
+            textRect.pivot = new Vector2(0, 1);
+            textRect.anchoredPosition = Vector2.zero;
+            textRect.sizeDelta = new Vector2(0, preferredHeight);
+        }
+
+        // Auto-scroll to bottom if enabled and user hasn't manually scrolled
+        if (autoScrollToBottom && !isDraggingScrollbar && !isMouseOverScrollbar && !userHasScrolled)
         {
             Canvas.ForceUpdateCanvases();
             outputScrollRect.verticalNormalizedPosition = 0f;
+            lastScrollbarValue = 0f;
         }
-
-        // Force update of layout
-        LayoutRebuilder.ForceRebuildLayoutImmediate(outputContent);
-        Canvas.ForceUpdateCanvases();
     }
 
     private string EscapeRichText(string text)
     {
-        // Escape any rich text tags that might be in the input
         return text
-            .Replace("<", "<")
-            .Replace(">", ">");
+            .Replace("<", "&lt;")
+            .Replace(">", "&gt;");
     }
 
     public void ClearOutput()
     {
         outputLines.Clear();
         UpdateOutputDisplay();
-        needsScrollUpdate = true;
         LogSystem("Console cleared.");
+        autoScrollToBottom = true;
+        userHasScrolled = false;
     }
 
-    // Static helper methods for easy access from anywhere
+    public void ScrollToBottom()
+    {
+        if (outputScrollRect != null)
+        {
+            Canvas.ForceUpdateCanvases();
+            outputScrollRect.verticalNormalizedPosition = 0f;
+            autoScrollToBottom = true;
+            userHasScrolled = false;
+        }
+    }
+
+    // Static helper methods
     public static void Print(string message)
     {
+        print(message);
         if (Instance != null)
         {
             Instance.Log(message);
@@ -441,11 +890,5 @@ public class ConsoleUI : MonoBehaviour
         {
             Instance.LogSystem(message);
         }
-    }
-
-    // Helper method to force scroll update
-    public void ForceScrollUpdate()
-    {
-        needsScrollUpdate = true;
     }
 }

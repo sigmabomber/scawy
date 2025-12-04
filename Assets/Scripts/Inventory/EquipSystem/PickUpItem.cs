@@ -90,10 +90,8 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
             }
             else
             {
-                // Inventory full - show feedback
                 InteractionSystem.Instance?.ShowFeedback("Inventory Full!", Color.red);
 
-                // Make sure item stays in world state
                 if (stateTracker != null)
                 {
                     stateTracker.SetState(ItemState.InWorld);

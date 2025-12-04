@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eefd7db6af8f72e488fc1ec52a84f309, type: 3}
   m_Name: FenceDoorKey
   m_EditorClassIdentifier: 
-  icon: {fileID: 21300000, guid: e2475c9b028028a4a9361c3d9a015e19, type: 3}
+  icon: {fileID: 21300000, guid: 9629a5cf3f3ab1f40abfcb9472295699, type: 3}
   itemName: Fence Door Key
   maxStack: 0
   prefab: {fileID: 0}

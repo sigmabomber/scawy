@@ -3,16 +3,14 @@ using UnityEngine;
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
 {
-
     // Singleton
-
     public static PlayerController Instance { get; private set; }
 
     [Header("Movement Settings")]
-    [SerializeField] private float walkSpeed = 5f;
+    [SerializeField] public float walkSpeed = 5f;
     [SerializeField] private float sprintSpeed = 7.5f;
     [SerializeField] private float crouchSpeed = 2.5f;
-    [SerializeField] private float mouseSensitivity = 2f;
+    [SerializeField] public float mouseSensitivity = 2f;
     [SerializeField] private float gravity = -9.81f;
 
     [Header("Height Settings")]
@@ -25,8 +23,11 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CameraRecoil cameraRecoil;
 
-    private CharacterController characterController;
+    [Header("Input Settings")]
+    [SerializeField] private KeyCode toggleCursorKey = KeyCode.Escape;
 
+    private CharacterController characterController;
+    public bool canSprint = true;
     private enum MovementState { Walking, Sprinting, Crouching }
     private MovementState currentMovementState = MovementState.Walking;
 
@@ -34,6 +35,7 @@ public class PlayerController : MonoBehaviour
     private float cameraPitch;
     private float currentHeight;
     private float targetHeight;
+    private bool isInputEnabled = true;
 
     private void Awake()
     {
@@ -49,12 +51,10 @@ public class PlayerController : MonoBehaviour
             cameraRecoil = cameraTransform.GetComponent<CameraRecoil>();
         }
 
-     
-            if (Instance == null)
-                Instance = this;
-            else
-                Destroy(gameObject);
-        
+        if (Instance == null)
+            Instance = this;
+        else
+            Destroy(gameObject);
 
         InitializeController();
     }
@@ -70,11 +70,55 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
+        // Toggle input with Escape key
+        if (Input.GetKeyDown(toggleCursorKey))
+        {
+            ToggleInput();
+        }
+
+        // Check if any input field is focused
+        if (IsAnyInputFieldFocused())
+        {
+            // Keep cursor unlocked and visible when typing
+            if (Cursor.lockState != CursorLockMode.None)
+            {
+                Cursor.lockState = CursorLockMode.None;
+                Cursor.visible = true;
+            }
+            return;
+        }
+
+        // Don't process player input if disabled
+        if (!isInputEnabled)
+            return;
+
         HandleMovementState();
         HandleMovement();
         if (Time.timeScale > 0)
             HandleMouseLook();
         HandleHeightTransition();
+    }
+
+    private bool IsAnyInputFieldFocused()
+    {
+        // Check if EventSystem exists and something is selected
+        if (UnityEngine.EventSystems.EventSystem.current == null ||
+            UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
+            return false;
+
+        GameObject selectedObject = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+
+        // Check for TMP InputField (TextMeshPro)
+#if TEXTMESH_PRO
+        if (selectedObject.GetComponent<TMPro.TMP_InputField>() != null)
+            return true;
+#endif
+
+        // Check for Legacy InputField (Unity UI)
+        if (selectedObject.GetComponent<UnityEngine.UI.InputField>() != null)
+            return true;
+
+        return false;
     }
 
     private void InitializeController()
@@ -86,7 +130,7 @@ public class PlayerController : MonoBehaviour
     private void HandleMovementState()
     {
         bool isCrouching = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
-        bool isSprinting = Input.GetKey(KeyCode.LeftShift);
+        bool isSprinting = Input.GetKey(KeyCode.LeftShift) && canSprint;
         Vector2 input = GetMovementInput();
         bool isMoving = input.sqrMagnitude > 0.01f;
 
@@ -211,5 +255,53 @@ public class PlayerController : MonoBehaviour
         float horizontal = Input.GetAxisRaw("Horizontal");
         float vertical = Input.GetAxisRaw("Vertical");
         return new Vector2(horizontal, vertical);
+    }
+
+    // Public methods to control input state
+    public void ToggleInput()
+    {
+        isInputEnabled = !isInputEnabled;
+
+        if (isInputEnabled)
+        {
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
+        }
+        else
+        {
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
+        }
+    }
+
+    public void DisablePlayerInput()
+    {
+        isInputEnabled = false;
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
+    }
+
+    public void EnablePlayerInput()
+    {
+        isInputEnabled = true;
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+    }
+
+    // Call these methods from your input field events
+    public void OnInputFieldFocus()
+    {
+        DisablePlayerInput();
+    }
+
+    public void OnInputFieldUnfocus()
+    {
+        EnablePlayerInput();
+    }
+
+    // Helper property to check if input is currently enabled
+    public bool IsInputEnabled
+    {
+        get { return isInputEnabled && !IsAnyInputFieldFocused(); }
     }
 }

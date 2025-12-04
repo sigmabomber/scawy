@@ -97,6 +97,7 @@ public class InventorySystem : MonoBehaviour
             case SlotPriority.Normal:
                 if (itemData.maxStack > 1)
                 {
+                    print(itemData.itemName);
                     foreach (var slot in normalInventorySlots)
                     {
                         if (slot.itemData == itemData && slot.quantity < itemData.maxStack)
@@ -116,7 +117,6 @@ public class InventorySystem : MonoBehaviour
                     }
                 }
 
-                // If we still have quantity to add, look for empty slots
                 if (remainingQuantity > 0)
                 {
                     foreach (var slot in normalInventorySlots)
