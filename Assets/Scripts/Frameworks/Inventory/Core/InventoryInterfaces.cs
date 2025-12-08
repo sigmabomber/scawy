@@ -48,6 +48,9 @@ namespace Doody.InventoryFramework
         int Quantity { get; }
         GameObject InstantiatedPrefab { get; }
 
+
+         Sprite NormalSlotSprite { get; }
+         Sprite EquippedSlotSprite { get; }
         void SetItem(ItemData itemData, int quantity, GameObject prefab);
         void UpdateQuantity(int newQuantity);
         void ClearSlot();

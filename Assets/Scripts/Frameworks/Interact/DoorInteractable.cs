@@ -65,7 +65,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IRevolverHit
     
     public bool CanInteract()
     {
-        return true;
+        return !isUnlocked;
     }
     public string GetInteractionPrompt()
     {
@@ -77,7 +77,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IRevolverHit
         if(isUnlocked) return;
        isUnlocked = true;
 
-
+        
         animator.SetTrigger(UnlockHash);
     }
 }

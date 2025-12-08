@@ -7,6 +7,7 @@ using UnityEngine.UI;
 using System.Linq;
 using Doody.InventoryFramework;
 using Doody.GameEvents;
+using System.Runtime.CompilerServices;
 
 public class InventorySlotsUI : EventListener,
     IBeginDragHandler,
@@ -19,11 +20,17 @@ public class InventorySlotsUI : EventListener,
     public ItemData itemData;
     public int quantity;
     public float usage;
-
+    public Sprite equippedSprite;
+    public Sprite normalSprite;
+    private Image slotSprite;
     // IInventorySlotUI implementation
     public ItemData ItemData => itemData;
     public int Quantity => quantity;
     public GameObject InstantiatedPrefab => instantiatedPrefab;
+
+
+    public Sprite EquippedSlotSprite => equippedSprite;
+    public Sprite NormalSlotSprite => normalSprite;
 
     //  Managers
     private static DragHandlerManager _dragManager;
@@ -42,7 +49,7 @@ public class InventorySlotsUI : EventListener,
     public Image icon;
     public Color isDragging = new Color(1f, 1f, 1f, .5f);
     public Color Original = new Color(1f, 1f, 1f, 1f);
-
+    
     // Dragging
     private GameObject dragIcon;
     private Transform originalParent;
@@ -56,18 +63,19 @@ public class InventorySlotsUI : EventListener,
     private bool isEquipped = false;
 
     public InventorySystem inventorySystem;
-
+    
     public SlotPriority slotPriority;
 
-    void Awake()
-    {
-      
-    }
+
+
+    
+
+ 
 
     private void Start()
     {
         lastClickTime = 0f;
-
+        slotSprite = GetComponent<Image>();
         inventorySystem = InventorySystem.Instance;
         canvas = GetComponentInParent<Canvas>();
 
@@ -296,7 +304,7 @@ public class InventorySlotsUI : EventListener,
             Events.Publish(new ItemEquippedEvent("player_inventory", itemData,
                                                 quantity, this, null));
         }
-
+        slotSprite.sprite = equippedSprite;
         var mainUsableComponents = instantiatedPrefab.GetComponents<IItemUsable>();
         foreach (var usable in mainUsableComponents)
         {
@@ -375,7 +383,7 @@ public class InventorySlotsUI : EventListener,
         {
             instantiatedPrefab.SetActive(false);
         }
-
+        slotSprite.sprite = normalSprite;
         // Publish event
         Events.Publish(new ItemUnequippedEvent("player_inventory", itemData,
                                               quantity, this));
