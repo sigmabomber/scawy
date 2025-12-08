@@ -7,7 +7,7 @@ using System.Reflection;
 using System.Threading.Tasks;
 using UnityEngine;
 
-namespace Debugging
+namespace Doody.Debugging
 {
     public class CommandRegistry : MonoBehaviour
     {
@@ -118,20 +118,18 @@ namespace Debugging
         {
             if (_instance != null && _instance != this)
             {
-              //  Destroy(gameObject);
                 return;
             }
 
             _instance = this;
             DontDestroyOnLoad(gameObject);
 
-            // Only register default commands immediately - NO reflection work here
+
             RegisterDefaultCommands();
         }
 
         void Start()
         {
-            // Defer expensive reflection-based initialization to Start
             StartCoroutine(DeferredInitialization());
         }
 
@@ -149,10 +147,9 @@ namespace Debugging
         #region Initialization
         private IEnumerator DeferredInitialization()
         {
-            // Wait a frame to let everything else initialize
+
             yield return null;
 
-            // Register attribute commands over multiple frames to avoid hitching
             yield return StartCoroutine(RegisterAttributeCommandsAsync());
 
             if (enableLogging && logToUnityConsole)
@@ -168,7 +165,6 @@ namespace Debugging
 
             foreach (var assembly in assemblies)
             {
-                // Skip system assemblies to reduce work
                 if (assembly.FullName.StartsWith("Unity") ||
                     assembly.FullName.StartsWith("System") ||
                     assembly.FullName.StartsWith("Mono") ||
@@ -190,7 +186,6 @@ namespace Debugging
                     continue;
                 }
 
-                // Process types outside the try-catch so we can yield
                 if (types != null)
                 {
                     foreach (var type in types)
@@ -198,7 +193,6 @@ namespace Debugging
                         RegisterCommandsFromType(type);
                     }
 
-                    // Yield every few assemblies to prevent frame drops
                     assemblyCount++;
                     if (assemblyCount % 5 == 0)
                     {
@@ -210,7 +204,6 @@ namespace Debugging
 
         private void RegisterDefaultCommands()
         {
-            // Help and system commands
             RegisterCommand("help", "Shows all available commands", "help [command_name]",
                 "System", CommandPermission.Player, HelpCommand, "?", "commands");
 
@@ -223,11 +216,9 @@ namespace Debugging
             RegisterCommand("echo", "Prints a message", "echo <message>",
                 "System", CommandPermission.Player, EchoCommand);
 
-            // Admin commands
             RegisterAsyncCommand("admin", "Toggles admin mode", "admin [password]",
                 "Admin", CommandPermission.Admin, AdminCommand, "sudo");
 
-            // Debug commands
             RegisterCommand("time", "Gets or sets game time scale", "time [scale]",
                 "Debug", CommandPermission.Debug, TimeScaleCommand, "timescale");
 
@@ -237,14 +228,12 @@ namespace Debugging
             RegisterCommand("mem", "Shows memory usage", "mem",
                 "Debug", CommandPermission.Debug, MemoryCommand, "memory");
 
-            // Game control commands
             RegisterCommand("pause", "Pauses or resumes the game", "pause",
                 "Game", CommandPermission.Player, PauseCommand, "p");
 
             RegisterAsyncCommand("quit", "Quits the game", "quit",
                 "Game", CommandPermission.Admin, QuitCommand, "exit");
 
-            // Player commands
             RegisterCommand("god", "Toggles god mode", "god",
                 "Player", CommandPermission.Admin, GodCommand, "invincible");
 
@@ -646,9 +635,7 @@ namespace Debugging
                     ConsoleUI.Print($"Permission: {command.permission}");
 
                     if (command.aliases.Length > 0)
-                    {
                         ConsoleUI.Print($"Aliases: {string.Join(", ", command.aliases)}");
-                    }
                 }
                 else
                 {
@@ -657,8 +644,7 @@ namespace Debugging
                 return;
             }
 
-            var groupedCommands = commands.Values
-                .Where(c => CheckPermission(c))
+            var groupedCommands = GetAllCommands()
                 .GroupBy(c => c.category)
                 .OrderBy(g => g.Key);
 
@@ -667,9 +653,11 @@ namespace Debugging
             {
                 hasCommands = true;
                 ConsoleUI.PrintSystem($"\n=== {group.Key.ToUpper()} ===");
+
                 foreach (var cmd in group.OrderBy(c => c.name))
                 {
-                    ConsoleUI.Print($"{cmd.name.PadRight(20)} - {cmd.description}");
+                    string aliasText = cmd.aliases.Length > 0 ? $" (aliases: {string.Join(", ", cmd.aliases)})" : "";
+                    ConsoleUI.Print($"{cmd.name.PadRight(20)} - {cmd.description}{aliasText}");
                 }
             }
 
@@ -683,6 +671,7 @@ namespace Debugging
                 ConsoleUI.Print("Use 'help [command]' for detailed information.");
             }
         }
+
 
         private void ClearCommand(string[] args)
         {
@@ -709,7 +698,7 @@ namespace Debugging
             for (int i = 0; i < history.Count; i++)
             {
                 var entry = history[i];
-                // FIXED: Use simple characters instead of Unicode checkmarks
+
                 string status = entry.success ? "[OK]" : "[X]";
                 string time = entry.timestamp.ToString("HH:mm:ss");
                 ConsoleUI.Print($"[{time}] {status} {entry.command}");
@@ -861,9 +850,11 @@ namespace Debugging
             HelpCommand(new string[0]);
         }
 
+
+
         private void HandleUnityLog(string logString, string stackTrace, LogType type)
         {
-            // CRITICAL: Prevent infinite loop by NOT logging font warnings
+
             if (logString.Contains("Unicode") || logString.Contains("font asset"))
                 return;
 
@@ -882,7 +873,6 @@ namespace Debugging
                     break;
 
                 case LogType.Warning:
-                    // Don't log warnings to console to avoid spam
                     break;
             }
         }

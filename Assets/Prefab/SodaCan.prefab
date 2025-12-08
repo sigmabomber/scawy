@@ -11,9 +11,11 @@ GameObject:
   - component: {fileID: 7210261419785016264}
   - component: {fileID: 506548586416788470}
   - component: {fileID: 8158591390947171672}
+  - component: {fileID: 463805108159876276}
   - component: {fileID: 7471801707359864307}
   - component: {fileID: 9208659188726642050}
   - component: {fileID: 4993759324634375923}
+  - component: {fileID: 1699527365409879217}
   m_Layer: 7
   m_Name: SodaCan
   m_TagString: Untagged
@@ -86,6 +88,18 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &463805108159876276
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3877245823159775160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d35649786dfdae45b5cece21a222402, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &7471801707359864307
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -101,9 +115,11 @@ MonoBehaviour:
   itemData: {fileID: 11400000, guid: 7c441839457697c47a14ab57f9423e68, type: 2}
   quantity: 1
   slotPriority: 0
+  customPrompt: 
   interactionIcon: {fileID: 21300000, guid: 752794d4c2ea0e049900517dd9cb608c, type: 3}
-  inventorySystem: {fileID: 0}
   isBeingPickedUp: 0
+  pickupEffect: {fileID: 0}
+  pickupSound: {fileID: 0}
 --- !u!65 &9208659188726642050
 BoxCollider:
   m_ObjectHideFlags: 0
@@ -152,3 +168,18 @@ Rigidbody:
   m_Interpolate: 0
   m_Constraints: 112
   m_CollisionDetection: 0
+--- !u!114 &1699527365409879217
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3877245823159775160}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 920f46fc7f10420469726faf1f1c9cc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  equippedPosition: {x: 0.09799869, y: 0.320995, z: 0.1360005}
+  equippedRotation: {x: -91.761, y: 2.154007, z: -143.306}
+  equippedScale: {x: 15.77296, y: 15.77296, z: 15.77296}

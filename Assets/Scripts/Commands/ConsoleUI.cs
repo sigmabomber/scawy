@@ -4,7 +4,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.EventSystems;
-using Debugging; // ADDED - This is needed to find CommandRegistry
+using Doody.Debugging; 
 
 public class ConsoleUI : MonoBehaviour
 {
@@ -70,9 +70,9 @@ public class ConsoleUI : MonoBehaviour
     // Scroll system
     private const float SCROLL_UPDATE_DELAY = 0.05f;
     private bool isDraggingScrollbar = false;
-    private float lastScrollbarValue = 0f; // Start at bottom
+    private float lastScrollbarValue = 0f;
     private bool isMouseOverScrollbar = false;
-    private bool userHasScrolled = false; // Track if user manually scrolled
+    private bool userHasScrolled = false; 
 
     // Performance optimization
     private bool isInitialized = false;
@@ -134,7 +134,6 @@ public class ConsoleUI : MonoBehaviour
             }
         }
 
-        // Update scroll more frequently
         if (outputScrollRect != null)
         {
             UpdateScrollContent();
@@ -223,7 +222,6 @@ public class ConsoleUI : MonoBehaviour
             }
         }
 
-        // Mouse wheel scrolling
         if (scrollWithMouseWheel && outputScrollRect != null)
         {
             float scroll = Input.GetAxis("Mouse ScrollWheel");
@@ -238,7 +236,6 @@ public class ConsoleUI : MonoBehaviour
             }
         }
 
-        // Auto-focus input field
         if (!inputField.isFocused)
         {
             if (Input.anyKeyDown && !Input.GetMouseButtonDown(0) && !Input.GetMouseButtonDown(1) && !Input.GetMouseButtonDown(2))
@@ -305,19 +302,16 @@ public class ConsoleUI : MonoBehaviour
                 outputContent = outputScrollRect.content;
             }
 
-            // CRITICAL: Configure ScrollRect properly
             outputScrollRect.vertical = true;
             outputScrollRect.horizontal = false;
             outputScrollRect.movementType = ScrollRect.MovementType.Clamped;
             outputScrollRect.scrollSensitivity = 30f;
 
-            // Make sure scrollbar is always enabled
             if (outputScrollRect.verticalScrollbar != null)
             {
                 outputScrollRect.verticalScrollbar.gameObject.SetActive(true);
             }
 
-            // Set up proper layout
             var layoutGroup = outputContent.GetComponent<VerticalLayoutGroup>();
             if (layoutGroup == null)
             {
@@ -339,7 +333,6 @@ public class ConsoleUI : MonoBehaviour
             sizeFitter.verticalFit = ContentSizeFitter.FitMode.PreferredSize;
             sizeFitter.horizontalFit = ContentSizeFitter.FitMode.Unconstrained;
 
-            // Set content anchors properly
             outputContent.anchorMin = new Vector2(0, 1);
             outputContent.anchorMax = new Vector2(1, 1);
             outputContent.pivot = new Vector2(0, 1);
@@ -606,7 +599,6 @@ public class ConsoleUI : MonoBehaviour
             StartCoroutine(FindRegistryCoroutine());
         }
 
-        // Scroll to bottom when opening
         Canvas.ForceUpdateCanvases();
         if (outputScrollRect != null)
         {
@@ -790,20 +782,16 @@ public class ConsoleUI : MonoBehaviour
         if (outputScrollRect == null || outputContent == null || outputText == null)
             return;
 
-        // Force canvas update
         Canvas.ForceUpdateCanvases();
 
-        // Get preferred height
         float preferredHeight = outputText.preferredHeight;
         float padding = 20f;
 
-        // Update content size
         float viewportHeight = outputScrollRect.viewport.rect.height;
         float contentHeight = Mathf.Max(preferredHeight + padding, viewportHeight);
 
         outputContent.sizeDelta = new Vector2(outputContent.sizeDelta.x, contentHeight);
 
-        // Position text at top of content
         RectTransform textRect = outputText.GetComponent<RectTransform>();
         if (textRect != null)
         {
@@ -814,7 +802,6 @@ public class ConsoleUI : MonoBehaviour
             textRect.sizeDelta = new Vector2(0, preferredHeight);
         }
 
-        // Auto-scroll to bottom if enabled and user hasn't manually scrolled
         if (autoScrollToBottom && !isDraggingScrollbar && !isMouseOverScrollbar && !userHasScrolled)
         {
             Canvas.ForceUpdateCanvases();
@@ -825,9 +812,7 @@ public class ConsoleUI : MonoBehaviour
 
     private string EscapeRichText(string text)
     {
-        return text
-            .Replace("<", "&lt;")
-            .Replace(">", "&gt;");
+        return text;
     }
 
     public void ClearOutput()

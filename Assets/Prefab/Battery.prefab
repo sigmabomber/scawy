@@ -11,6 +11,7 @@ GameObject:
   - component: {fileID: 5551779672928294038}
   - component: {fileID: 6542646500998259158}
   - component: {fileID: 1476135352402213877}
+  - component: {fileID: 1729792209925899735}
   - component: {fileID: 220962448646897416}
   - component: {fileID: 5912176005629089447}
   - component: {fileID: -1423641300258724179}
@@ -86,6 +87,18 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!114 &1729792209925899735
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6752415349115052067}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d35649786dfdae45b5cece21a222402, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!114 &220962448646897416
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -101,9 +114,11 @@ MonoBehaviour:
   itemData: {fileID: 11400000, guid: cc529a2005718ff408a0b512d758fcf7, type: 2}
   quantity: 1
   slotPriority: 0
+  customPrompt: 
   interactionIcon: {fileID: 21300000, guid: 752794d4c2ea0e049900517dd9cb608c, type: 3}
-  inventorySystem: {fileID: 0}
   isBeingPickedUp: 0
+  pickupEffect: {fileID: 0}
+  pickupSound: {fileID: 0}
 --- !u!65 &5912176005629089447
 BoxCollider:
   m_ObjectHideFlags: 0

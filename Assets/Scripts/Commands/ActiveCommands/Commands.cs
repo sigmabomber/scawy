@@ -5,7 +5,7 @@ using UnityEngine;
 public class InventoryCommands : MonoBehaviour
 {
     private InventorySystem inventorySystem;
-    public ItemDatabaseManager itemDatabaseManager;
+    private ItemDatabaseManager itemDatabaseManager;
     void Start()
     {
         inventorySystem = InventorySystem.Instance;
@@ -212,7 +212,7 @@ public class InventoryCommands : MonoBehaviour
             ConsoleUI.Print($"  {itemId.PadRight(15)} - {itemData.itemName} {stackInfo}");
 
             count++;
-            if (count >= 20) // Limit to prevent console spam
+            if (count >= 20) 
             {
                 ConsoleUI.Print($"  ... and {itemIds.Count - count} more items");
                 break;

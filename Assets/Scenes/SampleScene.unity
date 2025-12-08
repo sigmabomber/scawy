@@ -280,7 +280,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8e913b8fbbd988d4099190c1f9ec341e, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemDatabaseManager: {fileID: 0}
 --- !u!114 &14090013
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -809,8 +808,8 @@ MonoBehaviour:
   m_TargetGraphic: {fileID: 1124970001}
   m_HandleRect: {fileID: 1124970000}
   m_Direction: 2
-  m_Value: 1
-  m_Size: 0.9999969
+  m_Value: 1.060606
+  m_Size: 0.93939114
   m_NumberOfSteps: 0
   m_OnValueChanged:
     m_PersistentCalls:
@@ -853,6 +852,26 @@ CanvasRenderer:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 408974510}
   m_CullTransparentMesh: 1
+--- !u!1 &438835928 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 6752415349115052067, guid: db83630043d5c414281c4c1a67b1dba9, type: 3}
+  m_PrefabInstance: {fileID: 1222099071220032928}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &438835935
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 438835928}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 920f46fc7f10420469726faf1f1c9cc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  equippedPosition: {x: 0.09799869, y: 0.320995, z: 0.1360005}
+  equippedRotation: {x: -91.761, y: 2.154007, z: -143.306}
+  equippedScale: {x: 15.77296, y: 15.77296, z: 15.77296}
 --- !u!1 &482036598
 GameObject:
   m_ObjectHideFlags: 0
@@ -1496,6 +1515,7 @@ GameObject:
   - component: {fileID: 724419702}
   - component: {fileID: 724419701}
   - component: {fileID: 724419705}
+  - component: {fileID: 724419706}
   m_Layer: 5
   m_Name: PlayerHud
   m_TagString: Untagged
@@ -1603,12 +1623,26 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   inventory: {fileID: 981178278}
   currentlyEquippedSlot: {fileID: 0}
-  maxSlots: 3
+  maxSlots: 6
   normalSlotsPrefab: {fileID: 5728552733918393511, guid: d1d910a92b5cdba4f9566400c8079d6e, type: 3}
   dedicatedSlotsPrefab: {fileID: 8923181778109071458, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
   normalSlotsContainer: {fileID: 1873511190}
   dedicatedSlotsContainer: {fileID: 45517006}
   normalInventorySlots: []
+  dedicatedInventorySlots: []
+--- !u!114 &724419706
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 724419700}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 5dd4e278b6893404885af2a28cfed73f, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  systemId: player_inventory
 --- !u!1001 &751384256
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -2286,7 +2320,7 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0, y: 1}
   m_AnchorMax: {x: 1, y: 1}
-  m_AnchoredPosition: {x: 0, y: -0.000091553}
+  m_AnchoredPosition: {x: 0, y: -0.000091552734}
   m_SizeDelta: {x: 0.00012207, y: 648.2}
   m_Pivot: {x: 0, y: 1}
 --- !u!1 &967108747
@@ -2301,7 +2335,7 @@ GameObject:
   - component: {fileID: 967108748}
   - component: {fileID: 967108750}
   m_Layer: 0
-  m_Name: CommandRegistry
+  m_Name: FrameworkBootstrap
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -2320,11 +2354,11 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   enableLogging: 1
-  requireCheatCode: 0
+  requireCheatCode: 1
   adminPassword: admin123
-  isAdminMode: 0
+  isAdminMode: 1
   autoOpenConsoleOnError: 1
-  logToUnityConsole: 0
+  logToUnityConsole: 1
 --- !u!4 &967108749
 Transform:
   m_ObjectHideFlags: 0
@@ -2349,15 +2383,15 @@ MonoBehaviour:
   m_GameObject: {fileID: 967108747}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8fb11f34b2cf8d84f992c452e480663f, type: 3}
+  m_Script: {fileID: 11500000, guid: 938b29cd0cbfc374cba75809a3c87cc2, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enableLogging: 1
-  requireCheatCode: 0
-  adminPassword: admin123
-  isAdminMode: 0
-  autoOpenConsoleOnError: 1
-  logToUnityConsole: 1
+  enableEquipmentModule: 1
+  enableDragDropModule: 1
+  enableUIModule: 1
+  inventoryToggleKey: 9
+  unequipKey: 0
+  showDebugLogs: 1
 --- !u!1 &981178278
 GameObject:
   m_ObjectHideFlags: 0
@@ -2977,7 +3011,7 @@ RectTransform:
   m_Children: []
   m_Father: {fileID: 861259534}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
-  m_AnchorMin: {x: 0, y: 0.0000030994415}
+  m_AnchorMin: {x: 0, y: 0.060608864}
   m_AnchorMax: {x: 1, y: 1}
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 20, y: 20}
@@ -4259,9 +4293,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: 'Item Name
-
-'
+  m_text: item name
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
   m_sharedMaterial: {fileID: 2181413351908578262, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
@@ -4288,7 +4320,7 @@ MonoBehaviour:
   m_faceColor:
     serializedVersion: 2
     rgba: 4294967295
-  m_fontSize: 39.55
+  m_fontSize: 43.95
   m_fontSizeBase: 50.6
   m_fontWeight: 400
   m_enableAutoSizing: 1
@@ -4354,8 +4386,8 @@ RectTransform:
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
   m_AnchorMin: {x: 0.5, y: 0.5}
   m_AnchorMax: {x: 0.5, y: 0.5}
-  m_AnchoredPosition: {x: 0, y: -74.4}
-  m_SizeDelta: {x: 233.7935, y: 55.9529}
+  m_AnchoredPosition: {x: -0.000095367, y: -68.368}
+  m_SizeDelta: {x: 311.4188, y: 55.9529}
   m_Pivot: {x: 0.5, y: 0.5}
 --- !u!1 &1734411602
 GameObject:
@@ -5758,7 +5790,10 @@ PrefabInstance:
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 6752415349115052067, guid: db83630043d5c414281c4c1a67b1dba9, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 438835935}
   m_SourcePrefab: {fileID: 100100000, guid: db83630043d5c414281c4c1a67b1dba9, type: 3}
 --- !u!1 &1508576767287238992
 GameObject:

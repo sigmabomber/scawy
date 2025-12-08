@@ -70,16 +70,13 @@ public class PlayerController : MonoBehaviour
 
     private void Update()
     {
-        // Toggle input with Escape key
         if (Input.GetKeyDown(toggleCursorKey))
         {
             ToggleInput();
         }
 
-        // Check if any input field is focused
         if (IsAnyInputFieldFocused())
         {
-            // Keep cursor unlocked and visible when typing
             if (Cursor.lockState != CursorLockMode.None)
             {
                 Cursor.lockState = CursorLockMode.None;
@@ -88,7 +85,6 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Don't process player input if disabled
         if (!isInputEnabled)
             return;
 
@@ -101,20 +97,17 @@ public class PlayerController : MonoBehaviour
 
     private bool IsAnyInputFieldFocused()
     {
-        // Check if EventSystem exists and something is selected
         if (UnityEngine.EventSystems.EventSystem.current == null ||
             UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
             return false;
 
         GameObject selectedObject = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
 
-        // Check for TMP InputField (TextMeshPro)
 #if TEXTMESH_PRO
         if (selectedObject.GetComponent<TMPro.TMP_InputField>() != null)
             return true;
 #endif
 
-        // Check for Legacy InputField (Unity UI)
         if (selectedObject.GetComponent<UnityEngine.UI.InputField>() != null)
             return true;
 
@@ -199,14 +192,12 @@ public class PlayerController : MonoBehaviour
 
         if (cameraTransform != null)
         {
-            // Apply camera pitch + recoil
             Vector3 recoilRotation = Vector3.zero;
             if (cameraRecoil != null)
             {
                 recoilRotation = cameraRecoil.CurrentRecoilRotation;
             }
 
-            // Combine base camera rotation with recoil
             cameraTransform.localRotation = Quaternion.Euler(cameraPitch + recoilRotation.x, recoilRotation.y, recoilRotation.z);
         }
     }
@@ -257,7 +248,6 @@ public class PlayerController : MonoBehaviour
         return new Vector2(horizontal, vertical);
     }
 
-    // Public methods to control input state
     public void ToggleInput()
     {
         isInputEnabled = !isInputEnabled;
@@ -288,7 +278,6 @@ public class PlayerController : MonoBehaviour
         Cursor.visible = false;
     }
 
-    // Call these methods from your input field events
     public void OnInputFieldFocus()
     {
         DisablePlayerInput();
@@ -299,7 +288,6 @@ public class PlayerController : MonoBehaviour
         EnablePlayerInput();
     }
 
-    // Helper property to check if input is currently enabled
     public bool IsInputEnabled
     {
         get { return isInputEnabled && !IsAnyInputFieldFocused(); }
