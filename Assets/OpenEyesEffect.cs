@@ -12,21 +12,21 @@ public class ScaleUpUI : MonoBehaviour
     public PostProcessVolume volume;
 
     [Header("Eye Blink Settings")]
-    public float firstOpenDuration = 0.4f;    
-    public float quickCloseDuration = 0.15f; 
-    public float pauseClosedDuration = 0.6f;     
-    public float finalOpenDuration = 0.5f;    
-    public int postOpenBlinkCount = 2;         
-    public float blinkSpeed = 0.1f;              
-    public float pauseBetweenBlinks = 0.2f;      
-    public float blurFadeDuration = 0.3f;        
+    public float firstOpenDuration = 0.4f;
+    public float quickCloseDuration = 0.15f;
+    public float pauseClosedDuration = 0.6f;
+    public float finalOpenDuration = 0.5f;
+    public int postOpenBlinkCount = 2;
+    public float blinkSpeed = 0.1f;
+    public float pauseBetweenBlinks = 0.2f;
+    public float blurFadeDuration = 0.3f;
 
     void Start()
     {
         sprite.localScale = startScale;
         if (volume != null)
         {
-            volume.weight = 1f; 
+            volume.weight = 1f;
         }
     }
 
@@ -100,7 +100,7 @@ public class ScaleUpUI : MonoBehaviour
         sprite.localScale = startScale;
         if (volume != null)
         {
-            volume.weight = 1f; 
+            volume.weight = 1f;
         }
         StartCoroutine(EyeSequence());
     }
