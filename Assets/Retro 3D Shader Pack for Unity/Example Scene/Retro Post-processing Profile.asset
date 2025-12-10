@@ -17,14 +17,14 @@ MonoBehaviour:
     overrideState: 1
     value: 1
   spectralLut:
-    overrideState: 0
+    overrideState: 1
     value: {fileID: 0}
     defaultState: 1
   intensity:
-    overrideState: 0
-    value: 0
+    overrideState: 1
+    value: 0.1
   fastMode:
-    overrideState: 0
+    overrideState: 1
     value: 0
 --- !u!114 &-2321387468865950922
 MonoBehaviour:
@@ -50,7 +50,7 @@ MonoBehaviour:
     value: 4
   FixedVerticalResolution:
     overrideState: 1
-    value: 400
+    value: 300
   ColorDepth:
     overrideState: 1
     value: 0.3
@@ -60,13 +60,13 @@ MonoBehaviour:
     defaultState: 0
   DitherPatternScale:
     overrideState: 1
-    value: 3
+    value: 1
   DitherThreshold:
     overrideState: 1
-    value: 0.079
+    value: 0.09
   DitherIntensity:
     overrideState: 1
-    value: 0.023
+    value: 0.05
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
