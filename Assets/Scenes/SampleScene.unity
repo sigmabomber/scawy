@@ -7096,7 +7096,7 @@ MonoBehaviour:
   filledColor: {r: 1, g: 1, b: 1, a: 1}
   emptyColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   maxValue: 100
-  debugValue: 5.19
+  fillDuration: 3
 --- !u!224 &1984019209 stripped
 RectTransform:
   m_CorrespondingSourceObject: {fileID: 7370720434581844509, guid: d1d910a92b5cdba4f9566400c8079d6e, type: 3}
@@ -7693,6 +7693,10 @@ PrefabInstance:
       propertyPath: equipmentManager
       value: 
       objectReference: {fileID: 2110686902}
+    - target: {fileID: 7160783337459581658, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
+      propertyPath: m_IsActive
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 8923181778109071458, guid: 46e03dd772ad31e49b2cae81bc649f65, type: 3}
       propertyPath: m_Name
       value: PrioritySlotPrefab
