@@ -9,5 +9,7 @@ public class HealingItemData : ItemData
     public float healing;
     public int maxUses;
 
+    public float timeToUse; 
+
 
 }

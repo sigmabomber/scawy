@@ -1,7 +1,12 @@
+
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.UI;
+using Doody.GameEvents;
+using Doody.InventoryFramework;
+using Doody.Framework.Progressbar;
 
-public class SegmentedProgressBar : MonoBehaviour
+public class SegmentedProgressBar : EventListener
 {
     [SerializeField] private Image[] segments;
     [SerializeField] private Color filledColor = Color.green;
@@ -11,61 +16,46 @@ public class SegmentedProgressBar : MonoBehaviour
     [SerializeField] public float maxValue = 100f;
     [SerializeField] public float fillDuration = 3f; 
 
-    [Header("Debug")]
-    [SerializeField] public float debugValue = 55f;
-    [SerializeField] private bool autoFill = false; 
 
     private float currentProgress = 0f;
     private float fillStartTime;
     private bool isFilling = false;
 
-    private void OnValidate()
+    
+
+    void Start()
     {
-        debugValue = Mathf.Clamp(debugValue, 0, maxValue);
+        Events.Subscribe<StartProgressBar>(StartFill, this);
+
     }
 
     private void Update()
     {
-        if (autoFill)
-        {
-            if (!isFilling)
-            {
-                StartFill();
-            }
 
+        if (!isFilling) return;
             float elapsed = Time.time - fillStartTime;
             float progress = Mathf.Clamp01(elapsed / fillDuration);
             currentProgress = progress * maxValue;
 
             if (progress >= 1f)
             {
-                autoFill = false;
                 isFilling = false;
             }
-        }
-        else
-        {
-            currentProgress = debugValue;
-        }
-
+        
+     
         SetProgress(currentProgress, maxValue);
     }
 
-    public void StartFill()
+
+
+    public void StartFill(StartProgressBar data)
     {
         fillStartTime = Time.time;
         isFilling = true;
         currentProgress = 0f;
     }
 
-    public void FillToValue(float targetValue, float duration)
-    {
-        fillDuration = duration;
-        maxValue = targetValue;
-        autoFill = true;
-        StartFill();
-    }
-
+   
     public void SetProgress(float currentValue, float max)
     {
         currentValue = Mathf.Clamp(currentValue, 0, max);
