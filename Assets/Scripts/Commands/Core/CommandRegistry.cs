@@ -154,7 +154,6 @@ namespace Doody.Debugging
 
             if (enableLogging && logToUnityConsole)
             {
-                Debug.Log($"[CommandRegistry] Fully initialized with {commands.Count} total commands.");
             }
         }
 

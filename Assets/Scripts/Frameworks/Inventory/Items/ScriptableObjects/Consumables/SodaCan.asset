@@ -16,5 +16,7 @@ MonoBehaviour:
   itemName: Soda Can
   maxStack: 0
   prefab: {fileID: 3877245823159775160, guid: 9c988426beee8bc4092ce1ef04ac8abc, type: 3}
+  priority: 0
   amountToReplenish: 0
   maxUses: 0
+  duration: 2

@@ -8,7 +8,8 @@ namespace Doody.Framework.Progressbar
 
     /// <summary>
     /// Progress bar framework for things that has a duration to complete or cooldown to be able to use again
-    /// Can be subscribed to
+    /// Can be subscribed to Events
+    /// Documentation on Events Framework <https://github.com/sigmabomber/Unity-Event-Framework/tree/main>
     /// </summary>
 
 
@@ -26,13 +27,13 @@ namespace Doody.Framework.Progressbar
     {
         public GameObject ItemObject { get; set; }
 
-
-        public StartProgressBar( float duration, GameObject itemObject)
+        public string ProgressName { get; set; }
+        public StartProgressBar( float duration, GameObject itemObject, string progressName)
         {
 
             Duration = duration;
             ItemObject = itemObject;
-
+            ProgressName = progressName;
         }
     }
 
@@ -40,9 +41,10 @@ namespace Doody.Framework.Progressbar
 
     public class ProgressbarCompleted : ProgressBarEvent
     {
-        public ProgressbarCompleted()
+        public GameObject ItemObject { get; set; }
+        public ProgressbarCompleted(GameObject itemObject)
         {
-           
+            ItemObject = itemObject;
         }
     }
 

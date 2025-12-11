@@ -17,8 +17,6 @@ namespace Doody.InventoryFramework
         [SerializeField] private KeyCode inventoryToggleKey = KeyCode.Tab;
         [SerializeField] private KeyCode unequipKey = KeyCode.G;
 
-        [Header("Debug")]
-        [SerializeField] private bool showDebugLogs = true;
 
         private void Awake()
         {
@@ -49,8 +47,6 @@ namespace Doody.InventoryFramework
                 var equipmentModule = new Modules.EquipmentModule();
                 framework.RegisterModule(equipmentModule);
 
-                if (showDebugLogs)
-                    Debug.Log("[Bootstrap] Equipment Module enabled");
             }
 
             // Drag & Drop Module
@@ -59,8 +55,6 @@ namespace Doody.InventoryFramework
                 var dragDropModule = new Modules.DragDropModule();
                 framework.RegisterModule(dragDropModule);
 
-                if (showDebugLogs)
-                    Debug.Log("[Bootstrap] Drag & Drop Module enabled");
             }
 
             // UI Module
@@ -73,12 +67,8 @@ namespace Doody.InventoryFramework
                 uiModule.SetToggleKey(inventoryToggleKey);
                 uiModule.SetUnequipKey(unequipKey);
 
-                if (showDebugLogs)
-                    Debug.Log("[Bootstrap] UI Module enabled");
             }
 
-            if (showDebugLogs)
-                Debug.Log("[Bootstrap] All modules registered successfully!");
         }
 
         // Public methods to enable/disable modules at runtime

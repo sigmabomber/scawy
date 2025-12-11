@@ -17,13 +17,11 @@ namespace Doody.InventoryFramework.Modules
         {
             this.framework = framework;
             IsEnabled = true;
-            Debug.Log($"[{ModuleName}] Initialized");
         }
 
         public void Shutdown()
         {
             IsEnabled = false;
-            Debug.Log($"[{ModuleName}] Shutdown");
         }
 
         public void Update(float deltaTime)
@@ -33,7 +31,6 @@ namespace Doody.InventoryFramework.Modules
 
         public void OnInventorySystemCreated(IInventorySystem system)
         {
-            Debug.Log($"[{ModuleName}] New inventory system registered: {system.SystemId}");
         }
 
         /// <summary>

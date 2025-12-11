@@ -51,7 +51,6 @@ namespace Doody.InventoryFramework.Modules
             targetRotation = equipPoint.localRotation;
             lastPlayerPosition = playerCamera.transform.position;
 
-            Debug.Log($"[EquipmentModule] Initialized");
         }
 
         public void EquipItem(IInventorySlotUI slot)

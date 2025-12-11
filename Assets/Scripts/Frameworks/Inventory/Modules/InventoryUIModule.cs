@@ -16,7 +16,6 @@ namespace Doody.InventoryFramework.Modules
         public void Initialize(IInventoryFramework framework)
         {
             this.framework = framework;
-            Debug.Log($"[UIModule] Initialized with toggle key: {toggleKey}");
         }
 
         public void SetToggleKey(KeyCode key)
@@ -34,7 +33,6 @@ namespace Doody.InventoryFramework.Modules
             if (!inventorySystems.Contains(system))
             {
                 inventorySystems.Add(system);
-                Debug.Log($"[UIModule] Registered inventory system: {system.SystemId}");
             }
         }
 
@@ -72,7 +70,6 @@ namespace Doody.InventoryFramework.Modules
                         Cursor.visible = false;
                     }
 
-                    Debug.Log($"[UIModule] Inventory toggled: {(isOpen ? "Open" : "Closed")}");
                 }
             }
         }
@@ -80,7 +77,6 @@ namespace Doody.InventoryFramework.Modules
         public void Shutdown()
         {
             inventorySystems.Clear();
-            Debug.Log($"[UIModule] Shutdown");
         }
     }
 }

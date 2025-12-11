@@ -56,7 +56,6 @@ namespace Doody.InventoryFramework
                 module.OnInventorySystemCreated(system);
             }
 
-            Debug.Log($"[Framework] Registered module: {module.ModuleName}");
         }
 
         public void UnregisterModule(IInventoryModule module)
@@ -108,7 +107,6 @@ namespace Doody.InventoryFramework
                 }
             }
 
-            Debug.Log($"[Framework] Registered inventory system: {system.SystemId}");
 
             Events.Publish(new InventorySystemRegistered(system.SystemId));
         }

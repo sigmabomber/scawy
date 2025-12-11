@@ -10,7 +10,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IRevolverHit
 
     private bool isUnlocked = false;
     public Sprite interactionIcon;
-    public int UnlockHash = Animator.StringToHash("Unlock");
+    private int UnlockHash = Animator.StringToHash("Unlock");
 
     public Animator animator;
     private void Start()

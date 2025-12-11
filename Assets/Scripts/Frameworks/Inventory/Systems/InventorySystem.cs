@@ -83,7 +83,6 @@ public class InventorySystem : MonoBehaviour
 
                 if (useFrameworkInput)
                 {
-                    Debug.Log("[InventorySystem] Framework UI module detected - delegating input handling");
                 }
                 else
                 {

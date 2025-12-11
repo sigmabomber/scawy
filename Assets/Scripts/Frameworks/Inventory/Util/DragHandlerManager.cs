@@ -36,7 +36,6 @@ public class DragHandlerManager
         if (handler != null && !customHandlers.Contains(handler))
         {
             customHandlers.Add(handler);
-            Debug.Log($"Registered drag handler: {handler.GetType().Name}");
         }
     }
 

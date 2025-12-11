@@ -20,16 +20,23 @@ public class InteractionSystem : MonoBehaviour
 
     private Camera playerCamera;
     private GameObject currentHighlightedObject;
+    private Outline currentOutline; 
     private IInteractable currentInteractable;
     private Color originalTextColor;
     private bool isShowingFeedback = false;
 
+    private RaycastHit cachedHit;
+
     public static InteractionSystem Instance;
+
+    private void Awake()
+    {
+        Instance = this;
+    }
 
     private void Start()
     {
         playerCamera = Camera.main;
-        Instance = this;
 
         if (interactionText != null)
             originalTextColor = interactionText.color;
@@ -56,9 +63,8 @@ public class InteractionSystem : MonoBehaviour
         if (isShowingFeedback)
         {
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-            RaycastHit hit;
 
-            if (!Physics.Raycast(ray, out hit, interactionRange, interactableLayer))
+            if (!Physics.Raycast(ray, out cachedHit, interactionRange, interactableLayer))
             {
                 StopAllCoroutines();
                 isShowingFeedback = false;
@@ -68,21 +74,37 @@ public class InteractionSystem : MonoBehaviour
         }
 
         Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit checkHit;
 
         Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
 
-        if (Physics.Raycast(checkRay, out checkHit, interactionRange, interactableLayer))
+        // **FIX: Cast ray on ALL layers first to check for obstacles**
+        if (Physics.Raycast(checkRay, out RaycastHit firstHit, interactionRange))
         {
-            IInteractable interactable = checkHit.collider.GetComponent<IInteractable>();
+            // Check if the first thing we hit is on the interactable layer
+            if (((1 << firstHit.collider.gameObject.layer) & interactableLayer) == 0)
+            {
+                // Hit something that's NOT interactable - there's an obstacle
+                if (currentInteractable != null)
+                {
+                    currentInteractable = null;
+                    HideUI();
+                    RemoveOutline();
+                }
+                return;
+            }
+
+            // The first hit IS an interactable object, proceed normally
+            cachedHit = firstHit;
+
+            IInteractable interactable = cachedHit.collider.GetComponent<IInteractable>();
 
             if (interactable == null)
             {
-                interactable = checkHit.collider.GetComponentInParent<IInteractable>();
+                interactable = cachedHit.collider.GetComponentInParent<IInteractable>();
 
                 if (interactable == null)
                 {
-                    GameObject hitObject = checkHit.collider.gameObject;
+                    GameObject hitObject = cachedHit.collider.gameObject;
 
                     ItemStateTracker stateTracker = hitObject.GetComponent<ItemStateTracker>();
                     if (stateTracker != null && stateTracker.IsInWorld)
@@ -108,7 +130,7 @@ public class InteractionSystem : MonoBehaviour
 
                 if (interactable == null)
                 {
-                    Debug.LogWarning($"Object {checkHit.collider.name} has no IInteractable component and cannot be made interactable!");
+                    Debug.LogWarning($"Object {cachedHit.collider.name} has no IInteractable component and cannot be made interactable!");
                 }
             }
 
@@ -131,16 +153,17 @@ public class InteractionSystem : MonoBehaviour
                     currentInteractable = interactable;
                     UpdateUI(interactable.GetInteractionPrompt());
 
-                    if (currentHighlightedObject != checkHit.collider.gameObject)
+                    if (currentHighlightedObject != cachedHit.collider.gameObject)
                     {
                         RemoveOutline();
-                        AddOutline(checkHit.collider.gameObject);
+                        AddOutline(cachedHit.collider.gameObject);
                     }
                 }
                 return;
             }
         }
 
+        // Clear state if nothing valid is being looked at
         if (currentInteractable != null)
         {
             currentInteractable = null;
@@ -148,16 +171,15 @@ public class InteractionSystem : MonoBehaviour
             RemoveOutline();
         }
     }
-
     private ItemData GetItemDataFromObject(GameObject obj)
     {
         ItemDataComponent dataComp = obj.GetComponent<ItemDataComponent>();
         if (dataComp != null)
             return dataComp.itemData;
 
-
         return null;
     }
+
     private void UpdateUI(string prompt)
     {
         if (reticleUI != null)
@@ -181,32 +203,38 @@ public class InteractionSystem : MonoBehaviour
     {
         currentHighlightedObject = obj;
 
-        Outline outline = obj.GetComponent<Outline>();
+        // Try to get existing outline first (optimization)
+        currentOutline = obj.GetComponent<Outline>();
 
-        if (outline == null)
+        if (currentOutline == null)
         {
-            outline = obj.AddComponent<Outline>();
+            currentOutline = obj.AddComponent<Outline>();
+
+            // Configure outline settings once when creating
+            currentOutline.OutlineMode = Outline.Mode.OutlineAll;
+            currentOutline.OutlineColor = outlineColor;
+            currentOutline.OutlineWidth = outlineWidth;
+        }
+        else
+        {
+            // Update settings in case they changed
+            currentOutline.OutlineMode = Outline.Mode.OutlineAll;
+            currentOutline.OutlineColor = outlineColor;
+            currentOutline.OutlineWidth = outlineWidth;
         }
 
-        outline.OutlineMode = Outline.Mode.OutlineAll;
-        outline.OutlineColor = outlineColor;
-        outline.OutlineWidth = outlineWidth;
-        outline.enabled = true;
+        currentOutline.enabled = true;
     }
 
     private void RemoveOutline()
     {
-        if (currentHighlightedObject != null)
+        if (currentOutline != null)
         {
-            Outline outline = currentHighlightedObject.GetComponent<Outline>();
-
-            if (outline != null)
-            {
-                outline.enabled = false;
-            }
-
-            currentHighlightedObject = null;
+            currentOutline.enabled = false;
+            currentOutline = null;
         }
+
+        currentHighlightedObject = null;
     }
 
     private void OnDisable()
@@ -233,15 +261,13 @@ public class InteractionSystem : MonoBehaviour
         yield return new WaitForSeconds(1.5f);
 
         isShowingFeedback = false;
-
         interactionText.color = originalTextColor;
 
         Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
-        RaycastHit hit;
 
-        if (Physics.Raycast(ray, out hit, interactionRange, interactableLayer))
+        if (Physics.Raycast(ray, out cachedHit, interactionRange, interactableLayer))
         {
-            IInteractable interactable = hit.collider.GetComponent<IInteractable>();
+            IInteractable interactable = cachedHit.collider.GetComponent<IInteractable>();
             if (interactable != null && interactable.CanInteract())
             {
                 interactionText.text = interactable.GetInteractionPrompt();

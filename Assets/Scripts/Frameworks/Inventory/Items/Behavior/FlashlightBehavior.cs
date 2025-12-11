@@ -6,7 +6,7 @@ using UnityEngine.EventSystems;
 
 public class FlashlightBehavior : MonoBehaviour, IItemUsable
 {
-    public float currentBattery;
+    private float currentBattery;
     private bool isOn = false;
     private FlashlightItemData flashlightData;
     private InventorySlotsUI slot;
@@ -15,7 +15,7 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
     private GameObject SpotLightObj;
     private Light flashlightLight;
 
-    public bool initialized = false;
+    private bool initialized = false;
 
     private float maxIntensity;
     private float minIntensity = 0.3f;
@@ -142,8 +142,6 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
 
     public void OnPickedUp()
     {
-        Debug.Log("Flashlight picked up");
-        // Reset any pickup-specific states if needed
     }
 
     public void OnDroppedInWorld()
