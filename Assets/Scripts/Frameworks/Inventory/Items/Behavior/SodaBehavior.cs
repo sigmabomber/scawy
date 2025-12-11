@@ -1,3 +1,4 @@
+using Doody.Framework.Player.Effects;
 using Doody.Framework.Progressbar;
 using Doody.GameEvents;
 using Doody.InventoryFramework;
@@ -76,7 +77,7 @@ public class SodaBehavior : EventListener, IItemUsable
             return;
         }
         Events.Publish(new StartProgressBar(data.duration, gameObject, "Drinking"));
-
+        
         isUsing = true;
     }
 
@@ -84,8 +85,12 @@ public class SodaBehavior : EventListener, IItemUsable
     {
         if(completed.ItemObject == gameObject)
         {
-            Destroy(gameObject);
+
+            Events.Publish(new AddEffect(EffectEvent.EffectType.Speed, data.speedDuration, data.speedStrength));
             slot.ClearSlot();
+            Destroy(gameObject);
+
+            
         }
     }
 

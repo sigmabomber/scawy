@@ -1,4 +1,7 @@
 using Debugging;
+using Doody.Framework.Player.Effects;
+using Doody.GameEvents;
+using System;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
@@ -53,26 +56,59 @@ public class InventoryCommands : MonoBehaviour
         }
 
         ItemData itemData = ItemDatabaseManager.Instance.GetItem(itemId);
-        SlotPriority slot = SlotPriority.Normal;
-        slot = ItemDatabaseManager.Instance.GetSlotPriority(itemId);
         if (itemData == null)
         {
             ConsoleUI.PrintError($"Failed to load item '{itemId}'");
             return;
         }
 
-        bool success = inventorySystem.AddItem(itemData, quantity, slot);
+        SlotPriority slot = ItemDatabaseManager.Instance.GetSlotPriority(itemId);
 
-        if (success)
+        bool success;
+
+        if (itemData.maxStack < 2)
         {
+            int itemsAdded = 0;
+
+            for (int i = 0; i < quantity; i++)
+            {
+                bool itemAdded = inventorySystem.AddItem(itemData, 1, slot);
+
+                if (itemAdded)
+                {
+                    itemsAdded++;
+                }
+                else
+                {
+                    if (itemsAdded > 0)
+                    {
+                        ConsoleUI.PrintWarning($"Partially added {itemsAdded}x {itemData.itemName} ({quantity - itemsAdded} couldn't fit)");
+                    }
+                    else
+                    {
+                        ConsoleUI.PrintError($"Failed to add {itemData.itemName} (inventory may be full)");
+                    }
+                    return;
+                }
+            }
+
+            success = true;
             ConsoleUI.PrintSuccess($"Added {quantity}x {itemData.itemName} to inventory");
         }
         else
         {
-            ConsoleUI.PrintError($"Failed to add {itemData.itemName} (inventory may be full)");
+            success = inventorySystem.AddItem(itemData, quantity, slot);
+
+            if (success)
+            {
+                ConsoleUI.PrintSuccess($"Added {quantity}x {itemData.itemName} to inventory");
+            }
+            else
+            {
+                ConsoleUI.PrintError($"Failed to add {itemData.itemName} (inventory may be full)");
+            }
         }
     }
-
     [Command("give_all", "Gives one of every item in database", "give_all")]
     public void GiveAllCommand(string[] args)
     {
@@ -250,5 +286,44 @@ public class InventoryCommands : MonoBehaviour
         if (flashlightCount > 0) ConsoleUI.Print($"Flashlights: {flashlightCount}");
         if (gunCount > 0) ConsoleUI.Print($"Guns: {gunCount}");
         if (healCount > 0) ConsoleUI.Print($"Healing items: {healCount}");
+    }
+
+
+    private void ShowAvailableEffects()
+    {
+        ConsoleUI.Print("Available Effects:");
+        foreach (EffectEvent.EffectType effect in Enum.GetValues(typeof(EffectEvent.EffectType)))
+        {
+            ConsoleUI.Print(effect.ToString());
+        }
+
+
+    }
+
+    [Command("give_effect", "Adds Status effect to player", "give_effect [EffectType] [duration] [strength]")]
+    public void GiveEffectCommand(string[] args)
+    {
+
+        if (args.Length == 0)
+        {
+            ConsoleUI.PrintError("Usage: give_effect [effecttype] [duration = 1 (sec)] [strength = 1.2 (multiplier)]");
+            ConsoleUI.Print("Example: give_effect speed 10 1.5");
+            ShowAvailableEffects();
+            return;
+        }
+
+        if (!Enum.TryParse<EffectEvent.EffectType>(args[0], true, out var effectType))
+        {
+            ConsoleUI.PrintError($"Unknown effect type: {args[0]}");
+            ShowAvailableEffects();
+            return;
+        }
+        float duration = args.Length > 1 ? float.Parse(args[1]) : 1f;
+
+        float strength = args.Length > 2 ? float.Parse(args[2]) : 1.2f;
+
+        Events.Publish(new AddEffect(effectType, duration, strength));
+
+        ConsoleUI.PrintSuccess($"Successfully applied {effectType} for {duration}s @ {strength}x");
     }
 }

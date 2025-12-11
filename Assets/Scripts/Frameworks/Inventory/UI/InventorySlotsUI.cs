@@ -460,12 +460,10 @@ public class InventorySlotsUI : EventListener,
         {
             if (result.gameObject == null) continue;
 
-            Debug.Log($"Checking: {result.gameObject.name}");
 
             var targetSlot = result.gameObject.GetComponentInParent<InventorySlotsUI>();
             if (targetSlot != null)
             {
-                Debug.Log($"Found InventorySlotsUI on: {targetSlot.gameObject.name}");
 
                 if (targetSlot != this)
                 {

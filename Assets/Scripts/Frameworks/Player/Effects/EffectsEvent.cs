@@ -17,7 +17,7 @@ namespace Doody.Framework.Player.Effects
 
         protected EffectType Type { get; set; }
 
-        public enum EffectType { Slow, Speed, Stamina, Health, NULL }
+        public enum EffectType { Slow, Speed, Stamina, Health }
 
         protected float Strength { get; set; }
     }

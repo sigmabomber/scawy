@@ -77,13 +77,10 @@ public class InteractionSystem : MonoBehaviour
 
         Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
 
-        // **FIX: Cast ray on ALL layers first to check for obstacles**
         if (Physics.Raycast(checkRay, out RaycastHit firstHit, interactionRange))
         {
-            // Check if the first thing we hit is on the interactable layer
             if (((1 << firstHit.collider.gameObject.layer) & interactableLayer) == 0)
             {
-                // Hit something that's NOT interactable - there's an obstacle
                 if (currentInteractable != null)
                 {
                     currentInteractable = null;
@@ -93,7 +90,6 @@ public class InteractionSystem : MonoBehaviour
                 return;
             }
 
-            // The first hit IS an interactable object, proceed normally
             cachedHit = firstHit;
 
             IInteractable interactable = cachedHit.collider.GetComponent<IInteractable>();
@@ -163,7 +159,6 @@ public class InteractionSystem : MonoBehaviour
             }
         }
 
-        // Clear state if nothing valid is being looked at
         if (currentInteractable != null)
         {
             currentInteractable = null;
@@ -203,21 +198,18 @@ public class InteractionSystem : MonoBehaviour
     {
         currentHighlightedObject = obj;
 
-        // Try to get existing outline first (optimization)
         currentOutline = obj.GetComponent<Outline>();
 
         if (currentOutline == null)
         {
             currentOutline = obj.AddComponent<Outline>();
 
-            // Configure outline settings once when creating
             currentOutline.OutlineMode = Outline.Mode.OutlineAll;
             currentOutline.OutlineColor = outlineColor;
             currentOutline.OutlineWidth = outlineWidth;
         }
         else
         {
-            // Update settings in case they changed
             currentOutline.OutlineMode = Outline.Mode.OutlineAll;
             currentOutline.OutlineColor = outlineColor;
             currentOutline.OutlineWidth = outlineWidth;

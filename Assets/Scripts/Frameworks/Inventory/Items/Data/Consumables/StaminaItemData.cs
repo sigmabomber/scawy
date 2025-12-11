@@ -6,9 +6,9 @@ using UnityEngine;
 [CreateAssetMenu(menuName = "Item/Consumables/Stamina")]
 public class StaminaItemData : ItemData
 {
-    public float amountToReplenish;
+    public float speedDuration;
     public int maxUses;
-
+    public float speedStrength;
     public float duration;
 
 }

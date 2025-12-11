@@ -14,20 +14,16 @@ public class EffectsManager : EventListener
     [Header("References")]
     [SerializeField] private PlayerController playerController;
 
-    // Active effects storage
     private Dictionary<string, ActiveEffect> activeEffects = new Dictionary<string, ActiveEffect>();
     private float nextUpdateTime;
 
-    // Effect modifiers (accumulated from all active effects)
     private EffectModifiers currentModifiers = new EffectModifiers();
 
-    // Base speeds (cached from player controller)
     private float baseWalkSpeed;
-    private float baseMouseSensitivity;
+    private float baseSprintSpeed;
 
     void Awake()
     {
-        // Auto-find PlayerController if not assigned
         if (playerController == null)
             playerController = PlayerController.Instance ?? FindObjectOfType<PlayerController>();
 
@@ -39,23 +35,15 @@ public class EffectsManager : EventListener
 
     void Start()
     {
-        // Subscribe to effect events
         Listen<AddEffect>(OnAddEffect);
         Listen<RemoveEffect>(OnRemoveEffect);
         Listen<RemoveAllEffects>(OnRemoveAllEffects);
         Listen<GiveAllEffects>(OnGiveAllEffects);
 
-        // Cache base speeds from player controller
-        if (playerController != null)
-        {
-            baseWalkSpeed = playerController.walkSpeed;
-            baseMouseSensitivity = playerController.mouseSensitivity;
-        }
+        CacheBaseValuesFromPlayer();
 
         nextUpdateTime = Time.time + updateInterval;
 
-        if (debugMode)
-            Debug.Log("[EffectsManager] Initialized and listening for effect events");
     }
 
     void Update()
@@ -67,11 +55,23 @@ public class EffectsManager : EventListener
         }
     }
 
+    private void CacheBaseValuesFromPlayer()
+    {
+        if (playerController == null)
+            return;
+
+        baseWalkSpeed = playerController.GetBaseWalkSpeed();
+        baseSprintSpeed = playerController.GetBaseSprintSpeed();
+
+        if (debugMode)
+        {
+        }
+    }
+
     #region Event Handlers
 
     private void OnAddEffect(AddEffect effectEvent)
     {
-        // Use reflection to get protected properties
         var typeField = typeof(EffectEvent).GetProperty("Type",
             System.Reflection.BindingFlags.NonPublic | System.Reflection.BindingFlags.Instance);
         var durationField = typeof(EffectEvent).GetProperty("Duration",
@@ -114,19 +114,19 @@ public class EffectsManager : EventListener
 
     private void AddEffectInternal(EffectEvent.EffectType type, float duration, float strength, string id)
     {
-        // Check if effect already exists
         if (activeEffects.ContainsKey(id))
         {
             if (debugMode)
                 Debug.LogWarning($"[EffectsManager] Effect {id} already exists. Refreshing duration.");
 
-            // Refresh the existing effect
             activeEffects[id].remainingDuration = duration;
             activeEffects[id].strength = strength;
+
+            RecalculateModifiers();
+            ApplyModifiersToPlayer();
             return;
         }
 
-        // Create new active effect
         ActiveEffect newEffect = new ActiveEffect
         {
             id = id,
@@ -140,10 +140,7 @@ public class EffectsManager : EventListener
         RecalculateModifiers();
         ApplyModifiersToPlayer();
 
-        if (debugMode)
-            Debug.Log($"[EffectsManager] Added {type} effect (ID: {id}, Duration: {duration}s, Strength: {strength})");
 
-        // Start visual effect if you have one
         StartCoroutine(PlayEffectVisual(newEffect));
     }
 
@@ -187,7 +184,6 @@ public class EffectsManager : EventListener
         if (debugMode)
             Debug.Log("[EffectsManager] Giving all effects (Debug mode)");
 
-        // Add one of each effect type for testing
         AddEffectInternal(EffectEvent.EffectType.Speed, 10f, 1.5f, "debug_speed");
         AddEffectInternal(EffectEvent.EffectType.Slow, 10f, 0.5f, "debug_slow");
         AddEffectInternal(EffectEvent.EffectType.Stamina, 10f, 2f, "debug_stamina");
@@ -205,7 +201,6 @@ public class EffectsManager : EventListener
 
         List<string> expiredEffects = new List<string>();
 
-        // Update all active effects
         foreach (var kvp in activeEffects)
         {
             var effect = kvp.Value;
@@ -217,16 +212,13 @@ public class EffectsManager : EventListener
             }
         }
 
-        // Remove expired effects
         if (expiredEffects.Count > 0)
         {
             foreach (var id in expiredEffects)
             {
                 var effect = activeEffects[id];
                 activeEffects.Remove(id);
-
-                if (debugMode)
-                    Debug.Log($"[EffectsManager] Effect {effect.type} (ID: {id}) expired");
+;
             }
 
             RecalculateModifiers();
@@ -236,43 +228,42 @@ public class EffectsManager : EventListener
 
     private void RecalculateModifiers()
     {
-        // Reset modifiers
         currentModifiers = new EffectModifiers();
 
-        // Accumulate all active effects
-        foreach (var effect in activeEffects.Values)
+        if (activeEffects.Count > 0)
         {
-            switch (effect.type)
+            foreach (var effect in activeEffects.Values)
             {
-                case EffectEvent.EffectType.Speed:
-                    currentModifiers.speedMultiplier *= effect.strength;
-                    currentModifiers.sensitivityMultiplier *= Mathf.Lerp(1f, effect.strength, 0.3f);
-                    break;
+                switch (effect.type)
+                {
+                    case EffectEvent.EffectType.Speed:
+                        currentModifiers.speedMultiplier *= effect.strength;
+                        currentModifiers.walkSpeedMultiplier *= effect.strength;
+                        currentModifiers.sprintSpeedMultiplier *= effect.strength;
+                        break;
 
-                case EffectEvent.EffectType.Slow:
-                    currentModifiers.speedMultiplier *= effect.strength;
-                    currentModifiers.sensitivityMultiplier *= Mathf.Lerp(1f, effect.strength, 0.5f);
-                    break;
+                    case EffectEvent.EffectType.Slow:
+                        currentModifiers.speedMultiplier *= effect.strength;
+                        currentModifiers.walkSpeedMultiplier *= effect.strength;
+                        currentModifiers.sprintSpeedMultiplier *= effect.strength;
+                        break;
 
-                case EffectEvent.EffectType.Stamina:
-                    currentModifiers.staminaMultiplier *= effect.strength;
-                    // Stamina affects sprint availability
-                    if (effect.strength > 1.5f)
-                        currentModifiers.canAlwaysSprint = true;
-                    break;
+                    case EffectEvent.EffectType.Stamina:
+                        currentModifiers.staminaMultiplier *= effect.strength;
+                        if (effect.strength > 1.5f)
+                            currentModifiers.canAlwaysSprint = true;
+                        break;
 
-                case EffectEvent.EffectType.Health:
-                    currentModifiers.healthMultiplier *= effect.strength;
-                    break;
+                    case EffectEvent.EffectType.Health:
+                        currentModifiers.healthMultiplier *= effect.strength;
+                        break;
+                }
             }
         }
 
         if (debugMode)
         {
-            Debug.Log($"[EffectsManager] Modifiers - Speed: {currentModifiers.speedMultiplier:F2}x, " +
-                     $"Sensitivity: {currentModifiers.sensitivityMultiplier:F2}x, " +
-                     $"Stamina: {currentModifiers.staminaMultiplier:F2}x, " +
-                     $"Health: {currentModifiers.healthMultiplier:F2}x");
+     
         }
     }
 
@@ -281,26 +272,18 @@ public class EffectsManager : EventListener
         if (playerController == null)
             return;
 
-        // Apply speed modifier
-        playerController.walkSpeed = baseWalkSpeed * currentModifiers.speedMultiplier;
+        playerController.ApplyMovementModifiers(
+            currentModifiers.walkSpeedMultiplier,
+            currentModifiers.sprintSpeedMultiplier,
+            currentModifiers.staminaMultiplier
+        );
 
-        // Apply sensitivity modifier
-        playerController.mouseSensitivity = baseMouseSensitivity * currentModifiers.sensitivityMultiplier;
-
-        // Apply stamina effects (super stamina disables sprint limit)
         if (currentModifiers.canAlwaysSprint)
             playerController.canSprint = true;
     }
 
     private IEnumerator PlayEffectVisual(ActiveEffect effect)
     {
-        // Placeholder for visual effects
-        // You can add particle systems, UI indicators, screen effects, etc.
-
-        // Example: Flash screen color based on effect type
-        // Color effectColor = GetEffectColor(effect.type);
-        // StartCoroutine(FlashScreen(effectColor));
-
         yield return null;
     }
 
@@ -314,9 +297,14 @@ public class EffectsManager : EventListener
     public float GetSpeedMultiplier() => currentModifiers.speedMultiplier;
 
     /// <summary>
-    /// Get the current sensitivity multiplier from all active effects
+    /// Get the current walk speed multiplier from all active effects
     /// </summary>
-    public float GetSensitivityMultiplier() => currentModifiers.sensitivityMultiplier;
+    public float GetWalkSpeedMultiplier() => currentModifiers.walkSpeedMultiplier;
+
+    /// <summary>
+    /// Get the current sprint speed multiplier from all active effects
+    /// </summary>
+    public float GetSprintSpeedMultiplier() => currentModifiers.sprintSpeedMultiplier;
 
     /// <summary>
     /// Get the current stamina multiplier from all active effects
@@ -327,6 +315,11 @@ public class EffectsManager : EventListener
     /// Get the current health multiplier from all active effects
     /// </summary>
     public float GetHealthMultiplier() => currentModifiers.healthMultiplier;
+
+    /// <summary>
+    /// Check if player can always sprint (super stamina effect)
+    /// </summary>
+    public bool CanAlwaysSprint() => currentModifiers.canAlwaysSprint;
 
     /// <summary>
     /// Check if a specific effect is currently active
@@ -378,32 +371,52 @@ public class EffectsManager : EventListener
 
     void OnGUI()
     {
-        if (!debugMode || activeEffects.Count == 0)
+        if (!debugMode)
             return;
 
-        GUILayout.BeginArea(new Rect(10, 10, 350, 500));
+        GUILayout.BeginArea(new Rect(10, 10, 400, 500));
 
-        // Background box
-        GUI.Box(new Rect(0, 0, 350, 500), "");
+        GUI.Box(new Rect(0, 0, 400, 500), "");
 
         GUILayout.Label($"<b><size=16>Active Effects: {activeEffects.Count}</size></b>");
         GUILayout.Space(5);
 
-        foreach (var kvp in activeEffects)
+        if (activeEffects.Count > 0)
         {
-            var effect = kvp.Value;
-            Color color = GetEffectDebugColor(effect.type);
-            GUI.color = color;
-            GUILayout.Label($"<b>{effect.type}</b>: {effect.remainingDuration:F1}s ({effect.strength:F2}x)");
-            GUI.color = Color.white;
+            foreach (var kvp in activeEffects)
+            {
+                var effect = kvp.Value;
+                Color color = GetEffectDebugColor(effect.type);
+                GUI.color = color;
+                GUILayout.Label($"<b>{effect.type}</b>: {effect.remainingDuration:F1}s ({effect.strength:F2}x)");
+                GUI.color = Color.white;
+            }
+        }
+        else
+        {
+            GUILayout.Label("<i>No active effects</i>");
         }
 
         GUILayout.Space(10);
         GUILayout.Label("<b><size=14>Current Modifiers:</size></b>");
-        GUILayout.Label($"Speed: {currentModifiers.speedMultiplier:F2}x (Base: {baseWalkSpeed:F1} → Current: {playerController?.walkSpeed:F1})");
-        GUILayout.Label($"Sensitivity: {currentModifiers.sensitivityMultiplier:F2}x");
+        GUILayout.Label($"Walk Speed: {currentModifiers.walkSpeedMultiplier:F2}x");
+        GUILayout.Label($"Sprint Speed: {currentModifiers.sprintSpeedMultiplier:F2}x");
         GUILayout.Label($"Stamina: {currentModifiers.staminaMultiplier:F2}x {(currentModifiers.canAlwaysSprint ? "(Unlimited Sprint)" : "")}");
         GUILayout.Label($"Health: {currentModifiers.healthMultiplier:F2}x");
+
+        if (playerController != null)
+        {
+            GUILayout.Space(10);
+            GUILayout.Label("<b><size=14>Current Player Stats:</size></b>");
+            GUILayout.Label($"Walk: {playerController.GetEffectiveWalkSpeed():F1}");
+            GUILayout.Label($"Sprint: {playerController.GetEffectiveSprintSpeed():F1}");
+            GUILayout.Label($"Crouch: {playerController.GetEffectiveCrouchSpeed():F1}");
+            GUILayout.Label($"Sensitivity: {playerController.GetEffectiveMouseSensitivity():F1}");
+            GUILayout.Label($"Stamina Mod: {playerController.GetCurrentStaminaModifier():F2}x");
+            GUILayout.Label($"Current Stamina: {playerController.GetCurrentStamina():F0}/{playerController.GetMaxStamina():F0}");
+        }
+
+      
 
         GUILayout.EndArea();
     }
@@ -413,7 +426,7 @@ public class EffectsManager : EventListener
         switch (type)
         {
             case EffectEvent.EffectType.Speed: return Color.cyan;
-            case EffectEvent.EffectType.Slow: return new Color(1f, 0.5f, 0f); // Orange
+            case EffectEvent.EffectType.Slow: return new Color(1f, 0.5f, 0f); 
             case EffectEvent.EffectType.Stamina: return Color.green;
             case EffectEvent.EffectType.Health: return Color.red;
             default: return Color.white;
@@ -436,7 +449,8 @@ public class EffectsManager : EventListener
     private class EffectModifiers
     {
         public float speedMultiplier = 1f;
-        public float sensitivityMultiplier = 1f;
+        public float walkSpeedMultiplier = 1f;
+        public float sprintSpeedMultiplier = 1f;
         public float staminaMultiplier = 1f;
         public float healthMultiplier = 1f;
         public bool canAlwaysSprint = false;

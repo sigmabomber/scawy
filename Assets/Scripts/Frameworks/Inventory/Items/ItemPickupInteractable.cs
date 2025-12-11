@@ -66,14 +66,8 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
         {
             PlayPickupEffects();
 
-            if (InteractionSystem.Instance != null)
-            {
-                InteractionSystem.Instance.ShowFeedback($"Picked up {itemData.itemName} x{quantity}", Color.green);
-            }
-            else
-            {
-                Debug.Log($"Picked up {itemData.itemName} x{quantity}");
-            }
+          
+            
 
             gameObject.SetActive(false);
 

@@ -16,11 +16,11 @@ public class PlayerController : MonoBehaviour
 
     [Header("Stamina Settings")]
     [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaDrainRate = 20f; // Per second while sprinting
-    [SerializeField] private float staminaRegenRate = 15f; // Per second while not sprinting
-    [SerializeField] private float staminaRegenDelay = 1f; // Delay before regen starts
-    [SerializeField] private float minStaminaToSprint = 10f; // Minimum stamina needed to start sprinting
-    [SerializeField] private bool infiniteStamina = false; // Debug toggle
+    [SerializeField] private float staminaDrainRate = 20f;
+    [SerializeField] private float staminaRegenRate = 15f;
+    [SerializeField] private float staminaRegenDelay = 1f;
+    [SerializeField] private float minStaminaToSprint = 10f;
+    [SerializeField] public bool infiniteStamina = false;
 
     [Header("Height Settings")]
     [SerializeField] private float standingHeight = 2f;
@@ -41,9 +41,18 @@ public class PlayerController : MonoBehaviour
     private MovementState currentMovementState = MovementState.Walking;
 
     // Stamina system
-    private float currentStamina;
-    private float timeSinceLastSprint;
-    private bool isExhausted = false;
+    public float currentStamina;
+    public float timeSinceLastSprint;
+    public bool isExhausted = false;
+
+    // Movement modifiers
+    private float baseWalkSpeed;
+    private float baseSprintSpeed;
+    private float baseCrouchSpeed;
+    private float baseMouseSensitivity;
+    private float walkSpeedModifier = 1f;
+    private float sprintSpeedModifier = 1f;
+    private float staminaModifier = 1f;
 
     private float verticalVelocity;
     private float cameraPitch;
@@ -65,6 +74,26 @@ public class PlayerController : MonoBehaviour
             MaxStamina = max;
             Percentage = max > 0 ? current / max : 0;
             IsExhausted = exhausted;
+        }
+    }
+
+    // Event for movement stat changes
+    public class MovementStatsChangedEvent
+    {
+        public float WalkSpeed { get; }
+        public float SprintSpeed { get; }
+        public float CrouchSpeed { get; }
+        public float MouseSensitivity { get; }
+        public float StaminaMultiplier { get; }
+
+        public MovementStatsChangedEvent(float walkSpeed, float sprintSpeed, float crouchSpeed,
+            float mouseSensitivity, float staminaMultiplier)
+        {
+            WalkSpeed = walkSpeed;
+            SprintSpeed = sprintSpeed;
+            CrouchSpeed = crouchSpeed;
+            MouseSensitivity = mouseSensitivity;
+            StaminaMultiplier = staminaMultiplier;
         }
     }
 
@@ -101,6 +130,9 @@ public class PlayerController : MonoBehaviour
         // Initialize stamina
         currentStamina = maxStamina;
         PublishStaminaUpdate();
+
+        // Cache base values from serialized fields BEFORE any modifications
+        CacheBaseMovementValues();
     }
 
     private void Update()
@@ -156,6 +188,18 @@ public class PlayerController : MonoBehaviour
         characterController.center = Vector3.zero;
     }
 
+    private void CacheBaseMovementValues()
+    {
+        // Store the original serialized values as base values
+        baseWalkSpeed = walkSpeed;
+        baseSprintSpeed = sprintSpeed;
+        baseCrouchSpeed = crouchSpeed;
+        baseMouseSensitivity = mouseSensitivity;
+
+        // Apply initial modifiers (all 1x)
+        ApplyMovementModifiers(1f, 1f, 1f, 1f);
+    }
+
     #region Stamina System
 
     private void HandleStamina()
@@ -170,18 +214,10 @@ public class PlayerController : MonoBehaviour
             return;
         }
 
-        // Apply stamina multiplier from effects manager
-        float staminaMultiplier = 1f;
-        EffectsManager effectsManager = FindObjectOfType<EffectsManager>();
-        if (effectsManager != null)
-        {
-            staminaMultiplier = effectsManager.GetStaminaMultiplier();
-        }
-
         if (currentMovementState == MovementState.Sprinting)
         {
             // Drain stamina while sprinting (affected by stamina multiplier)
-            float drainAmount = staminaDrainRate / staminaMultiplier * Time.deltaTime;
+            float drainAmount = staminaDrainRate / staminaModifier * Time.deltaTime;
             currentStamina -= drainAmount;
             currentStamina = Mathf.Max(0, currentStamina);
 
@@ -202,7 +238,7 @@ public class PlayerController : MonoBehaviour
             if (timeSinceLastSprint >= staminaRegenDelay)
             {
                 // Regenerate faster with stamina effects
-                float regenAmount = staminaRegenRate * staminaMultiplier * Time.deltaTime;
+                float regenAmount = staminaRegenRate * staminaModifier * Time.deltaTime;
                 currentStamina += regenAmount;
                 currentStamina = Mathf.Min(maxStamina, currentStamina);
 
@@ -255,6 +291,92 @@ public class PlayerController : MonoBehaviour
 
     #endregion
 
+    #region Movement Modifiers Integration
+
+    /// <summary>
+    /// Apply movement modifiers from EffectsManager
+    /// Simplified version - only modifies walk, sprint, and stamina
+    /// </summary>
+    public void ApplyMovementModifiers(float walkModifier, float sprintModifier,
+        float staminaModifier, float sensitivityModifier = 1f)
+    {
+        this.walkSpeedModifier = walkModifier;
+        this.sprintSpeedModifier = sprintModifier;
+        this.staminaModifier = staminaModifier;
+
+        // Apply modifiers to base values
+        walkSpeed = baseWalkSpeed * walkModifier;
+        sprintSpeed = baseSprintSpeed * sprintModifier;
+
+        // Apply sensitivity modifier if provided (optional)
+        if (sensitivityModifier != 1f)
+        {
+            mouseSensitivity = baseMouseSensitivity * sensitivityModifier;
+        }
+
+        // Publish movement stats update
+        PublishMovementStatsUpdate();
+    }
+
+    /// <summary>
+    /// Set base movement values (used when you want to permanently change base stats)
+    /// </summary>
+    public void SetBaseMovementValues(float newWalkSpeed, float newSprintSpeed,
+        float newCrouchSpeed, float newMouseSensitivity)
+    {
+        baseWalkSpeed = newWalkSpeed;
+        baseSprintSpeed = newSprintSpeed;
+        baseCrouchSpeed = newCrouchSpeed;
+        baseMouseSensitivity = newMouseSensitivity;
+
+        ApplyMovementModifiers(walkSpeedModifier, sprintSpeedModifier, staminaModifier);
+    }
+
+    /// <summary>
+    /// Reset all movement values to their original serialized state
+    /// </summary>
+    public void ResetMovementValues()
+    {
+        // Restore original serialized values as base
+        baseWalkSpeed = walkSpeed; // This gets the serialized value
+        baseSprintSpeed = sprintSpeed;
+        baseCrouchSpeed = crouchSpeed;
+        baseMouseSensitivity = mouseSensitivity;
+
+        // Reset modifiers to 1x
+        ApplyMovementModifiers(1f, 1f, 1f);
+    }
+
+    /// <summary>
+    /// Get current effective movement speeds
+    /// </summary>
+    public float GetEffectiveWalkSpeed() => walkSpeed;
+    public float GetEffectiveSprintSpeed() => sprintSpeed;
+    public float GetEffectiveCrouchSpeed() => crouchSpeed;
+    public float GetEffectiveMouseSensitivity() => mouseSensitivity;
+    public float GetCurrentStaminaModifier() => staminaModifier;
+
+    /// <summary>
+    /// Get base (unmodified) movement speeds
+    /// </summary>
+    public float GetBaseWalkSpeed() => baseWalkSpeed;
+    public float GetBaseSprintSpeed() => baseSprintSpeed;
+    public float GetBaseCrouchSpeed() => baseCrouchSpeed;
+    public float GetBaseMouseSensitivity() => baseMouseSensitivity;
+
+    private void PublishMovementStatsUpdate()
+    {
+        Events.Publish(new MovementStatsChangedEvent(
+            walkSpeed,
+            sprintSpeed,
+            crouchSpeed,
+            mouseSensitivity,
+            staminaModifier
+        ));
+    }
+
+    #endregion
+
     private void HandleMovementState()
     {
         bool isCrouching = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
@@ -292,7 +414,6 @@ public class PlayerController : MonoBehaviour
         if (infiniteStamina)
             return true;
 
-        // Can't sprint if exhausted or stamina too low
         if (isExhausted)
             return false;
 
@@ -332,8 +453,9 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMouseLook()
     {
-        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+        float effectiveMouseSensitivity = mouseSensitivity;
+        float mouseX = Input.GetAxis("Mouse X") * effectiveMouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * effectiveMouseSensitivity;
 
         transform.Rotate(Vector3.up * mouseX);
 

@@ -236,8 +236,8 @@ namespace Doody.Debugging
             RegisterCommand("god", "Toggles god mode", "god",
                 "Player", CommandPermission.Admin, GodCommand, "invincible");
 
-            RegisterCommand("noclip", "Toggles noclip mode", "noclip",
-                "Player", CommandPermission.Admin, NoclipCommand, "fly");
+            RegisterCommand("infinitestamina", "Infinite stamina", "infinitestamina",
+                "Player", CommandPermission.Admin, InfiniteStaminaCommand, "run forever");
         }
 
         private void RegisterCommandsFromType(Type type)
@@ -800,9 +800,14 @@ namespace Doody.Debugging
             ConsoleUI.PrintSuccess($"God mode toggled");
         }
 
-        private void NoclipCommand(string[] args)
+        private void InfiniteStaminaCommand(string[] args)
         {
-            ConsoleUI.PrintSuccess($"Noclip mode toggled");
+            bool activate = !PlayerController.Instance.infiniteStamina;
+            PlayerController.Instance.infiniteStamina = activate;
+            ConsoleUI.PrintSuccess($"Infinite stamina {(activate ? "on" : "off")}");
+
+
+
         }
         #endregion
 

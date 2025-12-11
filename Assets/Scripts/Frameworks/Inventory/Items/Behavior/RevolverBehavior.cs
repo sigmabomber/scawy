@@ -118,6 +118,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private ItemStateTracker stateTracker;
     private bool canUpdate = false;
 
+    // Coroutine reference for proper cleanup
+    private Coroutine inspectCoroutine;
+
     private void Awake()
     {
         StartReloadingHash = Animator.StringToHash("StartReloading");
@@ -130,7 +133,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void Start()
     {
-        if(ammoText != null)
+        if (ammoText != null)
         {
             ammoText.gameObject.SetActive(false);
         }
@@ -154,7 +157,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         {
             normalFOV = playerCamera.fieldOfView;
         }
-       
+
         if (tinnitusAudioSource == null)
         {
             tinnitusAudioSource = gameObject.AddComponent<AudioSource>();
@@ -185,7 +188,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
         }
 
-        if(aimReticle == null)
+        if (aimReticle == null)
         {
             GameObject temp = GameObject.Find("PlayerHud");
             aimReticle = temp.transform.Find("AimReticle");
@@ -217,6 +220,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void HandleAimInput()
     {
+        // Don't allow aiming during inspect
+        if (isInspecting) return;
+
         if (Input.GetKey(aimKey) && !isReloading)
         {
             isAiming = true;
@@ -256,9 +262,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         Quaternion targetRotation = isAiming ? aimRotation : normalRotation;
         equipPoint.localPosition = Vector3.Lerp(equipPoint.localPosition, targetPosition, aimSpeed * Time.deltaTime);
         equipPoint.localRotation = Quaternion.Lerp(equipPoint.localRotation, targetRotation, aimSpeed * Time.deltaTime);
-      
-        
-       
+
+
+
     }
 
     public bool IsAiming() => isAiming;
@@ -287,6 +293,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 StopTinnitus();
             }
 
+            // Cancel inspect if running
+            CancelInspect();
+
             // Reset aiming state
             isAiming = false;
             if (playerCamera != null)
@@ -311,6 +320,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 StopTinnitus();
             }
 
+            CancelInspect();
+
             isShooting = false;
             isAiming = false;
             CancelInvoke();
@@ -333,6 +344,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             {
                 StopTinnitus();
             }
+
+            CancelInspect();
 
             isShooting = false;
             isAiming = false;
@@ -382,6 +395,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 StopTinnitus();
             }
 
+            CancelInspect();
+
             isShooting = false;
             isAiming = false;
         }
@@ -393,20 +408,23 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void HandleReloadInput()
     {
+        // Don't allow reload input during inspect
+        if (isInspecting) return;
+
         // Hold down R to inspect
-        if (Input.GetKey(KeyCode.R) && !isReloading && !isInspecting)
+        if (Input.GetKey(KeyCode.R) && !isReloading)
         {
             currentTimer += Time.deltaTime;
 
             if (currentTimer >= holdUntilInspect)
             {
-                StartCoroutine(Inspect());
+                StartInspect();
                 currentTimer = 0f;
             }
         }
 
         // Release R before inspect threshold = reload
-        if (Input.GetKeyUp(KeyCode.R) && !isReloading && !isInspecting)
+        if (Input.GetKeyUp(KeyCode.R) && !isReloading)
         {
             if (currentTimer < holdUntilInspect && currentAmmoCount < maxAmmo)
             {
@@ -417,23 +435,75 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         }
     }
 
-    private IEnumerator Inspect()
+    private void StartInspect()
     {
+        if (isInspecting) return;
 
-        if (isInspecting) yield break;
+        // Cancel any active reload before inspecting
+        if (isReloading)
+        {
+            CancelReload();
+        }
+
+        inspectCoroutine = StartCoroutine(InspectCoroutine());
+    }
+
+    private IEnumerator InspectCoroutine()
+    {
         currentTimer = 0f;
         isInspecting = true;
+
+        // Exit aiming mode when inspecting
+        isAiming = false;
+        if (aimReticle != null)
+        {
+            aimReticle.gameObject.SetActive(false);
+        }
+
         ammoText.text = currentAmmoCount.ToString();
         ammoText.gameObject.SetActive(true);
-        animator.SetTrigger(StartInspectHash);
+
+        if (animator != null)
+            animator.SetTrigger(StartInspectHash);
 
         yield return new WaitForSeconds(inspectDuration);
-        ammoText.gameObject.SetActive(false);
+
+        if (ammoText != null)
+            ammoText.gameObject.SetActive(false);
+
         isInspecting = false;
-        animator.SetTrigger(EndInspectHash);
+
+        if (animator != null)
+            animator.SetTrigger(EndInspectHash);
+
+        inspectCoroutine = null;
     }
+
+    private void CancelInspect()
+    {
+        if (!isInspecting) return;
+
+        if (inspectCoroutine != null)
+        {
+            StopCoroutine(inspectCoroutine);
+            inspectCoroutine = null;
+        }
+
+        isInspecting = false;
+        currentTimer = 0f;
+
+        if (ammoText != null)
+            ammoText.gameObject.SetActive(false);
+
+        if (animator != null)
+            animator.SetTrigger(EndInspectHash);
+    }
+
     private void HandleShootInput()
     {
+        // Don't allow shooting during inspect
+        if (isInspecting) return;
+
         if (Input.GetMouseButtonDown(0) && !isShooting)
         {
             if (EventSystem.current.IsPointerOverGameObject())
@@ -492,6 +562,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             isReloading = false;
             isShooting = false;
             isAiming = false;
+            CancelInspect();
             StopTinnitus();
             CancelInvoke();
 
@@ -514,7 +585,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (stateTracker != null && !stateTracker.IsEquipped) return;
 
-        if (isShooting || isReloading) return;
+        if (isShooting || isReloading || isInspecting) return;
 
         if (currentAmmoCount < ammoPerShot)
         {
@@ -737,7 +808,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (stateTracker != null && !stateTracker.IsEquipped) return;
 
-        if (isReloading || currentAmmoCount >= maxAmmo) return;
+        if (isReloading || currentAmmoCount >= maxAmmo || isInspecting) return;
 
         isReloading = true;
         animator.SetBool(IsReloadingHash, true);
@@ -755,7 +826,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             animator.SetTrigger(EndReloadingHash);
     }
 
-  
+
 
     public void ApplyRecoil()
     {
@@ -855,7 +926,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public bool IsReloading() => isReloading;
     public bool IsShooting() => isShooting;
     public bool HasTinnitus() => hasTinnitus;
-    public bool CanShoot() => !isShooting && !isReloading && currentAmmoCount >= ammoPerShot;
+    public bool IsInspecting() => isInspecting;
+    public bool CanShoot() => !isShooting && !isReloading && !isInspecting && currentAmmoCount >= ammoPerShot;
 
     #endregion
 
@@ -874,6 +946,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         GUILayout.Label($"Reloading (R): {isReloading}", style);
         GUILayout.Label($"Shooting (M1): {isShooting}", style);
         GUILayout.Label($"Aiming (M2): {isAiming}", style);
+        GUILayout.Label($"Inspecting: {isInspecting}", style);
         GUILayout.Label($"Tinnitus: {hasTinnitus}", style);
 
         if (stateTracker != null)

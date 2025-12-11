@@ -17,6 +17,7 @@ MonoBehaviour:
   maxStack: 0
   prefab: {fileID: 3877245823159775160, guid: 9c988426beee8bc4092ce1ef04ac8abc, type: 3}
   priority: 0
-  amountToReplenish: 0
+  speedDuration: 10
   maxUses: 0
+  speedStrength: 1.5
   duration: 2

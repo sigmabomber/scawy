@@ -48,10 +48,7 @@ namespace Doody.InventoryFramework.Modules
             {
                 bool isCompatible = inventorySlot.slotPriority == itemData.priority;
 
-                Debug.Log($"[{ModuleName}] Slot Compatibility Check:\n" +
-                         $"Slot: {inventorySlot.gameObject.name}, Priority: {inventorySlot.slotPriority}\n" +
-                         $"Item: {itemData.itemName}, Priority: {itemData.priority}\n" +
-                         $"Compatible: {isCompatible}");
+           
 
                 return isCompatible;
             }
@@ -117,7 +114,6 @@ namespace Doody.InventoryFramework.Modules
 
             slotB.SetItem(tempItemData, tempQuantity, tempPrefab);
 
-            Debug.Log($"[{ModuleName}] Successfully swapped items between slots");
             return true;
         }
 

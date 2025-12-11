@@ -4,7 +4,8 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using System.Linq;
 using UnityEngine.EventSystems;
-using Doody.Debugging; 
+using Doody.Debugging;
+using Doody.GameEvents;
 
 public class ConsoleUI : MonoBehaviour
 {
@@ -590,6 +591,7 @@ public class ConsoleUI : MonoBehaviour
         {
             inputField.Select();
             inputField.ActivateInputField();
+            PlayerController.Instance.DisablePlayerInput();
         }
 
         if (cachedRegistry == null)
@@ -628,7 +630,7 @@ public class ConsoleUI : MonoBehaviour
     {
         consolePanel.SetActive(false);
         HideSuggestions();
-
+        PlayerController.Instance.EnablePlayerInput();
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
     }
