@@ -39,7 +39,7 @@ namespace Doody.Framework.Progressbar
 
     // Progress bar has completed
 
-    public class ProgressbarCompleted : ProgressBarEvent
+    public class ProgressbarCompleted 
     {
         public GameObject ItemObject { get; set; }
         public ProgressbarCompleted(GameObject itemObject)
@@ -49,7 +49,7 @@ namespace Doody.Framework.Progressbar
     }
 
     // Progress bar has been interuppted
-    public class ProgressbarInteruppted : ProgressBarEvent
+    public class ProgressbarInteruppted 
     {
         public ProgressbarInteruppted()
         {

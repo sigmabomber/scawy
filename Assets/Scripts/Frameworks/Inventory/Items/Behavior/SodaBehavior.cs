@@ -56,10 +56,11 @@ public class SodaBehavior : EventListener, IItemUsable
     {
         if(isUsing)
             Events.Publish(new ProgressbarInteruppted());
+
+        isUsing = false;
     }
     public void OnUse(InventorySlotsUI slot)
     {
-        print(":ED");
         if (stateTracker != null && !stateTracker.IsEquipped) return;
         Drink();
 
@@ -71,6 +72,7 @@ public class SodaBehavior : EventListener, IItemUsable
         if (isUsing)
         {
             Events.Publish(new ProgressbarInteruppted());
+            isUsing = false;
             return;
         }
         Events.Publish(new StartProgressBar(data.duration, gameObject, "Drinking"));
@@ -95,5 +97,5 @@ public class SodaBehavior : EventListener, IItemUsable
     public void OnDroppedInWorld()
     {
 
-    }
+    }//
 }

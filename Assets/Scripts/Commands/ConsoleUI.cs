@@ -75,7 +75,6 @@ public class ConsoleUI : MonoBehaviour
     private bool userHasScrolled = false; 
 
     // Performance optimization
-    private bool isInitialized = false;
     private bool isCommandRegistryAvailable = false;
 
     void Awake()
@@ -109,7 +108,6 @@ public class ConsoleUI : MonoBehaviour
         }
 
         InitializeSuggestions();
-        isInitialized = true;
     }
 
     void Update()

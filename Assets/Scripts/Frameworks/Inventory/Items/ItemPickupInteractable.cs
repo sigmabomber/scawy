@@ -29,10 +29,7 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
             stateTracker = gameObject.AddComponent<ItemStateTracker>();
         }
 
-        if (stateTracker.CurrentState != ItemState.InWorld)
-        {
-            stateTracker.SetState(ItemState.InWorld);
-        }
+      
 
         audioSource = GetComponent<AudioSource>();
         if (audioSource == null && pickupSound != null)

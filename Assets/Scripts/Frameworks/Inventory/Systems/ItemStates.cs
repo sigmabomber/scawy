@@ -34,6 +34,7 @@ public class ItemStateTracker : MonoBehaviour
                 {
                     rb.isKinematic = false;
                     rb.useGravity = true;
+                    print(":D");
                 }
                 if (col != null) col.enabled = true;
                 SetLayerRecursively(gameObject, LayerMask.NameToLayer("Interactable"));

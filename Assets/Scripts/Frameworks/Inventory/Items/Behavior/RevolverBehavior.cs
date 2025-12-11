@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using TMPro;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -13,9 +15,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private int StartReloadingHash;
     private int EndReloadingHash;
     private int ShootHash;
-
+    private int StartInspectHash;
+    private int EndInspectHash;
+    private int IsReloadingHash;
     [Header("Components")]
     public Animator animator;
+    public TMP_Text ammoText;
 
     [Header("Gun Data")]
     public int maxAmmo = 6;
@@ -27,6 +32,13 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public Camera playerCamera;
     public float maxRaycastDistance = 100f;
     public LayerMask raycastMask = ~0;
+
+
+    [Header("Inspect Settings")]
+    public float holdUntilInspect = 1f;
+    public float inspectDuration = 2f;
+    private float currentTimer = 0f;
+
 
     [Header("Aiming Settings")]
     [SerializeField] private KeyCode aimKey = KeyCode.Mouse1;
@@ -85,6 +97,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private bool isAiming = false;
     private bool hasTinnitus = false;
     private bool initialized = false;
+    private bool isInspecting = false;
 
     private InventorySlotsUI equippedSlot;
     private Transform equipPoint;
@@ -110,10 +123,17 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         StartReloadingHash = Animator.StringToHash("StartReloading");
         EndReloadingHash = Animator.StringToHash("EndReload");
         ShootHash = Animator.StringToHash("Shoot");
+        StartInspectHash = Animator.StringToHash("Inspect");
+        EndInspectHash = Animator.StringToHash("EndInspect");
+        IsReloadingHash = Animator.StringToHash("IsReloading");
     }
 
     private void Start()
     {
+        if(ammoText != null)
+        {
+            ammoText.gameObject.SetActive(false);
+        }
         stateTracker = GetComponent<ItemStateTracker>();
         if (stateTracker == null)
         {
@@ -134,7 +154,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         {
             normalFOV = playerCamera.fieldOfView;
         }
-
+       
         if (tinnitusAudioSource == null)
         {
             tinnitusAudioSource = gameObject.AddComponent<AudioSource>();
@@ -373,12 +393,45 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void HandleReloadInput()
     {
-        if (Input.GetKeyDown(KeyCode.R) && !isReloading && currentAmmoCount < maxAmmo)
+        // Hold down R to inspect
+        if (Input.GetKey(KeyCode.R) && !isReloading && !isInspecting)
         {
-            StartReload();
+            currentTimer += Time.deltaTime;
+
+            if (currentTimer >= holdUntilInspect)
+            {
+                StartCoroutine(Inspect());
+                currentTimer = 0f;
+            }
+        }
+
+        // Release R before inspect threshold = reload
+        if (Input.GetKeyUp(KeyCode.R) && !isReloading && !isInspecting)
+        {
+            if (currentTimer < holdUntilInspect && currentAmmoCount < maxAmmo)
+            {
+                StartReload();
+            }
+
+            currentTimer = 0f;
         }
     }
 
+    private IEnumerator Inspect()
+    {
+
+        if (isInspecting) yield break;
+        currentTimer = 0f;
+        isInspecting = true;
+        ammoText.text = currentAmmoCount.ToString();
+        ammoText.gameObject.SetActive(true);
+        animator.SetTrigger(StartInspectHash);
+
+        yield return new WaitForSeconds(inspectDuration);
+        ammoText.gameObject.SetActive(false);
+        isInspecting = false;
+        animator.SetTrigger(EndInspectHash);
+    }
     private void HandleShootInput()
     {
         if (Input.GetMouseButtonDown(0) && !isShooting)
@@ -471,7 +524,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         isShooting = true;
         currentAmmoCount -= ammoPerShot;
-
         if (animator != null)
             animator.SetTrigger(ShootHash);
 
@@ -688,7 +740,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (isReloading || currentAmmoCount >= maxAmmo) return;
 
         isReloading = true;
-
+        animator.SetBool(IsReloadingHash, true);
         if (animator != null)
             animator.SetTrigger(StartReloadingHash);
     }
@@ -698,15 +750,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (!isReloading) return;
 
         isReloading = false;
-
+        animator.SetBool(IsReloadingHash, false);
         if (animator != null)
             animator.SetTrigger(EndReloadingHash);
     }
 
-    public void StartReloadingFinished()
-    {
-        if (!isReloading) return;
-    }
+  
 
     public void ApplyRecoil()
     {
@@ -747,7 +796,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         {
             currentAmmoCount++;
         }
-
         if (currentAmmoCount >= maxAmmo)
         {
             FinishReload();
@@ -763,7 +811,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private void FinishReload()
     {
         isReloading = false;
-
+        animator.SetBool(IsReloadingHash, false);
         if (animator != null)
             animator.SetTrigger(EndReloadingHash);
     }

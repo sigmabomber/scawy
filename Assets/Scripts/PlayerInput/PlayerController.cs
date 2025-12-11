@@ -1,4 +1,5 @@
 using UnityEngine;
+using Doody.GameEvents;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : MonoBehaviour
@@ -13,6 +14,14 @@ public class PlayerController : MonoBehaviour
     [SerializeField] public float mouseSensitivity = 2f;
     [SerializeField] private float gravity = -9.81f;
 
+    [Header("Stamina Settings")]
+    [SerializeField] private float maxStamina = 100f;
+    [SerializeField] private float staminaDrainRate = 20f; // Per second while sprinting
+    [SerializeField] private float staminaRegenRate = 15f; // Per second while not sprinting
+    [SerializeField] private float staminaRegenDelay = 1f; // Delay before regen starts
+    [SerializeField] private float minStaminaToSprint = 10f; // Minimum stamina needed to start sprinting
+    [SerializeField] private bool infiniteStamina = false; // Debug toggle
+
     [Header("Height Settings")]
     [SerializeField] private float standingHeight = 2f;
     [SerializeField] private float crouchingHeight = 1f;
@@ -24,18 +33,40 @@ public class PlayerController : MonoBehaviour
     [SerializeField] private CameraRecoil cameraRecoil;
 
     [Header("Input Settings")]
-    [SerializeField] private KeyCode toggleCursorKey = KeyCode.Escape;
+    [SerializeField] private KeyCode toggleCursorKey = KeyCode.None;
 
     private CharacterController characterController;
     public bool canSprint = true;
     private enum MovementState { Walking, Sprinting, Crouching }
     private MovementState currentMovementState = MovementState.Walking;
 
+    // Stamina system
+    private float currentStamina;
+    private float timeSinceLastSprint;
+    private bool isExhausted = false;
+
     private float verticalVelocity;
     private float cameraPitch;
     private float currentHeight;
     private float targetHeight;
     private bool isInputEnabled = true;
+
+    // Events for stamina changes
+    public class StaminaChangedEvent
+    {
+        public float CurrentStamina { get; set; }
+        public float MaxStamina { get; set; }
+        public float Percentage { get; set; }
+        public bool IsExhausted { get; set; }
+
+        public StaminaChangedEvent(float current, float max, bool exhausted)
+        {
+            CurrentStamina = current;
+            MaxStamina = max;
+            Percentage = max > 0 ? current / max : 0;
+            IsExhausted = exhausted;
+        }
+    }
 
     private void Awake()
     {
@@ -66,6 +97,10 @@ public class PlayerController : MonoBehaviour
 
         currentHeight = standingHeight;
         targetHeight = standingHeight;
+
+        // Initialize stamina
+        currentStamina = maxStamina;
+        PublishStaminaUpdate();
     }
 
     private void Update()
@@ -88,6 +123,7 @@ public class PlayerController : MonoBehaviour
         if (!isInputEnabled)
             return;
 
+        HandleStamina();
         HandleMovementState();
         HandleMovement();
         if (Time.timeScale > 0)
@@ -120,6 +156,105 @@ public class PlayerController : MonoBehaviour
         characterController.center = Vector3.zero;
     }
 
+    #region Stamina System
+
+    private void HandleStamina()
+    {
+        bool wasSprinting = currentMovementState == MovementState.Sprinting;
+        float previousStamina = currentStamina;
+
+        if (infiniteStamina)
+        {
+            currentStamina = maxStamina;
+            isExhausted = false;
+            return;
+        }
+
+        // Apply stamina multiplier from effects manager
+        float staminaMultiplier = 1f;
+        EffectsManager effectsManager = FindObjectOfType<EffectsManager>();
+        if (effectsManager != null)
+        {
+            staminaMultiplier = effectsManager.GetStaminaMultiplier();
+        }
+
+        if (currentMovementState == MovementState.Sprinting)
+        {
+            // Drain stamina while sprinting (affected by stamina multiplier)
+            float drainAmount = staminaDrainRate / staminaMultiplier * Time.deltaTime;
+            currentStamina -= drainAmount;
+            currentStamina = Mathf.Max(0, currentStamina);
+
+            timeSinceLastSprint = 0f;
+
+            // Check if exhausted
+            if (currentStamina <= 0)
+            {
+                isExhausted = true;
+                canSprint = false;
+            }
+        }
+        else
+        {
+            // Regenerate stamina when not sprinting
+            timeSinceLastSprint += Time.deltaTime;
+
+            if (timeSinceLastSprint >= staminaRegenDelay)
+            {
+                // Regenerate faster with stamina effects
+                float regenAmount = staminaRegenRate * staminaMultiplier * Time.deltaTime;
+                currentStamina += regenAmount;
+                currentStamina = Mathf.Min(maxStamina, currentStamina);
+
+                // Recover from exhaustion
+                if (isExhausted && currentStamina >= minStaminaToSprint * 2f)
+                {
+                    isExhausted = false;
+                    canSprint = true;
+                }
+            }
+        }
+
+        // Publish stamina update if changed significantly
+        if (Mathf.Abs(currentStamina - previousStamina) > 0.5f || wasSprinting != (currentMovementState == MovementState.Sprinting))
+        {
+            PublishStaminaUpdate();
+        }
+    }
+
+    private void PublishStaminaUpdate()
+    {
+        Events.Publish(new StaminaChangedEvent(currentStamina, maxStamina, isExhausted));
+    }
+
+    public float GetCurrentStamina() => currentStamina;
+    public float GetMaxStamina() => maxStamina;
+    public float GetStaminaPercentage() => maxStamina > 0 ? currentStamina / maxStamina : 0;
+    public bool IsExhausted() => isExhausted;
+
+    /// <summary>
+    /// Add or remove stamina (useful for pickups or damage)
+    /// </summary>
+    public void ModifyStamina(float amount)
+    {
+        currentStamina += amount;
+        currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+        PublishStaminaUpdate();
+    }
+
+    /// <summary>
+    /// Set stamina to full
+    /// </summary>
+    public void RestoreStamina()
+    {
+        currentStamina = maxStamina;
+        isExhausted = false;
+        canSprint = true;
+        PublishStaminaUpdate();
+    }
+
+    #endregion
+
     private void HandleMovementState()
     {
         bool isCrouching = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
@@ -132,7 +267,7 @@ public class PlayerController : MonoBehaviour
             currentMovementState = MovementState.Crouching;
             targetHeight = crouchingHeight;
         }
-        else if (isSprinting && isMoving)
+        else if (isSprinting && isMoving && CanStartSprinting())
         {
             currentMovementState = MovementState.Sprinting;
 
@@ -150,6 +285,21 @@ public class PlayerController : MonoBehaviour
                 targetHeight = standingHeight;
             }
         }
+    }
+
+    private bool CanStartSprinting()
+    {
+        if (infiniteStamina)
+            return true;
+
+        // Can't sprint if exhausted or stamina too low
+        if (isExhausted)
+            return false;
+
+        if (currentStamina < minStaminaToSprint)
+            return false;
+
+        return true;
     }
 
     private void HandleMovement()

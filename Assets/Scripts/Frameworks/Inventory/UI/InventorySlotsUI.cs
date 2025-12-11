@@ -281,7 +281,7 @@ public class InventorySlotsUI : EventListener,
                 stateTracker.SetState(ItemState.Equipped);
             }
         }
-
+        
         if (instantiatedPrefab.layer != LayerMask.NameToLayer("PickedUpItem"))
         {
             foreach (Transform t in instantiatedPrefab.GetComponentsInChildren<Transform>(true))
@@ -539,6 +539,7 @@ public class InventorySlotsUI : EventListener,
             var stateTracker = droppedItem.GetComponent<ItemStateTracker>();
             if (stateTracker != null)
             {
+                print(":DD");
                 stateTracker.SetState(ItemState.InWorld);
             }
 
@@ -563,7 +564,7 @@ public class InventorySlotsUI : EventListener,
             {
                 stateTracker = droppedItem.AddComponent<ItemStateTracker>();
             }
-
+            print(":(");
             stateTracker.SetState(ItemState.InWorld, false);
 
             var usableComponents = droppedItem.GetComponents<IItemUsable>();
@@ -592,6 +593,7 @@ public class InventorySlotsUI : EventListener,
         {
             rb = droppedItem.AddComponent<Rigidbody>();
         }
+        print(":D");
         rb.useGravity = true;
         rb.isKinematic = false;
 

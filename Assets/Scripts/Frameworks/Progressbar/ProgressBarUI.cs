@@ -15,7 +15,7 @@ public class ProgressBarUI : EventListener
     [SerializeField] public float fillDuration = 3f;
 
     public TMP_Text progressText;
-    private GameObject progressBar;
+    public GameObject progressBar;
     private float currentProgress = 0f;
     private float fillStartTime;
     private bool isFilling = false;
@@ -32,7 +32,6 @@ public class ProgressBarUI : EventListener
         Events.Subscribe<StartProgressBar>(StartFill, this);
         Events.Subscribe<ProgressbarInteruppted>(StopFill, this);
 
-        progressBar = gameObject;
         progressBar.SetActive(false);
     }
 
