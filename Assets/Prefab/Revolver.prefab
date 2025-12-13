@@ -544,7 +544,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9728f8f4da3fb3644b80d43d2f1fe32b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  animator: {fileID: 0}
+  animator: {fileID: 313172334609579312}
   ammoText: {fileID: 6559316693928649088}
   maxAmmo: 6
   currentAmmoCount: 5
@@ -575,7 +575,6 @@ MonoBehaviour:
   shootSound: {fileID: 8300000, guid: ef7c47f1a7306a344aa25ff91832acd5, type: 3}
   reloadSound: {fileID: 8300000, guid: 3553bf77e45adc84db57daa9f2e486cb, type: 3}
   tinnitusSound: {fileID: 8300000, guid: ab1ba1079cd2f174fa0e1d254ae7459d, type: 3}
-  headshotSound: {fileID: 0}
   tinnitusDuration: 5
   tinnitusFadeInTime: 0.01
   tinnitusFadeOutTime: 2
