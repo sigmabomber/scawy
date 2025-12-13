@@ -60,6 +60,14 @@ public class PlayerController : MonoBehaviour
     private float targetHeight;
     private bool isInputEnabled = true;
 
+    // OPTIMIZATION: Cached input field check
+    private bool wasInputFieldFocused = false;
+    private float inputFieldCheckTimer = 0f;
+    private const float INPUT_FIELD_CHECK_INTERVAL = 0.1f; // Check every 100ms instead of every frame
+
+    // OPTIMIZATION: Cache event system reference
+    private UnityEngine.EventSystems.EventSystem cachedEventSystem;
+
     // Events for stamina changes
     public class StaminaChangedEvent
     {
@@ -117,6 +125,9 @@ public class PlayerController : MonoBehaviour
             Destroy(gameObject);
 
         InitializeController();
+
+        // OPTIMIZATION: Cache EventSystem reference
+        cachedEventSystem = UnityEngine.EventSystems.EventSystem.current;
     }
 
     private void Start()
@@ -142,16 +153,7 @@ public class PlayerController : MonoBehaviour
             ToggleInput();
         }
 
-        if (IsAnyInputFieldFocused())
-        {
-            if (Cursor.lockState != CursorLockMode.None)
-            {
-                Cursor.lockState = CursorLockMode.None;
-                Cursor.visible = true;
-            }
-            return;
-        }
-
+      
         if (!isInputEnabled)
             return;
 
@@ -165,11 +167,17 @@ public class PlayerController : MonoBehaviour
 
     private bool IsAnyInputFieldFocused()
     {
-        if (UnityEngine.EventSystems.EventSystem.current == null ||
-            UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject == null)
-            return false;
+        // OPTIMIZATION: Use cached EventSystem
+        if (cachedEventSystem == null)
+        {
+            cachedEventSystem = UnityEngine.EventSystems.EventSystem.current;
+            if (cachedEventSystem == null)
+                return false;
+        }
 
-        GameObject selectedObject = UnityEngine.EventSystems.EventSystem.current.currentSelectedGameObject;
+        GameObject selectedObject = cachedEventSystem.currentSelectedGameObject;
+        if (selectedObject == null)
+            return false;
 
 #if TEXTMESH_PRO
         if (selectedObject.GetComponent<TMPro.TMP_InputField>() != null)
@@ -251,8 +259,8 @@ public class PlayerController : MonoBehaviour
             }
         }
 
-        // Publish stamina update if changed significantly
-        if (Mathf.Abs(currentStamina - previousStamina) > 0.5f || wasSprinting != (currentMovementState == MovementState.Sprinting))
+        // OPTIMIZATION: Only publish if changed significantly or state changed
+        if (Mathf.Abs(currentStamina - previousStamina) > 1f || wasSprinting != (currentMovementState == MovementState.Sprinting))
         {
             PublishStaminaUpdate();
         }
@@ -427,6 +435,14 @@ public class PlayerController : MonoBehaviour
     {
         Vector2 input = GetMovementInput();
 
+        // OPTIMIZATION: Early exit if no movement
+        if (input.sqrMagnitude < 0.0001f && characterController.isGrounded && verticalVelocity < 0.1f)
+        {
+            ApplyGravity();
+            characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+            return;
+        }
+
         Vector3 moveDirection = transform.right * input.x + transform.forward * input.y;
         moveDirection.Normalize();
 
@@ -453,9 +469,8 @@ public class PlayerController : MonoBehaviour
 
     private void HandleMouseLook()
     {
-        float effectiveMouseSensitivity = mouseSensitivity;
-        float mouseX = Input.GetAxis("Mouse X") * effectiveMouseSensitivity;
-        float mouseY = Input.GetAxis("Mouse Y") * effectiveMouseSensitivity;
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
         transform.Rotate(Vector3.up * mouseX);
 
@@ -562,6 +577,6 @@ public class PlayerController : MonoBehaviour
 
     public bool IsInputEnabled
     {
-        get { return isInputEnabled && !IsAnyInputFieldFocused(); }
+        get { return isInputEnabled && !wasInputFieldFocused; }
     }
 }

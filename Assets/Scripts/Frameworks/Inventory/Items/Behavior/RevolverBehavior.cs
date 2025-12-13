@@ -70,11 +70,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float tinnitusFadeOutTime = 0.5f;
     [Tooltip("Volume of the tinnitus sound (0-1)")]
     [Range(0f, 1f)] public float tinnitusVolume = 0.3f;
-    public float soundDampening = 0.3f;
-    [Tooltip("Low-pass filter cutoff frequency during tinnitus (Hz)")]
-    public float lowPassCutoff = 1500f;
-    [Tooltip("How much to reduce pitch of other sounds during tinnitus")]
-    [Range(0f, 1f)] public float pitchReduction = 0.2f;
+    [Tooltip("How much to reduce volume of other sounds during tinnitus (0-1, where 0.3 = 70% volume)")]
+    [Range(0f, 1f)] public float volumeReduction = 0.3f;
     [Tooltip("Curve for fade in/out effect")]
     public AnimationCurve fadeCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
 
@@ -103,8 +100,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     // Original values
     private float originalAudioSourceVolume;
-    private float originalAudioSourcePitch;
-    private AudioLowPassFilter lowPassFilter;
 
     // Tinnitus fade tracking
     private float tinnitusTimer = 0f;
@@ -180,15 +175,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         if (audioSource != null)
         {
-            lowPassFilter = audioSource.GetComponent<AudioLowPassFilter>();
-            if (lowPassFilter == null)
-            {
-                lowPassFilter = audioSource.gameObject.AddComponent<AudioLowPassFilter>();
-            }
-            lowPassFilter.enabled = false;
-
             originalAudioSourceVolume = audioSource.volume;
-            originalAudioSourcePitch = audioSource.pitch;
         }
 
         if (cameraRecoil == null)
@@ -417,11 +404,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void HandleReloadInput()
     {
-        // Don't allow reload input during inspect
-        if (isInspecting) return;
+        // Don't allow reload input during inspect or while already reloading or shooting
+        if (isInspecting || isReloading || isShooting) return;
 
         // Hold down R to inspect
-        if (Input.GetKey(KeyCode.R) && !isReloading)
+        if (Input.GetKey(KeyCode.R))
         {
             currentTimer += Time.deltaTime;
 
@@ -433,7 +420,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         }
 
         // Release R before inspect threshold = reload
-        if (Input.GetKeyUp(KeyCode.R) && !isReloading)
+        if (Input.GetKeyUp(KeyCode.R))
         {
             if (currentTimer < holdUntilInspect && currentAmmoCount < maxAmmo)
             {
@@ -446,13 +433,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void StartInspect()
     {
-        if (isInspecting) return;
-
-        // Cancel any active reload before inspecting
-        if (isReloading)
-        {
-            CancelReload();
-        }
+        if (isInspecting || isReloading || isShooting) return;
 
         inspectCoroutine = StartCoroutine(InspectCoroutine());
     }
@@ -513,19 +494,13 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void HandleShootInput()
     {
-        // Don't allow shooting during inspect
-        if (isInspecting) return;
+        // Don't allow shooting during inspect or reload
+        if (isInspecting || isReloading) return;
 
         if (Input.GetMouseButtonDown(0) && !isShooting)
         {
             if (EventSystem.current.IsPointerOverGameObject())
                 return;
-
-            if (isReloading)
-            {
-                CancelReload();
-                return;
-            }
 
             TryShoot();
         }
@@ -597,11 +572,16 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (stateTracker != null && !stateTracker.IsEquipped) return;
 
+        // Strict checks to prevent shooting during invalid states
         if (isShooting || isReloading || isInspecting) return;
 
         if (currentAmmoCount < ammoPerShot)
         {
-            StartReload();
+            // Don't start reload if already reloading or shooting
+            if (!isReloading && !isShooting)
+            {
+                StartReload();
+            }
             return;
         }
 
@@ -696,12 +676,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 tinnitusAudioSource.Play();
             }
         }
-
-        if (lowPassFilter != null)
-        {
-            lowPassFilter.enabled = true;
-            lowPassFilter.cutoffFrequency = 22000f;
-        }
     }
 
     private void StartFadeOut()
@@ -729,14 +703,14 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 tinnitusAudioSource.volume = Mathf.Lerp(0f, tinnitusVolume, fadeAmount);
             }
 
-            ApplySoundEffects(fadeAmount);
+            ApplyVolumeReduction(fadeAmount);
 
             if (tinnitusFadeProgress >= 1f)
             {
                 isFadingIn = false;
                 if (tinnitusAudioSource != null)
                     tinnitusAudioSource.volume = tinnitusVolume;
-                ApplySoundEffects(1f);
+                ApplyVolumeReduction(1f);
             }
         }
 
@@ -750,7 +724,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 tinnitusAudioSource.volume = Mathf.Lerp(tinnitusVolume, 0f, fadeAmount);
             }
 
-            RemoveSoundEffects(fadeAmount);
+            RestoreVolume(fadeAmount);
 
             if (tinnitusFadeProgress >= 1f)
             {
@@ -764,31 +738,23 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         }
     }
 
-    private void ApplySoundEffects(float progress)
+    private void ApplyVolumeReduction(float progress)
     {
         if (audioSource != null)
         {
-            audioSource.volume = Mathf.Lerp(originalAudioSourceVolume, originalAudioSourceVolume * soundDampening, progress);
-            audioSource.pitch = Mathf.Lerp(originalAudioSourcePitch, originalAudioSourcePitch * (1f - pitchReduction), progress);
-        }
-
-        if (lowPassFilter != null)
-        {
-            lowPassFilter.cutoffFrequency = Mathf.Lerp(22000f, lowPassCutoff, progress);
+            // Calculate target volume: original volume * (1 - volumeReduction)
+            // For example, if volumeReduction is 0.3, sound will be at 70% of original
+            float targetVolume = originalAudioSourceVolume * (1f - volumeReduction);
+            audioSource.volume = Mathf.Lerp(originalAudioSourceVolume, targetVolume, progress);
         }
     }
 
-    private void RemoveSoundEffects(float progress)
+    private void RestoreVolume(float progress)
     {
         if (audioSource != null)
         {
-            audioSource.volume = Mathf.Lerp(originalAudioSourceVolume * soundDampening, originalAudioSourceVolume, progress);
-            audioSource.pitch = Mathf.Lerp(originalAudioSourcePitch * (1f - pitchReduction), originalAudioSourcePitch, progress);
-        }
-
-        if (lowPassFilter != null)
-        {
-            lowPassFilter.cutoffFrequency = Mathf.Lerp(lowPassCutoff, 22000f, progress);
+            float reducedVolume = originalAudioSourceVolume * (1f - volumeReduction);
+            audioSource.volume = Mathf.Lerp(reducedVolume, originalAudioSourceVolume, progress);
         }
     }
 
@@ -810,13 +776,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (audioSource != null)
         {
             audioSource.volume = originalAudioSourceVolume;
-            audioSource.pitch = originalAudioSourcePitch;
-        }
-
-        if (lowPassFilter != null)
-        {
-            lowPassFilter.enabled = false;
-            lowPassFilter.cutoffFrequency = 22000f;
         }
 
         CancelInvoke(nameof(StartFadeOut));
@@ -829,11 +788,40 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (stateTracker != null && !stateTracker.IsEquipped) return;
 
-        if (isReloading || currentAmmoCount >= maxAmmo || isInspecting) return;
+        // Prevent reload during other actions or if already at max ammo
+        if (isReloading || isShooting || isInspecting || currentAmmoCount >= maxAmmo) return;
 
         isReloading = true;
+
+        // Set animator speed based on reload time
         if (animator != null)
         {
+            // Calculate how many bullets need to be loaded
+            int bulletsToLoad = maxAmmo - currentAmmoCount;
+
+            // Get the reload animation clip length
+            AnimatorClipInfo[] clipInfo = animator.GetCurrentAnimatorClipInfo(0);
+            float animLength = 0f;
+
+            // Try to find the reload animation length
+            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
+            {
+                if (clip.name.ToLower().Contains("reload"))
+                {
+                    animLength = clip.length;
+                    break;
+                }
+            }
+
+            // If we found the animation length, adjust the speed
+            // Default to 1.0 if animation not found
+            if (animLength > 0f)
+            {
+                float desiredDuration = bulletsToLoad * reloadTimePerBullet;
+                float speedMultiplier = animLength / desiredDuration;
+                animator.speed = speedMultiplier;
+            }
+
             animator.SetBool(IsReloadingHash, true);
             animator.SetTrigger(StartReloadingHash);
         }
@@ -846,6 +834,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         isReloading = false;
         if (animator != null)
         {
+            // Reset animator speed to normal
+            animator.speed = 1f;
+
             animator.SetBool(IsReloadingHash, false);
             animator.SetTrigger(EndReloadingHash);
         }
@@ -908,6 +899,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         isReloading = false;
         if (animator != null)
         {
+            // Reset animator speed to normal
+            animator.speed = 1f;
+
             animator.SetBool(IsReloadingHash, false);
             animator.SetTrigger(EndReloadingHash);
         }

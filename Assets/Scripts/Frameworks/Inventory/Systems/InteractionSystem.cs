@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
@@ -18,14 +19,21 @@ public class InteractionSystem : MonoBehaviour
     [SerializeField] private Color outlineColor = Color.yellow;
     [SerializeField] private float outlineWidth = 5f;
 
+    [Header("Debug")]
+    [SerializeField] private bool showDebugRay = false;
+
     private Camera playerCamera;
     private GameObject currentHighlightedObject;
-    private Outline currentOutline; 
+    private Outline currentOutline;
     private IInteractable currentInteractable;
     private Color originalTextColor;
     private bool isShowingFeedback = false;
 
     private RaycastHit cachedHit;
+    private int interactableLayerValue;
+
+    // Outline caching - reuse outlines instead of constantly adding/removing
+    private Dictionary<GameObject, Outline> outlineCache = new Dictionary<GameObject, Outline>();
 
     public static InteractionSystem Instance;
 
@@ -37,6 +45,7 @@ public class InteractionSystem : MonoBehaviour
     private void Start()
     {
         playerCamera = Camera.main;
+        interactableLayerValue = interactableLayer.value;
 
         if (interactionText != null)
             originalTextColor = interactionText.color;
@@ -75,17 +84,20 @@ public class InteractionSystem : MonoBehaviour
 
         Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
 
-        Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
+#if UNITY_EDITOR
+        if (showDebugRay)
+            Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
+#endif
 
         if (Physics.Raycast(checkRay, out RaycastHit firstHit, interactionRange))
         {
-            if (((1 << firstHit.collider.gameObject.layer) & interactableLayer) == 0)
+            if (((1 << firstHit.collider.gameObject.layer) & interactableLayerValue) == 0)
             {
                 if (currentInteractable != null)
                 {
                     currentInteractable = null;
                     HideUI();
-                    RemoveOutline();
+                    DisableCurrentOutline();
                 }
                 return;
             }
@@ -151,8 +163,8 @@ public class InteractionSystem : MonoBehaviour
 
                     if (currentHighlightedObject != cachedHit.collider.gameObject)
                     {
-                        RemoveOutline();
-                        AddOutline(cachedHit.collider.gameObject);
+                        DisableCurrentOutline();
+                        EnableOutline(cachedHit.collider.gameObject);
                     }
                 }
                 return;
@@ -163,9 +175,10 @@ public class InteractionSystem : MonoBehaviour
         {
             currentInteractable = null;
             HideUI();
-            RemoveOutline();
+            DisableCurrentOutline();
         }
     }
+
     private ItemData GetItemDataFromObject(GameObject obj)
     {
         ItemDataComponent dataComp = obj.GetComponent<ItemDataComponent>();
@@ -194,31 +207,44 @@ public class InteractionSystem : MonoBehaviour
         }
     }
 
-    private void AddOutline(GameObject obj)
+    private void EnableOutline(GameObject obj)
     {
         currentHighlightedObject = obj;
 
-        currentOutline = obj.GetComponent<Outline>();
-
-        if (currentOutline == null)
+        // Check if we already have an outline cached for this object
+        if (!outlineCache.TryGetValue(obj, out currentOutline))
         {
-            currentOutline = obj.AddComponent<Outline>();
+            // Try to get existing outline component
+            currentOutline = obj.GetComponent<Outline>();
 
+            // If no outline exists, create one
+            if (currentOutline == null)
+            {
+                currentOutline = obj.AddComponent<Outline>();
+            }
+
+            // Cache it for future use
+            outlineCache[obj] = currentOutline;
+        }
+
+        // Configure outline settings (only if needed)
+        if (currentOutline.OutlineMode != Outline.Mode.OutlineAll ||
+            currentOutline.OutlineColor != outlineColor ||
+            currentOutline.OutlineWidth != outlineWidth)
+        {
             currentOutline.OutlineMode = Outline.Mode.OutlineAll;
             currentOutline.OutlineColor = outlineColor;
             currentOutline.OutlineWidth = outlineWidth;
         }
-        else
-        {
-            currentOutline.OutlineMode = Outline.Mode.OutlineAll;
-            currentOutline.OutlineColor = outlineColor;
-            currentOutline.OutlineWidth = outlineWidth;
-        }
 
-        currentOutline.enabled = true;
+        // Enable the outline
+        if (!currentOutline.enabled)
+        {
+            currentOutline.enabled = true;
+        }
     }
 
-    private void RemoveOutline()
+    private void DisableCurrentOutline()
     {
         if (currentOutline != null)
         {
@@ -231,8 +257,14 @@ public class InteractionSystem : MonoBehaviour
 
     private void OnDisable()
     {
-        RemoveOutline();
+        DisableCurrentOutline();
         HideUI();
+    }
+
+    private void OnDestroy()
+    {
+        // Clean up cache
+        outlineCache.Clear();
     }
 
     public void ShowFeedback(string message, Color textColor)
@@ -299,8 +331,26 @@ public class InteractionSystem : MonoBehaviour
             {
                 currentInteractable = null;
                 HideUI();
-                RemoveOutline();
+                DisableCurrentOutline();
             }
+        }
+    }
+
+    // Optional: Call this periodically to clean up destroyed objects from cache
+    public void CleanupOutlineCache()
+    {
+        List<GameObject> toRemove = new List<GameObject>();
+        foreach (var kvp in outlineCache)
+        {
+            if (kvp.Key == null)
+            {
+                toRemove.Add(kvp.Key);
+            }
+        }
+
+        foreach (var key in toRemove)
+        {
+            outlineCache.Remove(key);
         }
     }
 }
