@@ -562,7 +562,6 @@ public class InventorySlotsUI : EventListener,
             {
                 stateTracker = droppedItem.AddComponent<ItemStateTracker>();
             }
-            print(":(");
             stateTracker.SetState(ItemState.InWorld, false);
 
             var usableComponents = droppedItem.GetComponents<IItemUsable>();
@@ -591,7 +590,6 @@ public class InventorySlotsUI : EventListener,
         {
             rb = droppedItem.AddComponent<Rigidbody>();
         }
-        print(":D");
         rb.useGravity = true;
         rb.isKinematic = false;
 

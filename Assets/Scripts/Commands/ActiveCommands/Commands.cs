@@ -5,6 +5,7 @@ using System;
 using System.Linq;
 using Unity.VisualScripting;
 using UnityEngine;
+using static Doody.Framework.Player.Effects.EffectEvent;
 public class InventoryCommands : MonoBehaviour
 {
     private InventorySystem inventorySystem;
@@ -292,7 +293,7 @@ public class InventoryCommands : MonoBehaviour
     private void ShowAvailableEffects()
     {
         ConsoleUI.Print("Available Effects:");
-        foreach (EffectEvent.EffectType effect in Enum.GetValues(typeof(EffectEvent.EffectType)))
+        foreach (EffectType effect in Enum.GetValues(typeof(EffectType)))
         {
             ConsoleUI.Print(effect.ToString());
         }
@@ -325,5 +326,23 @@ public class InventoryCommands : MonoBehaviour
         Events.Publish(new AddEffect(effectType, duration, strength));
 
         ConsoleUI.PrintSuccess($"Successfully applied {effectType} for {duration}s @ {strength}x");
+    }
+
+    [Command("give_all_effect", "Adds all status effects to player", "give_all_effect [duration] [strength")]
+
+    public void GiveAllEffectsCommand(string[] args)
+    {
+        float duration = args.Length > 1 ? float.Parse(args[0]) : 1f;
+
+        float strength = args.Length > 2 ? float.Parse(args[1]) : 1.2f;
+
+        foreach (EffectType effect in Enum.GetValues(typeof(EffectType)))
+        {
+
+            Events.Publish(new AddEffect(effect, duration, strength));
+        }
+
+        
+        ConsoleUI.PrintSuccess($"Successfully applied all effects for {duration}s @ {strength}x");
     }
 }

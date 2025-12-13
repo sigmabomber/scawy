@@ -9,17 +9,17 @@ public class PlayerController : MonoBehaviour
 
     [Header("Movement Settings")]
     [SerializeField] public float walkSpeed = 5f;
-    [SerializeField] private float sprintSpeed = 7.5f;
-    [SerializeField] private float crouchSpeed = 2.5f;
+    [SerializeField] public float sprintSpeed = 7.5f;
+    [SerializeField] public float crouchSpeed = 2.5f;
     [SerializeField] public float mouseSensitivity = 2f;
-    [SerializeField] private float gravity = -9.81f;
+    [SerializeField] public float gravity = -9.81f;
 
     [Header("Stamina Settings")]
-    [SerializeField] private float maxStamina = 100f;
-    [SerializeField] private float staminaDrainRate = 20f;
-    [SerializeField] private float staminaRegenRate = 15f;
-    [SerializeField] private float staminaRegenDelay = 1f;
-    [SerializeField] private float minStaminaToSprint = 10f;
+    [SerializeField] public float maxStamina = 100f;
+    [SerializeField] public float staminaDrainRate = 20f;
+    [SerializeField] public float staminaRegenRate = 15f;
+    [SerializeField] public float staminaRegenDelay = 1f;
+    [SerializeField] public float minStaminaToSprint = 10f;
     [SerializeField] public bool infiniteStamina = false;
 
     [Header("Height Settings")]

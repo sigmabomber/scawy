@@ -51,7 +51,6 @@ public class DragHandlerManager
 
         if (!CheckPriorityCompatibility(sourceSlot, targetSlot))
         {
-            Debug.LogWarning($"Drag blocked: Priority mismatch between slots");
             return false;
         }
 
@@ -60,7 +59,6 @@ public class DragHandlerManager
             if (handler.CanHandleDrag(sourceSlot.itemData, targetSlot.itemData))
             {
                 handler.HandleDrag(sourceSlot, targetSlot);
-                Debug.Log($"Used custom drag handler: {handler.GetType().Name}");
                 return true;
             }
         }
@@ -82,7 +80,6 @@ public class DragHandlerManager
         {
             if (!CanSlotAcceptItem(targetSlot, sourceSlot.itemData))
             {
-                Debug.Log($"Cannot move {sourceSlot.itemData.itemName} to {targetSlot.gameObject.name} - priority mismatch");
                 return false;
             }
         }
@@ -91,7 +88,6 @@ public class DragHandlerManager
         {
             if (!CanSlotAcceptItem(sourceSlot, targetSlot.itemData))
             {
-                Debug.Log($"Cannot move {targetSlot.itemData.itemName} to {sourceSlot.gameObject.name} - priority mismatch");
                 return false;
             }
         }

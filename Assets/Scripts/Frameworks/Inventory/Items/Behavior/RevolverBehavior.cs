@@ -18,6 +18,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private int StartInspectHash;
     private int EndInspectHash;
     private int IsReloadingHash;
+
     [Header("Components")]
     public Animator animator;
     public TMP_Text ammoText;
@@ -33,12 +34,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public float maxRaycastDistance = 100f;
     public LayerMask raycastMask = ~0;
 
-
     [Header("Inspect Settings")]
     public float holdUntilInspect = 1f;
     public float inspectDuration = 2f;
     private float currentTimer = 0f;
-
 
     [Header("Aiming Settings")]
     [SerializeField] private KeyCode aimKey = KeyCode.Mouse1;
@@ -61,7 +60,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public AudioClip shootSound;
     public AudioClip reloadSound;
     public AudioClip tinnitusSound;
-    public AudioClip headshotSound;
 
     [Header("Tinnitus Settings")]
     [Tooltip("How long the tinnitus effect lasts after shooting")]
@@ -158,12 +156,26 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             normalFOV = playerCamera.fieldOfView;
         }
 
+        // Initialize tinnitus audio source properly
         if (tinnitusAudioSource == null)
         {
             tinnitusAudioSource = gameObject.AddComponent<AudioSource>();
-            tinnitusAudioSource.spatialBlend = 0f;
-            tinnitusAudioSource.loop = true;
-            tinnitusAudioSource.volume = 0f;
+        }
+
+        // Configure tinnitus audio source
+        tinnitusAudioSource.spatialBlend = 0f;
+        tinnitusAudioSource.loop = true;
+        tinnitusAudioSource.volume = 0f;
+        tinnitusAudioSource.playOnAwake = false;
+
+        // Assign the tinnitus clip if it exists
+        if (tinnitusSound != null)
+        {
+            tinnitusAudioSource.clip = tinnitusSound;
+        }
+        else
+        {
+            Debug.LogWarning("Tinnitus sound clip is not assigned!");
         }
 
         if (audioSource != null)
@@ -191,8 +203,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (aimReticle == null)
         {
             GameObject temp = GameObject.Find("PlayerHud");
-            aimReticle = temp.transform.Find("AimReticle");
+            if (temp != null)
+                aimReticle = temp.transform.Find("AimReticle");
         }
+
         if (EquipmentManager.Instance != null)
         {
             equipPoint = EquipmentManager.Instance.GetEquipPoint();
@@ -226,20 +240,21 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (Input.GetKey(aimKey) && !isReloading)
         {
             isAiming = true;
-            aimReticle.gameObject.SetActive(true);
+            if (aimReticle != null)
+                aimReticle.gameObject.SetActive(true);
 
             if (PlayerController.Instance != null && isAiming)
             {
                 PlayerController.Instance.walkSpeed = 2f;
                 PlayerController.Instance.canSprint = false;
-
                 PlayerController.Instance.mouseSensitivity = .5f;
             }
         }
         else
         {
             isAiming = false;
-            aimReticle.gameObject.SetActive(false);
+            if (aimReticle != null)
+                aimReticle.gameObject.SetActive(false);
 
             if (PlayerController.Instance != null && !isAiming)
             {
@@ -248,7 +263,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
                 PlayerController.Instance.canSprint = true;
             }
         }
-
     }
 
     private void UpdateAiming()
@@ -262,9 +276,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         Quaternion targetRotation = isAiming ? aimRotation : normalRotation;
         equipPoint.localPosition = Vector3.Lerp(equipPoint.localPosition, targetPosition, aimSpeed * Time.deltaTime);
         equipPoint.localRotation = Quaternion.Lerp(equipPoint.localRotation, targetRotation, aimSpeed * Time.deltaTime);
-
-
-
     }
 
     public bool IsAiming() => isAiming;
@@ -355,12 +366,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void OnPickedUp()
     {
-        Debug.Log("Revolver picked up");
     }
 
     public void OnDroppedInWorld()
     {
-        Debug.Log("Revolver dropped in world");
 
         if (audioSource != null && audioSource.isPlaying)
         {
@@ -460,8 +469,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             aimReticle.gameObject.SetActive(false);
         }
 
-        ammoText.text = currentAmmoCount.ToString();
-        ammoText.gameObject.SetActive(true);
+        if (ammoText != null)
+        {
+            ammoText.text = currentAmmoCount.ToString();
+            ammoText.gameObject.SetActive(true);
+        }
 
         if (animator != null)
             animator.SetTrigger(StartInspectHash);
@@ -670,11 +682,19 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         isFadingOut = false;
         tinnitusFadeProgress = 0f;
 
-        if (tinnitusAudioSource != null && tinnitusSound != null && !tinnitusAudioSource.isPlaying)
+        if (tinnitusAudioSource != null && tinnitusSound != null)
         {
-            tinnitusAudioSource.clip = tinnitusSound;
-            tinnitusAudioSource.volume = 0f;
-            tinnitusAudioSource.Play();
+            // Make sure the clip is assigned
+            if (tinnitusAudioSource.clip == null)
+            {
+                tinnitusAudioSource.clip = tinnitusSound;
+            }
+
+            if (!tinnitusAudioSource.isPlaying)
+            {
+                tinnitusAudioSource.volume = 0f;
+                tinnitusAudioSource.Play();
+            }
         }
 
         if (lowPassFilter != null)
@@ -714,7 +734,8 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             if (tinnitusFadeProgress >= 1f)
             {
                 isFadingIn = false;
-                tinnitusAudioSource.volume = tinnitusVolume;
+                if (tinnitusAudioSource != null)
+                    tinnitusAudioSource.volume = tinnitusVolume;
                 ApplySoundEffects(1f);
             }
         }
@@ -811,9 +832,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (isReloading || currentAmmoCount >= maxAmmo || isInspecting) return;
 
         isReloading = true;
-        animator.SetBool(IsReloadingHash, true);
         if (animator != null)
+        {
+            animator.SetBool(IsReloadingHash, true);
             animator.SetTrigger(StartReloadingHash);
+        }
     }
 
     private void CancelReload()
@@ -821,12 +844,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (!isReloading) return;
 
         isReloading = false;
-        animator.SetBool(IsReloadingHash, false);
         if (animator != null)
+        {
+            animator.SetBool(IsReloadingHash, false);
             animator.SetTrigger(EndReloadingHash);
+        }
     }
-
-
 
     public void ApplyRecoil()
     {
@@ -875,16 +898,19 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void ReloadFinished()
     {
-        animator.SetTrigger(EndReloadingHash);
+        if (animator != null)
+            animator.SetTrigger(EndReloadingHash);
         FinishReload();
     }
 
     private void FinishReload()
     {
         isReloading = false;
-        animator.SetBool(IsReloadingHash, false);
         if (animator != null)
+        {
+            animator.SetBool(IsReloadingHash, false);
             animator.SetTrigger(EndReloadingHash);
+        }
     }
 
     public void PlayReloadSound()

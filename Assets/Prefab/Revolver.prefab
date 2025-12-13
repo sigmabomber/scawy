@@ -568,8 +568,8 @@ MonoBehaviour:
   aimMovementSpeedMultiplier: 0.5
   aimSensitivityMultiplier: 0.6
   aimReticle: {fileID: 0}
-  audioSource: {fileID: 0}
-  tinnitusAudioSource: {fileID: 0}
+  audioSource: {fileID: -9101295362616403008}
+  tinnitusAudioSource: {fileID: -2075765808759555459}
   reloadIntroSound: {fileID: 8300000, guid: 33eb9bc53ebdd8b47872bcc80e380076, type: 3}
   reloadOutroSound: {fileID: 8300000, guid: f5c477666cb7f6f4cb37328fbcd5c865, type: 3}
   shootSound: {fileID: 8300000, guid: ef7c47f1a7306a344aa25ff91832acd5, type: 3}

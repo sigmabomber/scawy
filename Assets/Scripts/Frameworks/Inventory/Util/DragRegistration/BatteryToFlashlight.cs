@@ -31,21 +31,18 @@ public class BatteryToFlashlightHandler : IItemDragHandler
         }
         else
         {
-            // If no instantiated prefab, we might need to create one or just update UI
-            // For now, we'll just show a message
+            
             Debug.Log("Flashlight prefab not instantiated. Can't recharge.");
             return;
         }
 
         if (recharged)
         {
-            // Consume one battery
             sourceSlot.quantity--;
 
             if (sourceSlot.quantity <= 0)
             {
                 sourceSlot.ClearSlot();
-                Debug.Log($"Used up battery. Recharged flashlight with {battery.chargeAmount} charge.");
             }
             else
             {

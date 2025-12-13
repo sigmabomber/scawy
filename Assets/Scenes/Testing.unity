@@ -583,10 +583,6 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: animator
-      value: 
-      objectReference: {fileID: 758312431}
     - target: {fileID: 3675215914822228637, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_Name
       value: Revolver
@@ -2781,11 +2777,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: c1cc14d431be6da4abee4934a9a4c13c, type: 3}
---- !u!95 &758312431 stripped
-Animator:
-  m_CorrespondingSourceObject: {fileID: 313172334609579312, guid: 248395507a831ab4981c077443c16be0, type: 3}
-  m_PrefabInstance: {fileID: 143971608}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &775028428
 GameObject:
   m_ObjectHideFlags: 0
@@ -4919,7 +4910,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.39, y: 0.5, z: 0.06}
+  m_Size: {x: 0.39, y: 0.5, z: 0.15}
   m_Center: {x: 0, y: 0.25, z: 0}
 --- !u!1 &1319938542
 GameObject:
@@ -8004,8 +7995,7 @@ MonoBehaviour:
   equipPoint: {fileID: 2036969174}
   unequipKey: 0
   swaySmoothing: 8
-  swayAmount: 3
-  swayResetSpeed: 6
+  swayAmount: 9.26
   effectIntensity: 0.1
   effectIntensityX: 0.1
   effectSpeed: 8
@@ -9174,7 +9164,7 @@ BoxCollider:
   m_ProvidesContacts: 0
   m_Enabled: 1
   serializedVersion: 3
-  m_Size: {x: 0.39, y: 0.5, z: 0.06}
+  m_Size: {x: 0.39, y: 0.5, z: 0.15}
   m_Center: {x: 0, y: 0.25, z: 0}
 --- !u!4 &7280396845257112844
 Transform:

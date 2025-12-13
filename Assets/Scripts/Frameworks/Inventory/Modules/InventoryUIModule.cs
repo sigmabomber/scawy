@@ -9,7 +9,6 @@ namespace Doody.InventoryFramework.Modules
         public bool IsEnabled { get; private set; } = true;
 
         private KeyCode toggleKey = KeyCode.Tab;
-        private KeyCode unequipKey = KeyCode.G;
         private IInventoryFramework framework;
         private List<IInventorySystem> inventorySystems = new List<IInventorySystem>();
 
@@ -25,7 +24,6 @@ namespace Doody.InventoryFramework.Modules
 
         public void SetUnequipKey(KeyCode key)
         {
-            unequipKey = key;
         }
 
         public void OnInventorySystemCreated(IInventorySystem system)

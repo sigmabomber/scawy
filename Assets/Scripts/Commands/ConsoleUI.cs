@@ -339,8 +339,8 @@ public class ConsoleUI : MonoBehaviour
 
         AddOutputLine("=== Debug Console ===", systemColor);
         AddOutputLine("Type 'help' for available commands", systemColor);
-        AddOutputLine("Press '`' to show/hide console", systemColor);
-        AddOutputLine("Type part of a command and press Tab for suggestions", systemColor);
+        AddOutputLine($"Press ' {toggleKey.ToString()} ' key to show/hide console", systemColor);
+      //  AddOutputLine("Type part of a command and press Tab for suggestions", systemColor);
     }
 
     private void InitializeSuggestions()
@@ -838,7 +838,6 @@ public class ConsoleUI : MonoBehaviour
     // Static helper methods
     public static void Print(string message)
     {
-        print(message);
         if (Instance != null)
         {
             Instance.Log(message);

@@ -29,12 +29,10 @@ public class ItemStateTracker : MonoBehaviour
         switch (state)
         {
             case ItemState.InWorld:
-                // Enable physics for world items
                 if (rb != null)
                 {
                     rb.isKinematic = false;
                     rb.useGravity = true;
-                    print(":D");
                 }
                 if (col != null) col.enabled = true;
                 SetLayerRecursively(gameObject, LayerMask.NameToLayer("Interactable"));

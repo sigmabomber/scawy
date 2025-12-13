@@ -14,6 +14,7 @@ public class EquipmentManager : MonoBehaviour
     [Header("Sway Settings")]
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
+    [SerializeField] private float swayResetSpeed = 6f;
 
     [Header("Bobbing Settings")]
     [SerializeField] private float effectIntensity = 0.02f;
@@ -28,6 +29,7 @@ public class EquipmentManager : MonoBehaviour
     public IEquippable currentlyEquippedItem { get; private set; }
     private Camera playerCamera;
     private Quaternion targetRotation;
+    private Quaternion lastCameraRotation;
 
     [Header("References")]
     private InteractionSystem interactionSystem;
@@ -45,6 +47,7 @@ public class EquipmentManager : MonoBehaviour
     {
         playerCamera = Camera.main;
         lastPlayerPosition = playerCamera.transform.position;
+        lastCameraRotation = playerCamera.transform.rotation;
 
         if (equipPoint == null)
         {
@@ -52,7 +55,7 @@ public class EquipmentManager : MonoBehaviour
         }
 
         originalEquipPointPosition = equipPoint.localPosition;
-        targetRotation = equipPoint.localRotation;
+        targetRotation = Quaternion.identity;
 
         interactionSystem = GetComponent<InteractionSystem>();
         if (interactionSystem == null)
@@ -96,19 +99,42 @@ public class EquipmentManager : MonoBehaviour
 
     private void ApplyWeaponSway()
     {
-        float mouseX = Input.GetAxis("Mouse X");
-        float mouseY = Input.GetAxis("Mouse Y");
+        // Calculate actual camera rotation delta
+        Quaternion currentCameraRotation = playerCamera.transform.rotation;
+        Quaternion rotationDelta = currentCameraRotation * Quaternion.Inverse(lastCameraRotation);
 
-        Quaternion rotationX = Quaternion.AngleAxis(-mouseY * swayAmount, Vector3.right);
-        Quaternion rotationY = Quaternion.AngleAxis(mouseX * swayAmount, Vector3.up);
+        // Convert to euler angles to get the rotation amounts
+        Vector3 deltaEuler = rotationDelta.eulerAngles;
+
+        // Normalize angles to -180 to 180 range
+        if (deltaEuler.x > 180f) deltaEuler.x -= 360f;
+        if (deltaEuler.y > 180f) deltaEuler.y -= 360f;
+
+        // Apply sway based on actual camera rotation
+        float swayX = -deltaEuler.y * swayAmount;
+        float swayY = -deltaEuler.x * swayAmount;
+
+        Quaternion rotationX = Quaternion.AngleAxis(swayY, Vector3.right);
+        Quaternion rotationY = Quaternion.AngleAxis(swayX, Vector3.up);
 
         targetRotation = rotationX * rotationY;
 
+        // Smoothly interpolate to target rotation
         equipPoint.localRotation = Quaternion.Slerp(
             equipPoint.localRotation,
             targetRotation,
             swaySmoothing * Time.deltaTime
         );
+
+        // Reset target rotation back to identity for smooth return
+        targetRotation = Quaternion.Slerp(
+            targetRotation,
+            Quaternion.identity,
+            swayResetSpeed * Time.deltaTime
+        );
+
+        // Store current rotation for next frame
+        lastCameraRotation = currentCameraRotation;
     }
 
     private void ApplyWeaponBobbing()

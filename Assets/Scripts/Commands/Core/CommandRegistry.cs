@@ -234,10 +234,34 @@ namespace Doody.Debugging
                 "Game", CommandPermission.Admin, QuitCommand, "exit");
 
             RegisterCommand("god", "Toggles god mode", "god",
-                "Player", CommandPermission.Admin, GodCommand, "invincible");
+                "Health", CommandPermission.Admin, GodCommand, "invincible");
 
             RegisterCommand("infinitestamina", "Infinite stamina", "infinitestamina",
-                "Player", CommandPermission.Admin, InfiniteStaminaCommand, "run forever");
+                "Stamina", CommandPermission.Admin, InfiniteStaminaCommand);
+
+            RegisterCommand("walkspeed", "Adjust players walk speed", "walkspeed [speed]", 
+                "Movement", CommandPermission.Admin, WalkSpeedCommand);
+            RegisterCommand("sprintspeed", "Adjust players sprint speed", "sprintspeed [speed]",
+              "Movement", CommandPermission.Admin, SprintSpeedCommand);
+            RegisterCommand("crouchspeed", "Adjust players crouch speed", "crouchspeed [speed]",
+              "Movement", CommandPermission.Admin, CrouchSpeedCommand);
+
+            RegisterCommand("maxstamina", "Adjust players max stamina", "maxstamina [value]",
+              "Stamina", CommandPermission.Admin, MaxStaminaCommand);
+
+            RegisterCommand("staminadrainrate", "Adjust players stamina drain rate", "staminadrainrate [value]",
+             "Stamina", CommandPermission.Admin, StaminaDrainRateCommand);
+
+            RegisterCommand("staminaregenrate", "Adjust players stamina regen rate", "staminaregenrate [value]",
+            "Stamina", CommandPermission.Admin, StaminaRegenRateCommand);
+
+            RegisterCommand("staminaregendelay", "Adjust players stamina regen delay", "staminaregendelay [value]",
+           "Stamina", CommandPermission.Admin, StaminaRegenDelayCommand);
+
+            RegisterCommand("minstamina", "Adjust players minimum stamina to sprint", "minstamina [value]",
+           "Stamina", CommandPermission.Admin, MinStaminaToSprintCommand);
+
+
         }
 
         private void RegisterCommandsFromType(Type type)
@@ -338,7 +362,7 @@ namespace Doody.Debugging
 
             if (commands.ContainsKey(key))
             {
-                return; // Silently skip duplicates
+                return; 
             }
 
             var commandData = new CommandData(name, description, usage, category,
@@ -405,14 +429,25 @@ namespace Doody.Debugging
             {
                 // Try to find by partial match for better UX
                 var suggestions = GetCommandSuggestions(commandName).Take(3).ToList();
-                string errorMsg = $"Unknown command: '{commandName}'";
-
-                if (suggestions.Count > 0)
+                string errorMsg;
+                if (commandName.ToLower() == "bleh")
                 {
-                    errorMsg += $"\nDid you mean: {string.Join(", ", suggestions)}?";
-                }
 
-                ConsoleUI.PrintError(errorMsg);
+                     errorMsg = $"bleh :3";
+                    ConsoleUI.PrintSystem(errorMsg);
+                }
+                else
+                {
+                    errorMsg = $"Unknown command: '{commandName}'";
+
+                    if (suggestions.Count > 0)
+                    {
+                        errorMsg += $"\nDid you mean: {string.Join(", ", suggestions)}?";
+                    }
+
+                    ConsoleUI.PrintError(errorMsg);
+                   
+                }
                 AddToHistory(input, false);
 
                 if (autoOpenConsoleOnError && ConsoleUI.Instance != null && !ConsoleUI.Instance.consolePanel.activeSelf)
@@ -809,6 +844,78 @@ namespace Doody.Debugging
 
 
         }
+        #region Movement Commands
+        private void WalkSpeedCommand(string[] args)
+        {
+            float newSpeed = args.Length > 0 ? float.Parse(args[0]) : PlayerController.Instance.GetBaseWalkSpeed();
+            PlayerController.Instance.SetBaseMovementValues(
+                newSpeed,
+                PlayerController.Instance.GetBaseSprintSpeed(),
+                PlayerController.Instance.GetBaseCrouchSpeed(),
+                PlayerController.Instance.GetBaseMouseSensitivity()
+            );
+            ConsoleUI.PrintSuccess($"Successfully changed Players Walkspeed to {newSpeed}");
+        }
+
+        private void SprintSpeedCommand(string[] args)
+        {
+            float newSpeed = args.Length > 0 ? float.Parse(args[0]) : PlayerController.Instance.GetBaseSprintSpeed();
+            PlayerController.Instance.SetBaseMovementValues(
+                PlayerController.Instance.GetBaseWalkSpeed(),
+                newSpeed,
+                PlayerController.Instance.GetBaseCrouchSpeed(),
+                PlayerController.Instance.GetBaseMouseSensitivity()
+            );
+            ConsoleUI.PrintSuccess($"Successfully changed Players SprintSpeed to {newSpeed}");
+        }
+
+        private void CrouchSpeedCommand(string[] args)
+        {
+            float newSpeed = args.Length > 0 ? float.Parse(args[0]) : PlayerController.Instance.GetBaseCrouchSpeed();
+            PlayerController.Instance.SetBaseMovementValues(
+                PlayerController.Instance.GetBaseWalkSpeed(),
+                PlayerController.Instance.GetBaseSprintSpeed(),
+                newSpeed,
+                PlayerController.Instance.GetBaseMouseSensitivity()
+            );
+            ConsoleUI.PrintSuccess($"Successfully changed Players CrouchSpeed to {newSpeed}");
+        }
+        #endregion
+
+
+        #region Stamina Commands
+        private void MaxStaminaCommand(string[] args)
+        {
+            PlayerController.Instance.maxStamina = args.Length > 0 ? float.Parse(args[0]) : 100f;
+            ConsoleUI.PrintSuccess($"Successfully changed Players Max stamina to {PlayerController.Instance.maxStamina}");
+        }
+
+        private void StaminaDrainRateCommand(string[] args)
+        {
+            PlayerController.Instance.staminaDrainRate = args.Length > 0 ? float.Parse(args[0]) : 20f;
+            ConsoleUI.PrintSuccess($"Successfully changed Players stamina drain rate to {PlayerController.Instance.staminaDrainRate}");
+        }
+
+        private void StaminaRegenRateCommand(string[] args)
+        {
+            PlayerController.Instance.staminaRegenRate = args.Length > 0 ? float.Parse(args[0]) : 15f;
+            ConsoleUI.PrintSuccess($"Successfully changed Players stamina regen rate to {PlayerController.Instance.staminaRegenRate}");
+        }
+
+        private void StaminaRegenDelayCommand(string[] args)
+        {
+            PlayerController.Instance.staminaRegenDelay = args.Length > 0 ? float.Parse(args[0]) : 1f;
+            ConsoleUI.PrintSuccess($"Successfully changed Players stamina regen delay to {PlayerController.Instance.staminaRegenDelay}");
+        }
+
+        private void MinStaminaToSprintCommand(string[] args)
+        {
+            PlayerController.Instance.minStaminaToSprint = args.Length > 0 ? float.Parse(args[0]) : 10f;
+            ConsoleUI.PrintSuccess($"Successfully changed Players minimum stamina to sprint to {PlayerController.Instance.minStaminaToSprint}");
+        }
+        #endregion
+
+
         #endregion
 
         #region Utility Methods
