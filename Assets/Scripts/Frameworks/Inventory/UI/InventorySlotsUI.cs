@@ -9,8 +9,6 @@ using Doody.InventoryFramework;
 using Doody.GameEvents;
 using System.Runtime.CompilerServices;
 
-
-
 public class InventorySlotsUI : EventListener,
     IBeginDragHandler,
     IDragHandler,
@@ -25,16 +23,15 @@ public class InventorySlotsUI : EventListener,
     public Sprite equippedSprite;
     public Sprite normalSprite;
     private Image slotSprite;
+
     // IInventorySlotUI implementation
     public ItemData ItemData => itemData;
     public int Quantity => quantity;
     public GameObject InstantiatedPrefab => instantiatedPrefab;
-
-
     public Sprite EquippedSlotSprite => equippedSprite;
     public Sprite NormalSlotSprite => normalSprite;
 
-    //  Managers
+    // Managers
     private static DragHandlerManager _dragManager;
 
     [Header("Equipment")]
@@ -51,7 +48,7 @@ public class InventorySlotsUI : EventListener,
     public Image icon;
     public Color isDragging = new Color(1f, 1f, 1f, .5f);
     public Color Original = new Color(1f, 1f, 1f, 1f);
-    
+
     // Dragging
     private GameObject dragIcon;
     private Transform originalParent;
@@ -63,16 +60,8 @@ public class InventorySlotsUI : EventListener,
 
     public bool useItem = false;
     private bool isEquipped = false;
-
     public InventorySystem inventorySystem;
-    
     public SlotPriority slotPriority;
-
-
-
-    
-
- 
 
     private void Start()
     {
@@ -87,7 +76,9 @@ public class InventorySlotsUI : EventListener,
         }
 
         if (_dragManager == null)
+        {
             _dragManager = new DragHandlerManager();
+        }
 
         equipmentManager = EquipmentManager.Instance;
 
@@ -163,6 +154,34 @@ public class InventorySlotsUI : EventListener,
         }
     }
 
+    public void InitializeForStorageUI()
+    {
+        if (canvas == null)
+        {
+            canvas = GetComponentInParent<Canvas>();
+        }
+
+        if (inventorySystem == null)
+        {
+            inventorySystem = InventorySystem.Instance;
+        }
+
+        if (playerTransform == null && PlayerController.Instance != null)
+        {
+            playerTransform = PlayerController.Instance.transform;
+        }
+
+        if (equipmentManager == null)
+        {
+            equipmentManager = EquipmentManager.Instance;
+        }
+
+        if (icon != null)
+        {
+            icon.raycastTarget = true;
+        }
+    }
+
     public void UpdateUsage(float newUsage)
     {
         usage = newUsage;
@@ -220,7 +239,6 @@ public class InventorySlotsUI : EventListener,
     {
         if (itemData == null || itemData.prefab == null)
         {
-            Debug.LogWarning("Cannot equip: No item data or prefab");
             return;
         }
 
@@ -243,7 +261,6 @@ public class InventorySlotsUI : EventListener,
 
         if (equipmentManager == null)
         {
-            Debug.LogWarning("EquipmentManager not found!");
             return;
         }
 
@@ -281,7 +298,7 @@ public class InventorySlotsUI : EventListener,
                 stateTracker.SetState(ItemState.Equipped);
             }
         }
-        
+
         if (instantiatedPrefab.layer != LayerMask.NameToLayer("PickedUpItem"))
         {
             foreach (Transform t in instantiatedPrefab.GetComponentsInChildren<Transform>(true))
@@ -386,7 +403,7 @@ public class InventorySlotsUI : EventListener,
             instantiatedPrefab.SetActive(false);
         }
         slotSprite.sprite = normalSprite;
-        // Publish event
+
         Events.Publish(new ItemUnequippedEvent("player_inventory", itemData,
                                               quantity, this));
     }
@@ -419,10 +436,12 @@ public class InventorySlotsUI : EventListener,
         }
     }
 
-    // Draggable events 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        if (itemData == null) return;
+        if (itemData == null)
+        {
+            return;
+        }
 
         dragIcon = new GameObject("DragIcon");
         dragIcon.transform.SetParent(canvas.transform, false);
@@ -440,14 +459,20 @@ public class InventorySlotsUI : EventListener,
 
     public void OnDrag(PointerEventData eventData)
     {
-        if (dragIcon != null)
-            dragIcon.transform.position = eventData.position;
+        if (dragIcon == null)
+        {
+            return;
+        }
+
+        dragIcon.transform.position = eventData.position;
     }
 
     public void OnEndDrag(PointerEventData eventData)
     {
         if (dragIcon != null)
+        {
             Destroy(dragIcon);
+        }
 
         icon.color = Original;
 
@@ -460,11 +485,17 @@ public class InventorySlotsUI : EventListener,
         {
             if (result.gameObject == null) continue;
 
+            var storageSlot = result.gameObject.GetComponentInParent<StorageSlotUI>();
+            if (storageSlot != null)
+            {
+                TransferToStorage(storageSlot);
+                droppedOnInventorySlot = true;
+                break;
+            }
 
             var targetSlot = result.gameObject.GetComponentInParent<InventorySlotsUI>();
             if (targetSlot != null)
             {
-
                 if (targetSlot != this)
                 {
                     if (_dragManager != null)
@@ -490,11 +521,47 @@ public class InventorySlotsUI : EventListener,
         }
     }
 
+    private void TransferToStorage(StorageSlotUI targetSlot)
+    {
+        if (itemData == null) return;
+
+        if (targetSlot.ItemData == null)
+        {
+            targetSlot.SetItem(itemData, quantity, instantiatedPrefab);
+            ClearSlot();
+        }
+        else if (targetSlot.ItemData == itemData && itemData.maxStack > 1)
+        {
+            int spaceLeft = itemData.maxStack - targetSlot.Quantity;
+            int amountToAdd = Mathf.Min(spaceLeft, quantity);
+
+            targetSlot.UpdateQuantity(targetSlot.Quantity + amountToAdd);
+
+            quantity -= amountToAdd;
+            if (quantity <= 0)
+            {
+                ClearSlot();
+            }
+            else
+            {
+                UpdateQuantity(quantity);
+            }
+        }
+        else
+        {
+            ItemData tempItem = targetSlot.ItemData;
+            int tempQty = targetSlot.Quantity;
+            GameObject tempPrefab = targetSlot.ItemPrefab;
+
+            targetSlot.SetItem(itemData, quantity, instantiatedPrefab);
+            SetItem(tempItem, tempQty, tempPrefab);
+        }
+    }
+
     private void DropItemInWorld()
     {
         if (itemData == null || itemData.prefab == null)
         {
-            print(":(");
             return;
         }
 
@@ -537,7 +604,6 @@ public class InventorySlotsUI : EventListener,
             var stateTracker = droppedItem.GetComponent<ItemStateTracker>();
             if (stateTracker != null)
             {
-                print(":DD");
                 stateTracker.SetState(ItemState.InWorld);
             }
 

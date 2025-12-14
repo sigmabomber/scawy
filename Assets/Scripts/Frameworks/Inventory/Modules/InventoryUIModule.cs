@@ -1,6 +1,7 @@
 using UnityEngine;
 using System.Collections.Generic;
-
+using Doody.GameEvents;
+using Doody.Framework.UI;
 namespace Doody.InventoryFramework.Modules
 {
     public class InventoryUIModule : IInventoryModule
@@ -53,9 +54,8 @@ namespace Doody.InventoryFramework.Modules
                 if (invSystem != null && invSystem.inventory != null)
                 {
                     bool isOpen = !invSystem.inventory.activeSelf;
-                    invSystem.inventory.SetActive(isOpen);
+                    Events.Publish(new UIRequestToggleEvent(invSystem.inventory));
 
-                    Time.timeScale = isOpen ? 0 : 1;
 
                     if (isOpen)
                     {

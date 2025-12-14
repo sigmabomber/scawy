@@ -22,6 +22,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     [Header("Components")]
     public Animator animator;
     public TMP_Text ammoText;
+    public AnimationClip reloadClip;
 
     [Header("Gun Data")]
     public int maxAmmo = 6;
@@ -799,22 +800,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             // Calculate how many bullets need to be loaded
             int bulletsToLoad = maxAmmo - currentAmmoCount;
 
-            // Get the reload animation clip length
-            AnimatorClipInfo[] clipInfo = animator.GetCurrentAnimatorClipInfo(0);
-            float animLength = 0f;
+   
+            float animLength = reloadClip != null ? reloadClip.length : 1f;
 
-            // Try to find the reload animation length
-            foreach (AnimationClip clip in animator.runtimeAnimatorController.animationClips)
-            {
-                if (clip.name.ToLower().Contains("reload"))
-                {
-                    animLength = clip.length;
-                    break;
-                }
-            }
-
-            // If we found the animation length, adjust the speed
-            // Default to 1.0 if animation not found
+            
             if (animLength > 0f)
             {
                 float desiredDuration = bulletsToLoad * reloadTimePerBullet;

@@ -546,10 +546,11 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 313172334609579312}
   ammoText: {fileID: 6559316693928649088}
+  reloadClip: {fileID: 7400000, guid: dd90ea11319f26641b0a299d13f82408, type: 2}
   maxAmmo: 6
   currentAmmoCount: 5
   ammoPerShot: 1
-  reloadTimePerBullet: 1
+  reloadTimePerBullet: 0.2
   playerCamera: {fileID: 0}
   maxRaycastDistance: 100
   raycastMask:
@@ -579,9 +580,7 @@ MonoBehaviour:
   tinnitusFadeInTime: 0.01
   tinnitusFadeOutTime: 2
   tinnitusVolume: 0.707
-  soundDampening: 1
-  lowPassCutoff: 2500
-  pitchReduction: 0.2
+  volumeReduction: 0.3
   fadeCurve:
     serializedVersion: 2
     m_Curve:

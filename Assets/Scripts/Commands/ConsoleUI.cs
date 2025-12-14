@@ -6,8 +6,9 @@ using System.Linq;
 using UnityEngine.EventSystems;
 using Doody.Debugging;
 using Doody.GameEvents;
+using Doody.Framework.UI;
 
-public class ConsoleUI : MonoBehaviour
+public class ConsoleUI : EventListener
 {
     public static ConsoleUI Instance { get; private set; }
 
@@ -73,7 +74,7 @@ public class ConsoleUI : MonoBehaviour
     private bool isDraggingScrollbar = false;
     private float lastScrollbarValue = 0f;
     private bool isMouseOverScrollbar = false;
-    private bool userHasScrolled = false; 
+    private bool userHasScrolled = false;
 
     // Performance optimization
     private bool isCommandRegistryAvailable = false;
@@ -109,6 +110,21 @@ public class ConsoleUI : MonoBehaviour
         }
 
         InitializeSuggestions();
+
+        // Subscribe to UI close events
+        Events.Subscribe<UIClosedEvent>(OnUIClosedEvent, this);
+    }
+
+   
+    /// <summary>
+    /// Called when any UI is closed - detects if this console was closed by another UI
+    /// </summary>
+    private void OnUIClosedEvent(UIClosedEvent data)
+    {
+       
+
+
+        PlayerController.Instance.EnablePlayerInput();
     }
 
     void Update()
@@ -340,7 +356,6 @@ public class ConsoleUI : MonoBehaviour
         AddOutputLine("=== Debug Console ===", systemColor);
         AddOutputLine("Type 'help' for available commands", systemColor);
         AddOutputLine($"Press ' {toggleKey.ToString()} ' key to show/hide console", systemColor);
-      //  AddOutputLine("Type part of a command and press Tab for suggestions", systemColor);
     }
 
     private void InitializeSuggestions()
@@ -582,7 +597,7 @@ public class ConsoleUI : MonoBehaviour
 
     public void OpenConsole()
     {
-        consolePanel.SetActive(true);
+        Events.Publish(new UIRequestOpenEvent(consolePanel));
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
@@ -628,7 +643,8 @@ public class ConsoleUI : MonoBehaviour
 
     public void CloseConsole()
     {
-        consolePanel.SetActive(false);
+        Events.Publish(new UIRequestCloseEvent(consolePanel));
+
         HideSuggestions();
         PlayerController.Instance.EnablePlayerInput();
         Cursor.lockState = CursorLockMode.Locked;

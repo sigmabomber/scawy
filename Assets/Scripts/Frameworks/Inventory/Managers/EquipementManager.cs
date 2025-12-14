@@ -1,10 +1,11 @@
 using UnityEngine;
 using Doody.InventoryFramework;
+
 public class EquipmentManager : MonoBehaviour
 {
-
     // Singleton
     public static EquipmentManager Instance { get; private set; }
+
     [Header("Equipment Point")]
     [SerializeField] private Transform equipPoint;
 
@@ -15,6 +16,7 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
     [SerializeField] private float swayResetSpeed = 6f;
+    [SerializeField] private float maxSwayAngle = 10f; // NEW: Maximum sway angle in degrees
 
     [Header("Bobbing Settings")]
     [SerializeField] private float effectIntensity = 0.02f;
@@ -33,7 +35,6 @@ public class EquipmentManager : MonoBehaviour
 
     [Header("References")]
     private InteractionSystem interactionSystem;
-
 
     void Awake()
     {
@@ -110,10 +111,15 @@ public class EquipmentManager : MonoBehaviour
         if (deltaEuler.x > 180f) deltaEuler.x -= 360f;
         if (deltaEuler.y > 180f) deltaEuler.y -= 360f;
 
-        // Apply sway based on actual camera rotation
-        float swayX = -deltaEuler.y * swayAmount;
-        float swayY = -deltaEuler.x * swayAmount;
+        // Calculate sway based on camera rotation
+        float rawSwayX = -deltaEuler.y * swayAmount;
+        float rawSwayY = -deltaEuler.x * swayAmount;
 
+        // NEW: Clamp sway angles to maximum limit
+        float swayX = Mathf.Clamp(rawSwayX, -maxSwayAngle, maxSwayAngle);
+        float swayY = Mathf.Clamp(rawSwayY, -maxSwayAngle, maxSwayAngle);
+
+        // Apply sway rotation
         Quaternion rotationX = Quaternion.AngleAxis(swayY, Vector3.right);
         Quaternion rotationY = Quaternion.AngleAxis(swayX, Vector3.up);
 
