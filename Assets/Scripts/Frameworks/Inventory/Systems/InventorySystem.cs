@@ -1,8 +1,9 @@
+using Doody.GameEvents;
+using Doody.InventoryFramework;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
-using Doody.InventoryFramework;
-using Doody.GameEvents;
 
 /// <summary>
 /// Updated InventorySystem - can work standalone or with framework
@@ -327,6 +328,11 @@ public class InventorySystem : MonoBehaviour
         }
 
         return null;
+    }
+
+    public InventorySlotsUI FindItem(ItemData itemData)
+    {
+        return GetAllSlots().FirstOrDefault(slot => slot.itemData == itemData);
     }
 
     private void PublishItemAdded(ItemData itemData, int quantity, GameObject itemObj,

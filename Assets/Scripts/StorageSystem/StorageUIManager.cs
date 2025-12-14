@@ -2,6 +2,7 @@ using Doody.Framework.UI;
 using Doody.GameEvents;
 using Doody.InventoryFramework;
 using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
 using UnityEngine.UI;
@@ -17,12 +18,12 @@ public class StorageUIManager : MonoBehaviour
     [SerializeField] private GameObject storageUIPanel;
     [SerializeField] private Transform storageSlotsContainer;
     [SerializeField] private Transform playerNormalSlotsContainer;
-    [SerializeField] private Transform playerDedicatedSlotsContainer; // NEW: For dedicated/priority slots
+    [SerializeField] private Transform playerDedicatedSlotsContainer; 
 
     private StorageContainer currentStorage;
     private List<StorageSlotUI> storageSlots = new List<StorageSlotUI>();
     private List<InventorySlotsUI> playerNormalSlots = new List<InventorySlotsUI>();
-    private List<InventorySlotsUI> playerDedicatedSlots = new List<InventorySlotsUI>(); // NEW
+    private List<InventorySlotsUI> playerDedicatedSlots = new List<InventorySlotsUI>(); 
     private bool isOpen = false;
     private bool slotsInitialized = false;
 
@@ -47,19 +48,18 @@ public class StorageUIManager : MonoBehaviour
     {
         Events.UnsubscribeAll(this);
     }
+    
 
     private void InitializeSlots()
     {
         if (slotsInitialized) return;
 
-        // Initialize storage slots
         StorageSlotUI[] existingStorageSlots = storageSlotsContainer.GetComponentsInChildren<StorageSlotUI>(true);
         foreach (var slot in existingStorageSlots)
         {
             storageSlots.Add(slot);
         }
 
-        // Initialize normal player slots
         if (playerNormalSlotsContainer != null)
         {
             InventorySlotsUI[] normalSlots = playerNormalSlotsContainer.GetComponentsInChildren<InventorySlotsUI>(true);
@@ -69,7 +69,6 @@ public class StorageUIManager : MonoBehaviour
             }
         }
 
-        // Initialize dedicated player slots
         if (playerDedicatedSlotsContainer != null)
         {
             InventorySlotsUI[] dedicatedSlots = playerDedicatedSlotsContainer.GetComponentsInChildren<InventorySlotsUI>(true);
@@ -79,7 +78,6 @@ public class StorageUIManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[Storage] Initialized {storageSlots.Count} storage slots, {playerNormalSlots.Count} normal slots, {playerDedicatedSlots.Count} dedicated slots");
         slotsInitialized = true;
     }
 
@@ -110,10 +108,17 @@ public class StorageUIManager : MonoBehaviour
             SaveCurrentStorageState();
         }
 
+        if(storageUIPanel.activeSelf)
+        {
+
+            Events.Publish(new UIRequestCloseEvent(storageUIPanel));
+            return;
+        }
+
         currentStorage = storage;
         isOpen = true;
 
-        storageUIPanel.SetActive(true);
+        
 
         LoadStorageData();
         LoadPlayerInventoryData();
@@ -125,7 +130,6 @@ public class StorageUIManager : MonoBehaviour
         Cursor.visible = true;
 
         Events.Publish(new StorageOpenedEvent(storage.StorageId));
-        Debug.Log($"[Storage] Opened: {storage.StorageId}");
     }
 
     public void CloseStorage()
@@ -148,7 +152,6 @@ public class StorageUIManager : MonoBehaviour
         currentStorage = null;
         isOpen = false;
 
-        Debug.Log("[Storage] Closed");
     }
 
     private void LoadStorageData()
@@ -172,22 +175,17 @@ public class StorageUIManager : MonoBehaviour
             storageSlots[i].SetStorageReference(currentStorage, i);
         }
 
-        Debug.Log($"[Storage] Loaded {currentStorage.SlotCount} storage slots");
     }
 
     private void LoadPlayerInventoryData()
     {
         if (InventorySystem.Instance == null) return;
 
-        // Load normal slots
         var realNormalSlots = InventorySystem.Instance.normalInventorySlots;
         LoadPlayerSlots(playerNormalSlots, realNormalSlots, SlotPriority.Normal);
 
-        // Load dedicated slots
         var realDedicatedSlots = InventorySystem.Instance.dedicatedInventorySlots;
         LoadPlayerSlots(playerDedicatedSlots, realDedicatedSlots, SlotPriority.Dedicated);
-
-        Debug.Log($"[Storage] Loaded player inventory (Normal: {playerNormalSlots.Count}, Dedicated: {playerDedicatedSlots.Count})");
     }
 
     private void LoadPlayerSlots(List<InventorySlotsUI> mirrorSlots, List<InventorySlotsUI> realSlots, SlotPriority priority)
@@ -198,7 +196,6 @@ public class StorageUIManager : MonoBehaviour
         {
             var mirrorSlot = mirrorSlots[i];
 
-            // Activate and initialize
             if (!mirrorSlot.gameObject.activeInHierarchy)
             {
                 mirrorSlot.gameObject.SetActive(true);
@@ -208,14 +205,11 @@ public class StorageUIManager : MonoBehaviour
             mirrorSlot.InitializeForStorageUI();
             mirrorSlot.ClearSlot();
 
-            // Set priority
             mirrorSlot.slotPriority = priority;
 
-            // DISABLE EQUIPPING in storage UI
             mirrorSlot.useItem = false;
         }
 
-        // Copy data from real slots
         for (int i = 0; i < mirrorSlots.Count && i < realSlots.Count; i++)
         {
             var realSlot = realSlots[i];
@@ -225,7 +219,6 @@ public class StorageUIManager : MonoBehaviour
             {
                 mirrorSlot.SetItemPublic(realSlot.itemData, realSlot.quantity, realSlot.instantiatedPrefab);
 
-                // Show usage slider for flashlights
                 if (realSlot.itemData is FlashlightItemData flashData)
                 {
                     if (mirrorSlot.usageSlider != null)
@@ -233,7 +226,6 @@ public class StorageUIManager : MonoBehaviour
                         mirrorSlot.usageSlider.gameObject.SetActive(true);
                         mirrorSlot.usageSlider.maxValue = flashData.maxBattery;
 
-                        // Get current battery from the real slot's instantiated prefab
                         if (realSlot.instantiatedPrefab != null)
                         {
                             FlashlightBehavior flashBehavior = realSlot.instantiatedPrefab.GetComponent<FlashlightBehavior>();
@@ -254,7 +246,6 @@ public class StorageUIManager : MonoBehaviour
                 }
                 else
                 {
-                    // Hide usage slider for non-flashlight items
                     if (mirrorSlot.usageSlider != null)
                     {
                         mirrorSlot.usageSlider.gameObject.SetActive(false);
@@ -262,8 +253,7 @@ public class StorageUIManager : MonoBehaviour
                 }
             }
 
-            // Ensure graphics are raycast-enabled
-            var graphic = mirrorSlot.GetComponent<UnityEngine.UI.Graphic>();
+            var graphic = mirrorSlot.GetComponent<Graphic>();
             if (graphic != null)
             {
                 graphic.raycastTarget = true;
@@ -289,22 +279,18 @@ public class StorageUIManager : MonoBehaviour
             }
         }
 
-        Debug.Log($"[Storage] Saved state for: {currentStorage.StorageId}");
     }
 
     private void SyncPlayerInventory()
     {
         if (InventorySystem.Instance == null) return;
 
-        // Sync normal slots
         var realNormalSlots = InventorySystem.Instance.normalInventorySlots;
         SyncPlayerSlots(playerNormalSlots, realNormalSlots);
 
-        // Sync dedicated slots
         var realDedicatedSlots = InventorySystem.Instance.dedicatedInventorySlots;
         SyncPlayerSlots(playerDedicatedSlots, realDedicatedSlots);
 
-        Debug.Log("[Storage] Synced player inventory");
     }
 
     private void SyncPlayerSlots(List<InventorySlotsUI> mirrorSlots, List<InventorySlotsUI> realSlots)

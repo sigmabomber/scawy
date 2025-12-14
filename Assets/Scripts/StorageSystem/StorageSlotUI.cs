@@ -14,7 +14,7 @@ public class StorageSlotUI : MonoBehaviour,
     [Header("UI Elements")]
     public UnityEngine.UI.Image icon;
     public TMPro.TMP_Text quantityText;
-    public UnityEngine.UI.Slider usageSlider; // NEW: For flashlight battery display
+    public UnityEngine.UI.Slider usageSlider; 
 
     private StorageContainer parentStorage;
     private int slotIndex;
@@ -61,7 +61,6 @@ public class StorageSlotUI : MonoBehaviour,
         quantity = newQuantity;
         itemPrefab = prefab;
 
-        // Hide everything first
         icon.gameObject.SetActive(false);
         quantityText.gameObject.SetActive(false);
         if (usageSlider != null)
@@ -72,19 +71,16 @@ public class StorageSlotUI : MonoBehaviour,
             return;
         }
 
-        // Show icon
         icon.sprite = itemData.icon;
         icon.gameObject.SetActive(true);
         icon.raycastTarget = true;
 
-        // Show quantity for stackable items
         if (itemData.maxStack > 1 && !(itemData is FlashlightItemData))
         {
             quantityText.text = quantity.ToString();
             quantityText.gameObject.SetActive(true);
         }
 
-        // Show usage slider for flashlights
         if (itemData is FlashlightItemData flashlightItemData && usageSlider != null)
         {
             FlashlightBehavior flashlightBehavior = null;
@@ -179,12 +175,9 @@ public class StorageSlotUI : MonoBehaviour,
     {
         if (itemData == null) return;
 
-        // CHECK PRIORITY COMPATIBILITY
         if (!CanSlotAcceptItem(targetSlot, itemData))
         {
-            Debug.Log($"[Storage] Cannot transfer {itemData.itemName} - priority mismatch! Item priority: {itemData.priority}, Slot priority: {targetSlot.slotPriority}");
-
-            // Visual feedback (optional - flash red or show message)
+            
             StartCoroutine(FlashSlotRed(targetSlot));
             return;
         }
@@ -213,10 +206,8 @@ public class StorageSlotUI : MonoBehaviour,
         }
         else
         {
-            // CHECK PRIORITY FOR SWAP
             if (!CanSlotAcceptItem(this, targetSlot.itemData))
             {
-                Debug.Log($"[Storage] Cannot swap - priority mismatch!");
                 StartCoroutine(FlashSlotRed(targetSlot));
                 return;
             }
@@ -239,7 +230,6 @@ public class StorageSlotUI : MonoBehaviour,
         otherSlot.SetItem(itemData, quantity, itemPrefab);
         SetItem(tempItem, tempQty, tempPrefab);
 
-        // SAVE IMMEDIATELY AFTER SWAP
         StorageUIManager.Instance?.SaveAndSyncImmediate();
     }
 
@@ -251,7 +241,6 @@ public class StorageSlotUI : MonoBehaviour,
 
     private bool CanSlotAcceptItem(StorageSlotUI slot, ItemData item)
     {
-        // Storage slots accept all priorities
         return true;
     }
 
@@ -274,7 +263,6 @@ public class StorageSlotUI : MonoBehaviour,
             var allPlayerSlots = StorageUIManager.Instance?.GetAllPlayerMirrorSlots();
             if (allPlayerSlots != null)
             {
-                // Try to stack first (only in compatible priority slots)
                 foreach (var slot in allPlayerSlots)
                 {
                     if (slot.itemData == itemData &&
@@ -301,7 +289,6 @@ public class StorageSlotUI : MonoBehaviour,
                     }
                 }
 
-                // Find empty slot with correct priority
                 foreach (var slot in allPlayerSlots)
                 {
                     if (slot.itemData == null && CanSlotAcceptItem(slot, itemData))
@@ -312,7 +299,6 @@ public class StorageSlotUI : MonoBehaviour,
                     }
                 }
 
-                Debug.Log("[Storage] Player inventory full or no compatible priority slots!");
             }
         }
     }

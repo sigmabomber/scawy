@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.EventSystems;
 
@@ -23,12 +24,12 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public Animator animator;
     public TMP_Text ammoText;
     public AnimationClip reloadClip;
+    private InventorySystem inventorySystem;
 
     [Header("Gun Data")]
     public int maxAmmo = 6;
     public int currentAmmoCount;
     public int ammoPerShot = 1;
-    
 
     [Header("Raycast Settings")]
     public Camera playerCamera;
@@ -61,7 +62,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public AudioClip shootSound;
     public AudioClip reloadSound;
     public AudioClip tinnitusSound;
-
+    public AudioClip emptyClickSound;
     [Header("Tinnitus Settings")]
     [Tooltip("How long the tinnitus effect lasts after shooting")]
     public float tinnitusDuration = 2f;
@@ -99,6 +100,10 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private InventorySlotsUI equippedSlot;
     private Transform equipPoint;
     private float shootingTimeout = 1f;
+
+    // Ammo tracking
+    private int availableAmmoInInventory = 0;
+    private AmmoItemData firstAmmoTypeFound = null;
 
     // Original values
     private float originalAudioSourceVolume;
@@ -146,6 +151,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         if (playerCamera == null)
             playerCamera = Camera.main;
+        if (inventorySystem == null)
+            inventorySystem = FindFirstObjectByType<InventorySystem>();
+
 
         // Store normal FOV
         if (playerCamera != null)
@@ -264,7 +272,16 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         Vector3 targetPosition = isAiming ? aimPosition : normalPosition;
         Quaternion targetRotation = isAiming ? aimRotation : normalRotation;
         equipPoint.localPosition = Vector3.Lerp(equipPoint.localPosition, targetPosition, aimSpeed * Time.deltaTime);
-        equipPoint.localRotation = Quaternion.Lerp(equipPoint.localRotation, targetRotation, aimSpeed * Time.deltaTime);
+        if (!float.IsNaN(targetRotation.x) && !float.IsNaN(targetRotation.y) &&
+         !float.IsNaN(targetRotation.z) && !float.IsNaN(targetRotation.w))
+        {
+            equipPoint.localRotation = Quaternion.Lerp(
+                equipPoint.localRotation,
+                targetRotation,
+                aimSpeed * Time.deltaTime
+            );
+        }
+        
     }
 
     public bool IsAiming() => isAiming;
@@ -305,6 +322,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
             if (gameObject != null)
                 gameObject.SetActive(true);
+
+            // Update available ammo count when equipped
+            UpdateAvailableAmmoCount();
         }
         else if (newState == ItemState.InWorld)
         {
@@ -359,7 +379,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public void OnDroppedInWorld()
     {
-
         if (audioSource != null && audioSource.isPlaying)
         {
             audioSource.Stop();
@@ -424,9 +443,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         // Release R before inspect threshold = reload
         if (Input.GetKeyUp(KeyCode.R))
         {
-            if (currentTimer < holdUntilInspect && currentAmmoCount < maxAmmo)
+            if (currentTimer < holdUntilInspect)
             {
-                StartReload();
+                TryStartReload();
             }
 
             currentTimer = 0f;
@@ -454,7 +473,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         if (ammoText != null)
         {
-            ammoText.text = currentAmmoCount.ToString();
+            ammoText.text = $"{currentAmmoCount}/{availableAmmoInInventory}";
             ammoText.gameObject.SetActive(true);
         }
 
@@ -497,12 +516,17 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private void HandleShootInput()
     {
         // Don't allow shooting during inspect or reload
-        if (isInspecting || isReloading) return;
+        if (isInspecting) return;
 
         if (Input.GetMouseButtonDown(0) && !isShooting)
         {
             if (EventSystem.current.IsPointerOverGameObject())
                 return;
+            if (isReloading)
+            {
+                isCancelReloading = true;
+                return;
+            }
 
             TryShoot();
         }
@@ -533,6 +557,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             }
 
             gameObject.SetActive(true);
+
+            // Update available ammo count
+            UpdateAvailableAmmoCount();
         }
     }
 
@@ -581,8 +608,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             // Don't start reload if already reloading or shooting
             if (!isReloading && !isShooting)
             {
-                StartReload();
+                TryStartReload();
             }
+
             return;
         }
 
@@ -783,27 +811,36 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     }
     #endregion
 
-    #region Reload Logic
+    #region Reload Logic with Inventory Check
+
+    private void TryStartReload()
+    {
+        if (stateTracker != null && !stateTracker.IsEquipped) return;
+
+        if (isReloading || isShooting || isInspecting || currentAmmoCount >= maxAmmo) return;
+
+        UpdateAvailableAmmoCount();
+
+        if (availableAmmoInInventory <= 0)
+        {
+            audioSource.clip = emptyClickSound;
+            audioSource.Play();
+            return;
+        }
+
+        StartReload();
+    }
 
     private void StartReload()
     {
         if (stateTracker != null && !stateTracker.IsEquipped) return;
 
-        // Prevent reload during other actions or if already at max ammo
         if (isReloading || isShooting || isInspecting || currentAmmoCount >= maxAmmo) return;
 
         isReloading = true;
 
-        // Set animator speed based on reload time
         if (animator != null)
         {
-            // Calculate how many bullets need to be loaded
-            int bulletsToLoad = maxAmmo - currentAmmoCount;
-
-
-            
-            
-
             animator.SetBool(IsReloadingHash, true);
             animator.SetTrigger(StartReloadingHash);
         }
@@ -814,9 +851,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         if (!isReloading) return;
 
         isReloading = false;
+        isCancelReloading = false; 
         if (animator != null)
         {
-            // Reset animator speed to normal
             animator.speed = 1f;
 
             animator.SetBool(IsReloadingHash, false);
@@ -831,7 +868,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         PerformRaycast();
         if (cameraRecoil != null)
         {
-            // Reduce recoil when aiming
             float recoilMultiplier = isAiming ? aimRecoilMultiplier : 1f;
 
             float randomX = Random.Range(-recoilVariation, recoilVariation) * recoilMultiplier;
@@ -859,11 +895,42 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     {
         if (!isReloading) return;
 
-        if (currentAmmoCount < maxAmmo)
+        bool shouldStopReload = false;
+
+        if (isCancelReloading)
+        {
+            shouldStopReload = true;
+            isCancelReloading = false;
+        }
+
+        else if (availableAmmoInInventory <= 0)
+        {
+            shouldStopReload = true;
+        }
+        else if (currentAmmoCount >= maxAmmo)
+        {
+            shouldStopReload = true;
+        }
+
+        if (shouldStopReload)
+        {
+            FinishReload();
+            return;
+        }
+
+        if (ConsumeAmmoFromInventory(1))
         {
             currentAmmoCount++;
+
+            UpdateAvailableAmmoCount();
+
+
+            if (currentAmmoCount >= maxAmmo || availableAmmoInInventory <= 0)
+            {
+                FinishReload();
+            }
         }
-        if (currentAmmoCount >= maxAmmo)
+        else
         {
             FinishReload();
         }
@@ -878,15 +945,62 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     private void FinishReload()
     {
+        if (!isReloading) return;
+
         isReloading = false;
+        isCancelReloading = false; 
         if (animator != null)
         {
-            // Reset animator speed to normal
             animator.speed = 1f;
 
             animator.SetBool(IsReloadingHash, false);
             animator.SetTrigger(EndReloadingHash);
         }
+    }
+
+    // Method to check how much ammo is available in inventory
+    private void UpdateAvailableAmmoCount()
+    {
+        if (inventorySystem == null)
+        {
+            availableAmmoInInventory = 0;
+            firstAmmoTypeFound = null;
+            return;
+        }
+
+        // Get all inventory slots
+        var allSlots = inventorySystem.GetAllSlots();
+        availableAmmoInInventory = 0;
+        firstAmmoTypeFound = null;
+
+        foreach (var slot in allSlots)
+        {
+            if (slot.itemData != null && slot.itemData is AmmoItemData ammoData)
+            {
+                availableAmmoInInventory += slot.quantity;
+
+                // Store the first ammo type we find for consumption
+                if (firstAmmoTypeFound == null)
+                {
+                    firstAmmoTypeFound = ammoData;
+                }
+            }
+        }
+    }
+
+    // Method to consume ammo from inventory
+    private bool ConsumeAmmoFromInventory(int amount)
+    {
+        if (inventorySystem == null || amount <= 0 || availableAmmoInInventory <= 0)
+            return false;
+
+        // Try to remove ammo from the first ammo slot we found
+        if (firstAmmoTypeFound != null)
+        {
+            return inventorySystem.RemoveItem(firstAmmoTypeFound, amount);
+        }
+
+        return false;
     }
 
     public void PlayReloadSound()
@@ -905,7 +1019,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     }
 
     #endregion
-
     #region Audio
 
     private void PlaySound(AudioClip clip)
@@ -924,6 +1037,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
     public int GetCurrentAmmo() => currentAmmoCount;
     public int GetMaxAmmo() => maxAmmo;
+    public int GetAvailableAmmoInInventory() => availableAmmoInInventory;
     public float GetAmmoPercent() => maxAmmo > 0 ? (float)currentAmmoCount / maxAmmo : 0f;
     public bool IsReloading() => isReloading;
     public bool IsShooting() => isShooting;
@@ -945,6 +1059,11 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
 
         GUILayout.BeginVertical();
         GUILayout.Label($"Ammo: {currentAmmoCount}/{maxAmmo}", style);
+        GUILayout.Label($"Inventory Ammo: {availableAmmoInInventory}", style);
+        if (firstAmmoTypeFound != null)
+        {
+            GUILayout.Label($"Ammo Type: {firstAmmoTypeFound.itemName}", style);
+        }
         GUILayout.Label($"Reloading (R): {isReloading}", style);
         GUILayout.Label($"Shooting (M1): {isShooting}", style);
         GUILayout.Label($"Aiming (M2): {isAiming}", style);

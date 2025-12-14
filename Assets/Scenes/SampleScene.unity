@@ -1048,77 +1048,9 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
-    - target: {fileID: 1693065737482893858, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: -29.629988
-      objectReference: {fileID: 0}
-    - target: {fileID: 1693065737482893858, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 179.99991
-      objectReference: {fileID: 0}
-    - target: {fileID: 1831194423330018590, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: -89.99743
-      objectReference: {fileID: 0}
-    - target: {fileID: 1831194423330018590, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0.000100981284
-      objectReference: {fileID: 0}
-    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: tinnitusVolume
-      value: 0.473
-      objectReference: {fileID: 0}
-    - target: {fileID: 2871122794126762033, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: volumeReduction
-      value: 0.898
-      objectReference: {fileID: 0}
-    - target: {fileID: 3559235492102199210, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 63.464603
-      objectReference: {fileID: 0}
-    - target: {fileID: 3559235492102199210, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: -175.06184
-      objectReference: {fileID: 0}
-    - target: {fileID: 3559235492102199210, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 179.99991
-      objectReference: {fileID: 0}
     - target: {fileID: 3675215914822228637, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_Name
       value: Revolver
-      objectReference: {fileID: 0}
-    - target: {fileID: 3727643039165275454, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: -65.986496
-      objectReference: {fileID: 0}
-    - target: {fileID: 3727643039165275454, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: -0.000038701866
-      objectReference: {fileID: 0}
-    - target: {fileID: 3727643039165275454, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0.00000046582355
-      objectReference: {fileID: 0}
-    - target: {fileID: 4150516135175164493, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: -16.41148
-      objectReference: {fileID: 0}
-    - target: {fileID: 4150516135175164493, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 178.84749
-      objectReference: {fileID: 0}
-    - target: {fileID: 4150516135175164493, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 176.39943
-      objectReference: {fileID: 0}
-    - target: {fileID: 6532345588331059914, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0.0033026086
-      objectReference: {fileID: 0}
-    - target: {fileID: 6532345588331059914, guid: 248395507a831ab4981c077443c16be0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0.0033229222
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []

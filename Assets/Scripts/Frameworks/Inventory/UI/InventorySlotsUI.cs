@@ -425,15 +425,12 @@ public class InventorySlotsUI : EventListener,
             }
         }
 
-        // Normal double-click equip logic
         float timeSinceLastClick = Time.unscaledTime - lastClickTime;
 
         if (timeSinceLastClick <= doubleClickThreshold)
         {
-            // DON'T EQUIP if useItem is false (in storage UI)
             if (!useItem)
             {
-                Debug.Log("[InventorySlot] Cannot equip in storage UI");
                 return;
             }
 
@@ -464,7 +461,6 @@ public class InventorySlotsUI : EventListener,
         var storageSlots = StorageUIManager.Instance.GetStorageSlots();
         if (storageSlots == null || storageSlots.Count == 0) return;
 
-        // Try to stack in existing slots first
         foreach (var storageSlot in storageSlots)
         {
             if (storageSlot.ItemData == itemData &&
@@ -486,13 +482,11 @@ public class InventorySlotsUI : EventListener,
                     UpdateQuantity(quantity);
                 }
 
-                // SAVE IMMEDIATELY
                 StorageUIManager.Instance.SaveAndSyncImmediate();
                 return;
             }
         }
 
-        // Find empty slot
         foreach (var storageSlot in storageSlots)
         {
             if (storageSlot.ItemData == null)
@@ -500,13 +494,11 @@ public class InventorySlotsUI : EventListener,
                 storageSlot.SetItem(itemData, quantity, instantiatedPrefab);
                 ClearSlot();
 
-                // SAVE IMMEDIATELY
                 StorageUIManager.Instance.SaveAndSyncImmediate();
                 return;
             }
         }
 
-        Debug.Log("[Storage] Storage is full!");
     }
 
     public void OnBeginDrag(PointerEventData eventData)
