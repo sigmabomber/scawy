@@ -22,13 +22,11 @@ public class StorageContainer : MonoBehaviour, IInteractable
 
     private void Start()
     {
-        // Initialize empty slots
         for (int i = 0; i < slotCount; i++)
         {
             storedItems.Add(new StorageSlotData());
         }
 
-        // Generate ID if not set
         if (string.IsNullOrEmpty(storageId))
         {
             storageId = $"storage_{GetInstanceID()}";
@@ -46,11 +44,9 @@ public class StorageContainer : MonoBehaviour, IInteractable
 
     public void Interact()
     {
-        // Tell the UI manager to open THIS storage
         StorageUIManager.Instance?.OpenStorage(this);
     }
 
-    // Data access methods
     public string StorageId => storageId;
     public int SlotCount => slotCount;
 
@@ -136,7 +132,6 @@ public class StorageContainer : MonoBehaviour, IInteractable
         }
 
         // Load saved items
-        // You'll need ItemDatabase.GetItemByName() here
         foreach (var slotData in data.slots)
         {
             // ItemData item = ItemDatabase.GetItemByName(slotData.itemName);

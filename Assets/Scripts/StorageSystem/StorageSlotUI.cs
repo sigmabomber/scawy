@@ -1,20 +1,20 @@
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.EventSystems;
-using UnityEngine.UI;
+
+/// <summary>
+/// Storage slot UI with priority checking
+/// </summary>
 public class StorageSlotUI : MonoBehaviour,
     IBeginDragHandler,
     IDragHandler,
     IEndDragHandler,
-    IPointerClickHandler,
-    IPointerEnterHandler,      // Add this
-    IPointerExitHandler,       // Add this
-    IPointerDownHandler,       // Add this
-    IPointerUpHandler          // Add this
+    IPointerClickHandler
 {
     [Header("UI Elements")]
     public UnityEngine.UI.Image icon;
     public TMPro.TMP_Text quantityText;
+    public UnityEngine.UI.Slider usageSlider; // NEW: For flashlight battery display
 
     private StorageContainer parentStorage;
     private int slotIndex;
@@ -27,7 +27,6 @@ public class StorageSlotUI : MonoBehaviour,
     public int Quantity => quantity;
     public GameObject ItemPrefab => itemPrefab;
 
-    // Dragging
     private GameObject dragIcon;
     private Canvas canvas;
     private Color isDragging = new Color(1f, 1f, 1f, 0.5f);
@@ -35,115 +34,20 @@ public class StorageSlotUI : MonoBehaviour,
 
     private static DragHandlerManager _dragManager;
 
-
-
-    private void Start()
+    private void Awake()
     {
-        Debug.Log($"[StorageSlotUI] Start() called on {gameObject.name}");
-
         canvas = GetComponentInParent<Canvas>();
-        Debug.Log($"[StorageSlotUI] Canvas found: {canvas != null} ({canvas?.name})");
 
         if (_dragManager == null)
-        {
-            Debug.Log("[StorageSlotUI] Creating new DragManager");
             _dragManager = new DragHandlerManager();
-        }
-
-        // Ensure EventTrigger component exists
-        var eventTrigger = GetComponent<EventTrigger>();
-        if (eventTrigger == null)
-        {
-            Debug.Log($"[StorageSlotUI] Adding EventTrigger component");
-            eventTrigger = gameObject.AddComponent<EventTrigger>();
-        }
-        else
-        {
-            Debug.Log($"[StorageSlotUI] EventTrigger already exists");
-        }
-
-        // Force all graphics to accept raycasts
-        var image = GetComponent<UnityEngine.UI.Image>();
-        if (image == null)
-        {
-            Debug.Log($"[StorageSlotUI] Adding Image component for raycast");
-            image = gameObject.AddComponent<UnityEngine.UI.Image>();
-            image.color = new Color(0, 0, 0, 0); // Transparent but still receives events
-        }
-        image.raycastTarget = true;
 
         if (icon != null)
-        {
             icon.raycastTarget = true;
-            Debug.Log($"[StorageSlotUI] Icon raycast target set to true");
-        }
 
-        // Check for CanvasGroup
-        var canvasGroup = GetComponent<CanvasGroup>();
-        if (canvasGroup != null)
-        {
-            Debug.Log($"[StorageSlotUI] Has CanvasGroup - blocksRaycasts: {canvasGroup.blocksRaycasts}, interactable: {canvasGroup.interactable}");
-
-            // Ensure it doesn't block raycasts
-            if (!canvasGroup.blocksRaycasts)
-            {
-                canvasGroup.blocksRaycasts = true;
-                Debug.Log($"[StorageSlotUI] Fixed CanvasGroup - blocksRaycasts now true");
-            }
-        }
-
-        // Debug the full setup
-        DebugSetup();
+        var image = GetComponent<UnityEngine.UI.Image>();
+        if (image != null)
+            image.raycastTarget = true;
     }
-
-    private void DebugSetup()
-    {
-        Debug.Log($"[StorageSlotUI] === Debug Setup for {gameObject.name} ===");
-
-        // Check all parent CanvasGroups
-        Transform current = transform;
-        while (current != null)
-        {
-            var parentCanvasGroup = current.GetComponent<CanvasGroup>();
-            if (parentCanvasGroup != null)
-            {
-                Debug.Log($"[StorageSlotUI] Parent '{current.name}' has CanvasGroup - blocksRaycasts: {parentCanvasGroup.blocksRaycasts}");
-            }
-            current = current.parent;
-        }
-
-        // Check for GraphicRaycaster on canvas
-        if (canvas != null)
-        {
-            var raycaster = canvas.GetComponent<GraphicRaycaster>();
-            if (raycaster == null)
-            {
-                Debug.LogError($"[StorageSlotUI] Canvas {canvas.name} has no GraphicRaycaster!");
-            }
-            else
-            {
-                Debug.Log($"[StorageSlotUI] GraphicRaycaster found: {raycaster.enabled}");
-            }
-        }
-
-        // Check EventSystem
-        var eventSystem = EventSystem.current;
-        if (eventSystem == null)
-        {
-            Debug.LogError($"[StorageSlotUI] No EventSystem in scene!");
-        }
-        else
-        {
-            Debug.Log($"[StorageSlotUI] EventSystem: {eventSystem.gameObject.name}");
-            Debug.Log($"[StorageSlotUI] Current Input Module: {eventSystem.currentInputModule?.GetType().Name}");
-        }
-
-        Debug.Log($"[StorageSlotUI] === End Debug Setup ===");
-    }
-
-
-
-
 
     public void SetStorageReference(StorageContainer storage, int index)
     {
@@ -157,25 +61,45 @@ public class StorageSlotUI : MonoBehaviour,
         quantity = newQuantity;
         itemPrefab = prefab;
 
+        // Hide everything first
+        icon.gameObject.SetActive(false);
+        quantityText.gameObject.SetActive(false);
+        if (usageSlider != null)
+            usageSlider.gameObject.SetActive(false);
+
         if (itemData == null)
         {
-            icon.gameObject.SetActive(false);
-            quantityText.gameObject.SetActive(false);
             return;
         }
 
+        // Show icon
         icon.sprite = itemData.icon;
         icon.gameObject.SetActive(true);
         icon.raycastTarget = true;
 
-        if (itemData.maxStack > 1)
+        // Show quantity for stackable items
+        if (itemData.maxStack > 1 && !(itemData is FlashlightItemData))
         {
             quantityText.text = quantity.ToString();
             quantityText.gameObject.SetActive(true);
         }
-        else
+
+        // Show usage slider for flashlights
+        if (itemData is FlashlightItemData flashlightItemData && usageSlider != null)
         {
-            quantityText.gameObject.SetActive(false);
+            FlashlightBehavior flashlightBehavior = null;
+            if (prefab != null)
+            {
+                flashlightBehavior = prefab.GetComponent<FlashlightBehavior>();
+                if (flashlightBehavior != null)
+                    flashlightBehavior.Initialize(flashlightItemData);
+            }
+
+            usageSlider.gameObject.SetActive(true);
+            usageSlider.maxValue = flashlightItemData.maxBattery;
+            usageSlider.value = (prefab != null && flashlightBehavior != null)
+                ? flashlightBehavior.GetCurrentBattery()
+                : flashlightItemData.maxBattery;
         }
     }
 
@@ -197,27 +121,13 @@ public class StorageSlotUI : MonoBehaviour,
         itemPrefab = null;
         icon.gameObject.SetActive(false);
         quantityText.gameObject.SetActive(false);
+        if (usageSlider != null)
+            usageSlider.gameObject.SetActive(false);
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
-        Debug.Log($"[StorageSlotUI] ===== OnBeginDrag START =====");
-        Debug.Log($"[StorageSlotUI] Slot: {gameObject.name}, ItemData: {itemData != null} ({itemData?.name})");
-        Debug.Log($"[StorageSlotUI] Canvas: {canvas != null}, ParentStorage: {parentStorage != null}");
-        Debug.Log($"[StorageSlotUI] Event position: {eventData.position}, Pressed: {eventData.pointerPress?.name}");
-
-        if (itemData == null)
-        {
-            Debug.LogWarning("[StorageSlotUI] Can't drag - no item data");
-            return;
-        }
-
-        if (canvas == null)
-        {
-            Debug.LogError("[StorageSlotUI] Canvas is null!");
-            canvas = GetComponentInParent<Canvas>();
-            if (canvas == null) return;
-        }
+        if (itemData == null) return;
 
         dragIcon = new GameObject("DragIcon");
         dragIcon.transform.SetParent(canvas.transform, false);
@@ -229,58 +139,12 @@ public class StorageSlotUI : MonoBehaviour,
 
         icon.color = isDragging;
         dragIcon.GetComponent<RectTransform>().sizeDelta = icon.rectTransform.sizeDelta;
-
-        Debug.Log($"[StorageSlotUI] Drag icon created");
-        Debug.Log($"[StorageSlotUI] ===== OnBeginDrag END =====");
     }
+
     public void OnDrag(PointerEventData eventData)
     {
         if (dragIcon != null)
             dragIcon.transform.position = eventData.position;
-    }
-
-    public void PostActivationSetup()
-    {
-        Debug.Log($"[StorageSlotUI] PostActivationSetup called on {gameObject.name}");
-
-        // Ensure everything is set up correctly after activation
-        gameObject.SetActive(true);
-        enabled = true;
-
-        // Ensure Image component exists and has raycast target
-        var image = GetComponent<UnityEngine.UI.Image>();
-        if (image == null)
-        {
-            Debug.Log($"[StorageSlotUI] Adding Image component to {gameObject.name}");
-            image = gameObject.AddComponent<UnityEngine.UI.Image>();
-            image.color = new Color(0, 0, 0, 0); // Transparent
-        }
-        image.raycastTarget = true;
-
-        // Ensure EventTrigger
-        if (GetComponent<EventTrigger>() == null)
-        {
-            Debug.Log($"[StorageSlotUI] Adding EventTrigger to {gameObject.name}");
-            gameObject.AddComponent<EventTrigger>();
-        }
-
-        // Ensure icon has raycast target
-        if (icon != null)
-        {
-            icon.raycastTarget = true;
-        }
-
-        // Check RectTransform size
-        var rectTransform = GetComponent<RectTransform>();
-        if (rectTransform != null)
-        {
-            Debug.Log($"[StorageSlotUI] {gameObject.name} size: {rectTransform.sizeDelta}");
-            if (rectTransform.sizeDelta.x < 10 || rectTransform.sizeDelta.y < 10)
-            {
-                Debug.LogWarning($"[StorageSlotUI] {gameObject.name} might be too small for interaction!");
-                rectTransform.sizeDelta = new Vector2(100, 100); // Set minimum size
-            }
-        }
     }
 
     public void OnEndDrag(PointerEventData eventData)
@@ -295,7 +159,6 @@ public class StorageSlotUI : MonoBehaviour,
 
         foreach (var result in results)
         {
-            // Check if dropped on player inventory slot
             var playerSlot = result.gameObject.GetComponentInParent<InventorySlotsUI>();
             if (playerSlot != null)
             {
@@ -303,7 +166,6 @@ public class StorageSlotUI : MonoBehaviour,
                 return;
             }
 
-            // Check if dropped on another storage slot
             var storageSlot = result.gameObject.GetComponentInParent<StorageSlotUI>();
             if (storageSlot != null && storageSlot != this)
             {
@@ -316,6 +178,16 @@ public class StorageSlotUI : MonoBehaviour,
     private void TransferToPlayerInventory(InventorySlotsUI targetSlot)
     {
         if (itemData == null) return;
+
+        // CHECK PRIORITY COMPATIBILITY
+        if (!CanSlotAcceptItem(targetSlot, itemData))
+        {
+            Debug.Log($"[Storage] Cannot transfer {itemData.itemName} - priority mismatch! Item priority: {itemData.priority}, Slot priority: {targetSlot.slotPriority}");
+
+            // Visual feedback (optional - flash red or show message)
+            StartCoroutine(FlashSlotRed(targetSlot));
+            return;
+        }
 
         if (targetSlot.itemData == null)
         {
@@ -341,6 +213,14 @@ public class StorageSlotUI : MonoBehaviour,
         }
         else
         {
+            // CHECK PRIORITY FOR SWAP
+            if (!CanSlotAcceptItem(this, targetSlot.itemData))
+            {
+                Debug.Log($"[Storage] Cannot swap - priority mismatch!");
+                StartCoroutine(FlashSlotRed(targetSlot));
+                return;
+            }
+
             ItemData tempItem = targetSlot.itemData;
             int tempQty = targetSlot.quantity;
             GameObject tempPrefab = targetSlot.instantiatedPrefab;
@@ -358,44 +238,49 @@ public class StorageSlotUI : MonoBehaviour,
 
         otherSlot.SetItem(itemData, quantity, itemPrefab);
         SetItem(tempItem, tempQty, tempPrefab);
+
+        // SAVE IMMEDIATELY AFTER SWAP
+        StorageUIManager.Instance?.SaveAndSyncImmediate();
     }
 
-    public void OnPointerEnter(PointerEventData eventData)
+    private bool CanSlotAcceptItem(InventorySlotsUI slot, ItemData item)
     {
-        Debug.Log($"[StorageSlotUI] OnPointerEnter on {gameObject.name}. Has item: {itemData != null}");
+        if (slot == null || item == null) return false;
+        return slot.slotPriority == item.priority;
     }
 
-    public void OnPointerExit(PointerEventData eventData)
+    private bool CanSlotAcceptItem(StorageSlotUI slot, ItemData item)
     {
-        Debug.Log($"[StorageSlotUI] OnPointerExit on {gameObject.name}");
+        // Storage slots accept all priorities
+        return true;
     }
 
-    public void OnPointerDown(PointerEventData eventData)
+    private System.Collections.IEnumerator FlashSlotRed(InventorySlotsUI slot)
     {
-        Debug.Log($"[StorageSlotUI] ===== OnPointerDown START =====");
-        Debug.Log($"[StorageSlotUI] Mouse down on {gameObject.name}");
-        Debug.Log($"[StorageSlotUI] Has item: {itemData != null}, Item: {itemData?.name}");
-        Debug.Log($"[StorageSlotUI] Event position: {eventData.position}");
-        Debug.Log($"[StorageSlotUI] PointerPress: {eventData.pointerPress?.name}");
-        Debug.Log($"[StorageSlotUI] ===== OnPointerDown END =====");
-    }
-
-    public void OnPointerUp(PointerEventData eventData)
-    {
-        Debug.Log($"[StorageSlotUI] OnPointerUp on {gameObject.name}");
+        var graphic = slot.GetComponent<UnityEngine.UI.Image>();
+        if (graphic != null)
+        {
+            Color originalColor = graphic.color;
+            graphic.color = Color.red;
+            yield return new WaitForSecondsRealtime(0.2f);
+            graphic.color = originalColor;
+        }
     }
 
     public void OnPointerClick(PointerEventData eventData)
     {
         if (Input.GetKey(KeyCode.LeftShift) && itemData != null)
         {
-            var playerMirrorSlots = StorageUIManager.Instance?.GetPlayerMirrorSlots();
-            if (playerMirrorSlots != null)
+            var allPlayerSlots = StorageUIManager.Instance?.GetAllPlayerMirrorSlots();
+            if (allPlayerSlots != null)
             {
-                // Try to stack first
-                foreach (var slot in playerMirrorSlots)
+                // Try to stack first (only in compatible priority slots)
+                foreach (var slot in allPlayerSlots)
                 {
-                    if (slot.itemData == itemData && slot.quantity < itemData.maxStack && itemData.maxStack > 1)
+                    if (slot.itemData == itemData &&
+                        slot.quantity < itemData.maxStack &&
+                        itemData.maxStack > 1 &&
+                        CanSlotAcceptItem(slot, itemData))
                     {
                         int spaceLeft = itemData.maxStack - slot.quantity;
                         int amountToAdd = Mathf.Min(spaceLeft, quantity);
@@ -416,10 +301,10 @@ public class StorageSlotUI : MonoBehaviour,
                     }
                 }
 
-                // Find empty slot
-                foreach (var slot in playerMirrorSlots)
+                // Find empty slot with correct priority
+                foreach (var slot in allPlayerSlots)
                 {
-                    if (slot.itemData == null)
+                    if (slot.itemData == null && CanSlotAcceptItem(slot, itemData))
                     {
                         slot.SetItem(itemData, quantity, itemPrefab);
                         ClearSlot();
@@ -427,7 +312,7 @@ public class StorageSlotUI : MonoBehaviour,
                     }
                 }
 
-                Debug.Log("[Storage] Player inventory full!");
+                Debug.Log("[Storage] Player inventory full or no compatible priority slots!");
             }
         }
     }

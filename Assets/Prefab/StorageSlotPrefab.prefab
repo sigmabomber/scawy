@@ -304,6 +304,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   icon: {fileID: 117948908510053513}
   quantityText: {fileID: 5584416827906607639}
+  usageSlider: {fileID: 4178543400765382974}
+  itemData: {fileID: 0}
 --- !u!1 &6909831477600448233
 GameObject:
   m_ObjectHideFlags: 0

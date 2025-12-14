@@ -415,10 +415,28 @@ public class InventorySlotsUI : EventListener,
             return;
         }
 
-        float timeSinceLastClick = Time.time - lastClickTime;
+        // SHIFT+CLICK to transfer to storage (if storage is open)
+        if (Input.GetKey(KeyCode.LeftShift))
+        {
+            if (StorageUIManager.Instance != null && StorageUIManager.Instance.IsOpen)
+            {
+                TryTransferToStorage();
+                return;
+            }
+        }
+
+        // Normal double-click equip logic
+        float timeSinceLastClick = Time.unscaledTime - lastClickTime;
 
         if (timeSinceLastClick <= doubleClickThreshold)
         {
+            // DON'T EQUIP if useItem is false (in storage UI)
+            if (!useItem)
+            {
+                Debug.Log("[InventorySlot] Cannot equip in storage UI");
+                return;
+            }
+
             if (isEquipped)
             {
                 OnUnequip();
@@ -432,8 +450,63 @@ public class InventorySlotsUI : EventListener,
         }
         else
         {
-            lastClickTime = Time.time;
+            lastClickTime = Time.unscaledTime;
         }
+    }
+
+    private void TryTransferToStorage()
+    {
+        if (itemData == null) return;
+
+        if (StorageUIManager.Instance == null || !StorageUIManager.Instance.IsOpen)
+            return;
+
+        var storageSlots = StorageUIManager.Instance.GetStorageSlots();
+        if (storageSlots == null || storageSlots.Count == 0) return;
+
+        // Try to stack in existing slots first
+        foreach (var storageSlot in storageSlots)
+        {
+            if (storageSlot.ItemData == itemData &&
+                storageSlot.Quantity < itemData.maxStack &&
+                itemData.maxStack > 1)
+            {
+                int spaceLeft = itemData.maxStack - storageSlot.Quantity;
+                int amountToAdd = Mathf.Min(spaceLeft, quantity);
+
+                storageSlot.UpdateQuantity(storageSlot.Quantity + amountToAdd);
+
+                quantity -= amountToAdd;
+                if (quantity <= 0)
+                {
+                    ClearSlot();
+                }
+                else
+                {
+                    UpdateQuantity(quantity);
+                }
+
+                // SAVE IMMEDIATELY
+                StorageUIManager.Instance.SaveAndSyncImmediate();
+                return;
+            }
+        }
+
+        // Find empty slot
+        foreach (var storageSlot in storageSlots)
+        {
+            if (storageSlot.ItemData == null)
+            {
+                storageSlot.SetItem(itemData, quantity, instantiatedPrefab);
+                ClearSlot();
+
+                // SAVE IMMEDIATELY
+                StorageUIManager.Instance.SaveAndSyncImmediate();
+                return;
+            }
+        }
+
+        Debug.Log("[Storage] Storage is full!");
     }
 
     public void OnBeginDrag(PointerEventData eventData)
