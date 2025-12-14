@@ -28,7 +28,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     public int maxAmmo = 6;
     public int currentAmmoCount;
     public int ammoPerShot = 1;
-    public float reloadTimePerBullet = 0.5f;
+    
 
     [Header("Raycast Settings")]
     public Camera playerCamera;
@@ -94,6 +94,7 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
     private bool hasTinnitus = false;
     private bool initialized = false;
     private bool isInspecting = false;
+    private bool isCancelReloading = false;
 
     private InventorySlotsUI equippedSlot;
     private Transform equipPoint;
@@ -519,7 +520,6 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
         {
             maxAmmo = data.maxAmmo;
             ammoPerShot = data.ammoPerShot;
-            reloadTimePerBullet = data.reloadTime;
 
             if (!initialized)
             {
@@ -800,16 +800,9 @@ public class RevolverBehavior : MonoBehaviour, IItemUsable
             // Calculate how many bullets need to be loaded
             int bulletsToLoad = maxAmmo - currentAmmoCount;
 
-   
-            float animLength = reloadClip != null ? reloadClip.length : 1f;
 
             
-            if (animLength > 0f)
-            {
-                float desiredDuration = bulletsToLoad * reloadTimePerBullet;
-                float speedMultiplier = animLength / desiredDuration;
-                animator.speed = speedMultiplier;
-            }
+            
 
             animator.SetBool(IsReloadingHash, true);
             animator.SetTrigger(StartReloadingHash);
