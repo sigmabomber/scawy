@@ -18,7 +18,7 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
     private bool initialized = false;
 
     private float maxIntensity;
-    private float minIntensity = 0.3f;
+    private float minIntensity = 0f;
 
     private float flickerSpeed;
 
