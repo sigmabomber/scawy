@@ -565,7 +565,7 @@ PrefabInstance:
     m_Modifications:
     - target: {fileID: 1351392322117940278, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_LocalPosition.x
-      value: 65.074715
+      value: 58.48
       objectReference: {fileID: 0}
     - target: {fileID: 1351392322117940278, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_LocalPosition.y
@@ -573,7 +573,7 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 1351392322117940278, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_LocalPosition.z
-      value: 14.116614
+      value: 18.67
       objectReference: {fileID: 0}
     - target: {fileID: 1351392322117940278, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_LocalRotation.w
@@ -606,6 +606,10 @@ PrefabInstance:
     - target: {fileID: 3675215914822228637, guid: 248395507a831ab4981c077443c16be0, type: 3}
       propertyPath: m_Name
       value: Revolver
+      objectReference: {fileID: 0}
+    - target: {fileID: 3972647652714788478, guid: 248395507a831ab4981c077443c16be0, type: 3}
+      propertyPath: m_LocalPosition.x
+      value: 2.94
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -666,6 +670,17 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 1.91, y: 3.96, z: 0.19}
   m_Center: {x: 0.95, y: 2.11, z: -0.02}
+--- !u!114 &240825612 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 5169862204325496517, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+  m_PrefabInstance: {fileID: 8193339067302111802}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 0
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe87c0e1cc204ed48ad3b37840f39efc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1001 &260490298
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -674,10 +689,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
-    - target: {fileID: 3592659363617418703, guid: da446cf4015ed1e48b6b32137300298c, type: 3}
-      propertyPath: debugMode
-      value: 1
-      objectReference: {fileID: 0}
+    - target: {fileID: 4030003468368452695, guid: da446cf4015ed1e48b6b32137300298c, type: 3}
+      propertyPath: bloodEdgeRenderer
+      value: 
+      objectReference: {fileID: 240825612}
     - target: {fileID: 7331652008572075859, guid: da446cf4015ed1e48b6b32137300298c, type: 3}
       propertyPath: m_LocalPosition.x
       value: 57.952366

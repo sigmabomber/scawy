@@ -290,6 +290,8 @@ public class InventoryCommands : MonoBehaviour
     }
 
 
+
+
     private void ShowAvailableEffects()
     {
         ConsoleUI.Print("Available Effects:");
@@ -313,7 +315,7 @@ public class InventoryCommands : MonoBehaviour
             return;
         }
 
-        if (!Enum.TryParse<EffectEvent.EffectType>(args[0], true, out var effectType))
+        if (!Enum.TryParse<EffectType>(args[0], true, out var effectType))
         {
             ConsoleUI.PrintError($"Unknown effect type: {args[0]}");
             ShowAvailableEffects();

@@ -1,4 +1,6 @@
 ﻿using Debugging;
+using Doody.GameEvents;
+using Doody.GameEvents.Health;
 using System;
 using System.Collections;
 using System.Collections.Generic;
@@ -233,11 +235,24 @@ namespace Doody.Debugging
             RegisterAsyncCommand("quit", "Quits the game", "quit",
                 "Game", CommandPermission.Admin, QuitCommand, "exit");
 
+   
+            // health
+            RegisterCommand("addhealth", "Adds Health to Player", "addhealth [amount]",
+               "Health", CommandPermission.Admin, AddHealthCommand, "addhp");
+          
+            RegisterCommand("removehealth", "Remove Health to Player", "removehealth [amount]",
+             "Health", CommandPermission.Admin, RemoveHealthCommand, "removehp");
+
+            RegisterCommand("maxhealth", "Adjusts Players Max Health", "maxhealth [amount]",
+             "Health", CommandPermission.Admin, MaxHealthCommand, "maxhp");
+
             RegisterCommand("god", "Toggles god mode", "god",
                 "Health", CommandPermission.Admin, GodCommand, "invincible");
+            RegisterCommand("healthdata", "Gets Health Data", "healthdata",
+             "Health", CommandPermission.Admin, GetHealthData, "hpdata");
 
-            RegisterCommand("infinitestamina", "Infinite stamina", "infinitestamina",
-                "Stamina", CommandPermission.Admin, InfiniteStaminaCommand);
+   // movement
+
 
             RegisterCommand("walkspeed", "Adjust players walk speed", "walkspeed [speed]", 
                 "Movement", CommandPermission.Admin, WalkSpeedCommand);
@@ -245,6 +260,14 @@ namespace Doody.Debugging
               "Movement", CommandPermission.Admin, SprintSpeedCommand);
             RegisterCommand("crouchspeed", "Adjust players crouch speed", "crouchspeed [speed]",
               "Movement", CommandPermission.Admin, CrouchSpeedCommand);
+            RegisterCommand("crouchspeed", "Adjust players crouch speed", "crouchspeed [speed]",
+             "Movement", CommandPermission.Developer, GetMovementDataCommand);
+
+            RegisterCommand("movementdata", "Get Movement Data", "movementdata",
+        "Stamina", CommandPermission.Developer, GetMovementDataCommand);
+
+
+            // stamina
 
             RegisterCommand("maxstamina", "Adjust players max stamina", "maxstamina [value]",
               "Stamina", CommandPermission.Admin, MaxStaminaCommand);
@@ -260,6 +283,13 @@ namespace Doody.Debugging
 
             RegisterCommand("minstamina", "Adjust players minimum stamina to sprint", "minstamina [value]",
            "Stamina", CommandPermission.Admin, MinStaminaToSprintCommand);
+            RegisterCommand("infinitestamina", "Infinite stamina", "infinitestamina",
+       "Stamina", CommandPermission.Admin, InfiniteStaminaCommand);
+
+            RegisterCommand("staminadata", "Get Stamina Data", "staminadata",
+        "Stamina", CommandPermission.Developer, GetStaminaDataCommand);
+
+            
 
 
         }
@@ -830,20 +860,80 @@ namespace Doody.Debugging
 #endif
         }
 
+
+        #region Health Commands
         private void GodCommand(string[] args)
         {
-            ConsoleUI.PrintSuccess($"God mode toggled");
+            bool activate = !HealthManager.instance.isInvincible;
+            HealthManager.instance.isInvincible = activate;
+
+            ConsoleUI.PrintSuccess($"God mode {(activate ? "on" : "off")}");
         }
 
-        private void InfiniteStaminaCommand(string[] args)
+        private void AddHealthCommand(string[] args)
         {
-            bool activate = !PlayerController.Instance.infiniteStamina;
-            PlayerController.Instance.infiniteStamina = activate;
-            ConsoleUI.PrintSuccess($"Infinite stamina {(activate ? "on" : "off")}");
+            if (args.Length == 0)
+            {
+                ConsoleUI.PrintError("Usage: addhealth [amount]");
+                ConsoleUI.Print("Example: addhealth 2");
+                return;
+            }
+            if (!int.TryParse(args[0], out var result))
+            {
+                ConsoleUI.PrintError($"Invalid number: {args[0]}");
+                return;
+            }
 
-
-
+            ConsoleUI.PrintSuccess($"Successfully added {result}hp");
+            Events.Publish(new AddHealthEvent(result));
         }
+
+        private void MaxHealthCommand(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                ConsoleUI.PrintError("Usage: maxhealth [amount]");
+                ConsoleUI.Print("Example: maxhealth 2");
+                return;
+            }
+            if (!int.TryParse(args[0], out var result))  
+            {
+                ConsoleUI.PrintError($"Invalid number: {args[0]}");
+                return;
+            }
+            HealthManager.instance.maxHealth = result;
+
+
+            ConsoleUI.PrintSuccess($"Successfully changed max health to {result}");
+        }
+
+        private void RemoveHealthCommand(string[] args)
+        {
+            if (args.Length == 0)
+            {
+                ConsoleUI.PrintError("Usage: removehealth [amount]");
+                ConsoleUI.Print("Example: removehealth 2");
+                return;
+            }
+            if (!int.TryParse(args[0], out var result))  
+            {
+                ConsoleUI.PrintError($"Invalid number: {args[0]}");
+                return;
+            }
+
+            ConsoleUI.PrintSuccess($"Successfully removed {result}hp");
+            Events.Publish(new RemoveHealthEvent(result));
+        }
+
+
+        private void GetHealthData(string[] args)
+        {
+            ConsoleUI.PrintSuccess("\nHealth Data:\n");
+            ConsoleUI.PrintSuccess($"Max Health: {HealthManager.instance.maxHealth}\nCurrent Health: {HealthManager.instance.currentHealth}\nInvincible: {HealthManager.instance.isInvincible}");
+        }
+        #endregion
+
+
         #region Movement Commands
         private void WalkSpeedCommand(string[] args)
         {
@@ -880,7 +970,15 @@ namespace Doody.Debugging
             );
             ConsoleUI.PrintSuccess($"Successfully changed Players CrouchSpeed to {newSpeed}");
         }
+
+        private void GetMovementDataCommand(string[] args)
+        {
+            ConsoleUI.PrintSuccess("\nMovement Data:\n");
+            ConsoleUI.PrintSuccess($"Walk Speed: {PlayerController.Instance.GetBaseWalkSpeed()}\nCrouch Speed: {PlayerController.Instance.GetBaseCrouchSpeed()}\nSprint Speed: {PlayerController.Instance.GetBaseSprintSpeed()}");
+        }
         #endregion
+
+
 
 
         #region Stamina Commands
@@ -913,12 +1011,28 @@ namespace Doody.Debugging
             PlayerController.Instance.minStaminaToSprint = args.Length > 0 ? float.Parse(args[0]) : 10f;
             ConsoleUI.PrintSuccess($"Successfully changed Players minimum stamina to sprint to {PlayerController.Instance.minStaminaToSprint}");
         }
+        private void InfiniteStaminaCommand(string[] args)
+        {
+            bool activate = !PlayerController.Instance.infiniteStamina;
+            PlayerController.Instance.infiniteStamina = activate;
+            ConsoleUI.PrintSuccess($"Infinite stamina {(activate ? "on" : "off")}");
+
+
+
+        }
+
+
+        private void GetStaminaDataCommand(string[] args)
+        {
+            ConsoleUI.PrintSuccess("Stamina Data:\n");
+            ConsoleUI.PrintSuccess($"Max Stamina: {PlayerController.Instance.maxStamina}\nStamina Drain Rate: {PlayerController.Instance.staminaDrainRate}\nStamina Regen Rate: {PlayerController.Instance.staminaRegenRate}\nStamina Regen Delay: {PlayerController.Instance.staminaRegenDelay}\nMinimum Stamina to Sprint: {PlayerController.Instance.minStaminaToSprint}\nInfinite Stamina: {PlayerController.Instance.infiniteStamina}");
+        }
         #endregion
 
 
-        #endregion
+            #endregion
 
-        #region Utility Methods
+            #region Utility Methods
         public List<CommandData> GetAllCommands()
         {
             return commands.Values

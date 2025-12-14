@@ -318,6 +318,7 @@ GameObject:
   - component: {fileID: 7837067474149532108}
   - component: {fileID: 3592659363617418703}
   - component: {fileID: 8432901657141763341}
+  - component: {fileID: 4030003468368452695}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -506,6 +507,34 @@ LODGroup:
     fadeTransitionWidth: 0
     renderers: []
   m_Enabled: 1
+--- !u!114 &4030003468368452695
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7948546303065143638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: e2f16c6ae160372428add3042bef5f63, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  maxHealth: 4
+  currentHealth: 0
+  isInvincible: 0
+  cameraRecoil: {fileID: 4486433483562399820}
+  damageRotationRecoil: {x: -2, y: 0.5, z: 0.2}
+  damagePositionRecoil: {x: 0, y: -0.05, z: -0.1}
+  shakeIntensityMultiplier: 1
+  bloodEdges:
+  - {fileID: 21300000, guid: 2e7b2fb7ff0d0ef4fa68c5b431ab529a, type: 3}
+  - {fileID: 21300000, guid: c36b99272bb88cb46b8d1001cd3999bf, type: 3}
+  - {fileID: 21300000, guid: e4747881c76f04f41ae4d097f896b17b, type: 3}
+  bloodEdgeRenderer: {fileID: 0}
+  bloodEdgeDisplayTime: 1.5
+  pulseSpeed: 2
+  minAlpha: 0.3
+  maxAlpha: 1
 --- !u!1 &8586872053062033744
 GameObject:
   m_ObjectHideFlags: 0
