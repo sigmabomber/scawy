@@ -10,7 +10,9 @@ public class HealthManager : EventListener
 {
     public int maxHealth = 4;
     public int currentHealth;
+#pragma warning disable CS0414
     private bool isDead = false;
+
     public bool isInvincible = false;
 
     [Header("Camera Shake Settings")]
@@ -42,7 +44,6 @@ public class HealthManager : EventListener
         Events.Subscribe<AddHealthEvent>(AddHealth, this);
         Events.Subscribe<RemoveHealthEvent>(RemoveHealth, this);
 
-        // Initialize camera recoil
         if (cameraRecoil == null)
         {
             cameraRecoil = FindObjectOfType<CameraRecoil>();

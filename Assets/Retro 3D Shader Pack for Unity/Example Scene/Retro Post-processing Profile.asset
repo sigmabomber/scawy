@@ -78,13 +78,13 @@ MonoBehaviour:
     value: 1
   UsesFixedResolution:
     overrideState: 1
-    value: 1
+    value: 0
   PixelScale:
     overrideState: 1
-    value: 4
+    value: 3
   FixedVerticalResolution:
     overrideState: 1
-    value: 256
+    value: 197
   ColorDepth:
     overrideState: 1
     value: 0.3
