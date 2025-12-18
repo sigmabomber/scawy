@@ -10,13 +10,13 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: ca7099f6b7a6cc74bb8dc959cff6168c, type: 3}
-  m_Name: Bandage
+  m_Name: Medkit
   m_EditorClassIdentifier: 
-  icon: {fileID: 21300000, guid: c3ce091251dc5464bbd391edecfeeccf, type: 3}
-  itemName: Bandage
+  icon: {fileID: 21300000, guid: d4270bb727e49204c8615c429a6f9437, type: 3}
+  itemName: Medkit
   maxStack: 0
-  prefab: {fileID: 3364318055041882371, guid: 1a98364076db58c4c98ae235c15e6be7, type: 3}
+  prefab: {fileID: 2940825567811139095, guid: ea62f346bf24ee9408b7ae4a8d8e940a, type: 3}
   priority: 0
-  healAmount: 1
+  healAmount: 2
   maxUses: 0
-  duration: 2
+  duration: 4

@@ -505,6 +505,7 @@ public class InventorySlotsUI : EventListener,
     {
         if (itemData == null)
         {
+            print(":gh");
             return;
         }
 
@@ -526,6 +527,7 @@ public class InventorySlotsUI : EventListener,
     {
         if (dragIcon == null)
         {
+            print("bleh");
             return;
         }
 

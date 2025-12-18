@@ -29,6 +29,12 @@ public class DragHandlerManager
     {
         RegisterHandler(new BatteryToFlashlightHandler());
 
+        // Load your medkit ScriptableObject
+        HealingItemData medkitData = Resources.Load<HealingItemData>("Medkit");
+        // OR if you have a reference somewhere else:
+        // HealingItemData medkitData = someManagerClass.medkitData;
+
+        RegisterHandler(new BandageToBandageHandler(medkitData));
     }
 
     public void RegisterHandler(IItemDragHandler handler)

@@ -11,11 +11,11 @@ GameObject:
   - component: {fileID: 95512458385922085}
   - component: {fileID: 9107925066320309250}
   - component: {fileID: 1264880931889350181}
-  - component: {fileID: 2467354178533607853}
   - component: {fileID: 6095585117885414706}
   - component: {fileID: 1031852423762317454}
   - component: {fileID: 2320680455746693598}
   - component: {fileID: 8848907228800110493}
+  - component: {fileID: 5131539465015704102}
   m_Layer: 7
   m_Name: Bandage
   m_TagString: Untagged
@@ -89,18 +89,6 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
---- !u!114 &2467354178533607853
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 2940825567811139095}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 8d35649786dfdae45b5cece21a222402, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
 --- !u!114 &6095585117885414706
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -184,3 +172,15 @@ MonoBehaviour:
   equippedPosition: {x: 0.0709, y: 0.2047, z: 0.2721}
   equippedRotation: {x: -88.413, y: -305.432, z: 108.488}
   equippedScale: {x: 89.85407, y: 89.85407, z: 89.85407}
+--- !u!114 &5131539465015704102
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2940825567811139095}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 290b04bd10cd91148982331108d3b5a1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

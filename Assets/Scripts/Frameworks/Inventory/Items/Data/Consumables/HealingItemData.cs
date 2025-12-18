@@ -6,10 +6,10 @@ using UnityEngine;
 [CreateAssetMenu(menuName ="Item/Consumables/Healing")]
 public class HealingItemData : ItemData
 {
-    public float healing;
+    public float healAmount;
     public int maxUses;
 
-    public float timeToUse; 
+    public float duration; 
 
 
 }

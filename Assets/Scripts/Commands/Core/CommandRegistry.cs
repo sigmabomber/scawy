@@ -238,10 +238,10 @@ namespace Doody.Debugging
    
             // health
             RegisterCommand("addhealth", "Adds Health to Player", "addhealth [amount]",
-               "Health", CommandPermission.Admin, AddHealthCommand, "addhp");
+               "Health", CommandPermission.Admin, AddHealthCommand, "addhp", "givehp");
           
             RegisterCommand("removehealth", "Remove Health to Player", "removehealth [amount]",
-             "Health", CommandPermission.Admin, RemoveHealthCommand, "removehp");
+             "Health", CommandPermission.Admin, RemoveHealthCommand, "removehp", "takehp", "takehealth", "takedmg");
 
             RegisterCommand("maxhealth", "Adjusts Players Max Health", "maxhealth [amount]",
              "Health", CommandPermission.Admin, MaxHealthCommand, "maxhp");

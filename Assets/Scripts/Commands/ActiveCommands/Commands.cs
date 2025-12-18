@@ -20,7 +20,7 @@ public class InventoryCommands : MonoBehaviour
         }
     }
 
-    [Command("additem", "Adds an item to inventory", "additem [itemId] [quantity=1]")]
+    [Command("additem", "Adds an item to inventory", "additem [itemId] [quantity=1]", "Items", CommandPermission.Developer, "giveitem")]
     public void AddItemCommand(string[] args)
     {
         if (ItemDatabaseManager.Instance == null)
@@ -110,7 +110,7 @@ public class InventoryCommands : MonoBehaviour
             }
         }
     }
-    [Command("give_all", "Gives one of every item in database", "give_all")]
+    [Command("give_all", "Gives one of every item in database", "give_all", "Items")]
     public void GiveAllCommand(string[] args)
     {
         if (ItemDatabaseManager.Instance == null)
@@ -147,7 +147,7 @@ public class InventoryCommands : MonoBehaviour
         }
     }
 
-    [Command("iteminfo", "Shows detailed info about an item", "iteminfo [itemId]")]
+    [Command("iteminfo", "Shows detailed info about an item", "iteminfo [itemId]", "Items")]
     public void ItemInfoCommand(string[] args)
     {
         if (args.Length == 0)
@@ -190,7 +190,7 @@ public class InventoryCommands : MonoBehaviour
         ConsoleUI.Print($"=== END INFO ===");
     }
 
-    [Command("search", "Searches for items by name", "search [search_term]")]
+    [Command("search", "Searches for items by name", "search [search_term]", "Items")]
     public void SearchItemsCommand(string[] args)
     {
         if (args.Length == 0)
@@ -219,46 +219,9 @@ public class InventoryCommands : MonoBehaviour
         }
     }
 
-    private string FindItemId(ItemData itemData)
-    {
-        var allIds = ItemDatabaseManager.Instance.GetAllItemIds();
-        foreach (var id in allIds)
-        {
-            if (ItemDatabaseManager.Instance.GetItem(id) == itemData)
-                return id;
-        }
-        return "unknown";
-    }
-
-    private void ShowAvailableItems()
-    {
-        var itemIds = ItemDatabaseManager.Instance.GetAllItemIds();
-
-        if (itemIds.Count == 0)
-        {
-            ConsoleUI.Print("Database is empty");
-            return;
-        }
-
-        ConsoleUI.Print("Available items:");
-        int count = 0;
-        foreach (string itemId in itemIds)
-        {
-            ItemData itemData = ItemDatabaseManager.Instance.GetItem(itemId);
-            string stackInfo = itemData.maxStack > 1 ? $"(stack x{itemData.maxStack})" : "";
-            ConsoleUI.Print($"  {itemId.PadRight(15)} - {itemData.itemName} {stackInfo}");
-
-            count++;
-            if (count >= 20) 
-            {
-                ConsoleUI.Print($"  ... and {itemIds.Count - count} more items");
-                break;
-            }
-        }
-        ConsoleUI.Print($"Total: {itemIds.Count} items in database");
-    }
-
-    [Command("db_stats", "Shows database statistics", "db_stats")]
+  
+   
+    [Command("db_stats", "Shows database statistics", "db_stats", "Items", CommandPermission.Developer, "showitems")]
     public void DatabaseStatsCommand(string[] args)
     {
         if (ItemDatabaseManager.Instance == null)
@@ -290,7 +253,44 @@ public class InventoryCommands : MonoBehaviour
     }
 
 
+    private void ShowAvailableItems()
+    {
+        var itemIds = ItemDatabaseManager.Instance.GetAllItemIds();
 
+        if (itemIds.Count == 0)
+        {
+            ConsoleUI.Print("Database is empty");
+            return;
+        }
+
+        ConsoleUI.Print("Available items:");
+        int count = 0;
+        foreach (string itemId in itemIds)
+        {
+            ItemData itemData = ItemDatabaseManager.Instance.GetItem(itemId);
+            string stackInfo = itemData.maxStack > 1 ? $"(stack x{itemData.maxStack})" : "";
+            ConsoleUI.Print($"  {itemId.PadRight(15)} - {itemData.itemName} {stackInfo}");
+
+            count++;
+            if (count >= 20)
+            {
+                ConsoleUI.Print($"  ... and {itemIds.Count - count} more items");
+                break;
+            }
+        }
+        ConsoleUI.Print($"Total: {itemIds.Count} items in database");
+    }
+
+    private string FindItemId(ItemData itemData)
+    {
+        var allIds = ItemDatabaseManager.Instance.GetAllItemIds();
+        foreach (var id in allIds)
+        {
+            if (ItemDatabaseManager.Instance.GetItem(id) == itemData)
+                return id;
+        }
+        return "unknown";
+    }
 
     private void ShowAvailableEffects()
     {
