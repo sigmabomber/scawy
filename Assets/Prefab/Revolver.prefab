@@ -577,10 +577,10 @@ MonoBehaviour:
   tinnitusSound: {fileID: 8300000, guid: ab1ba1079cd2f174fa0e1d254ae7459d, type: 3}
   emptyClickSound: {fileID: 8300000, guid: f8339e082f4aab94f97b9ad83b469fea, type: 3}
   tinnitusDuration: 5
-  tinnitusFadeInTime: 0.01
+  tinnitusFadeInTime: 0.05
   tinnitusFadeOutTime: 2
-  tinnitusVolume: 0.241
-  volumeReduction: 0.898
+  tinnitusVolume: 0.1
+  volumeReduction: 1
   fadeCurve:
     serializedVersion: 2
     m_Curve:
