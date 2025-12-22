@@ -86,6 +86,7 @@ public class HealingBehavior : MonoBehaviour, IItemUsable
 
             Events.Publish(new AddHealthEvent((int)data.healAmount));
             slot.ClearSlot();
+            Events.Unsubscribe<ProgressbarCompleted>(DrinkCompleted);
             Destroy(gameObject);
 
 

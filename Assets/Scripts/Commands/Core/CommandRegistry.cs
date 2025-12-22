@@ -1,4 +1,5 @@
 ﻿using Debugging;
+using Doody.Framework.ObjectiveSystem;
 using Doody.GameEvents;
 using Doody.GameEvents.Health;
 using System;
@@ -288,6 +289,14 @@ namespace Doody.Debugging
 
             RegisterCommand("staminadata", "Get Stamina Data", "staminadata",
         "Stamina", CommandPermission.Developer, GetStaminaDataCommand);
+
+
+
+
+            // objective
+
+            RegisterCommand("addobjective", "Adds a new Objective", "addobjective [name] [amount] [type]",
+                "Objective", CommandPermission.Developer, AddObjectiveCommand, "addtask");
 
             
 
@@ -1030,9 +1039,98 @@ namespace Doody.Debugging
         #endregion
 
 
-            #endregion
+        #region Objective Commands 
 
-            #region Utility Methods
+        private void AddObjectiveCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                ConsoleUI.PrintError(
+                    "Usage: giveobjective [name] [amount?] [type (count / collection / bool)]");
+                ConsoleUI.Print(
+                    "Examples:\n" +
+                    "giveobjective Enemy Hunter 10 count\n" +
+                    "giveobjective Gem Collector 5 collection\n" +
+                    "giveobjective Boss Slayer bool");
+                return;
+            }
+
+            string typeArg = args[^1].ToLower();
+
+            switch (typeArg)
+            {
+                case "count":
+                case "collection":
+                    {
+                        if (args.Length < 3)
+                        {
+                            ConsoleUI.PrintError("This objective type requires an amount.");
+                            return;
+                        }
+
+                        if (!int.TryParse(args[^2], out int amount) || amount <= 0)
+                        {
+                            ConsoleUI.PrintError("Amount must be a positive number.");
+                            return;
+                        }
+
+                        string name = string.Join(" ", args.Take(args.Length - 2));
+                        
+                        string description = name;
+
+                        if (typeArg == "count")
+                        {
+                            Events.Publish(new CountObjective(
+                                
+                                name,
+                                description,
+                                amount
+                            ));
+                        }
+                        else
+                        {
+                            Events.Publish(new CollectionObjective(
+                                
+                                name,
+                                description,
+                                amount
+                            ));
+                        }
+
+                        ConsoleUI.PrintSuccess($"Objective added: {name}");
+                        break;
+                    }
+
+                case "bool":
+                case "boolean":
+                    {
+                        string name = string.Join(" ", args.Take(args.Length - 1));
+                    
+                        string description = $"Complete: {name}";
+
+                        Events.Publish(new BooleanObjective(
+                            
+                            name,
+                            description
+                        ));
+
+                        ConsoleUI.PrintSuccess($"Objective added: {name}");
+                        break;
+                    }
+
+                default:
+                    ConsoleUI.PrintError($"Unknown objective type: {typeArg}");
+                    break;
+            }
+        }
+       
+        
+       
+        #endregion
+
+        #endregion
+
+        #region Utility Methods
         public List<CommandData> GetAllCommands()
         {
             return commands.Values

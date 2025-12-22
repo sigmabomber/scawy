@@ -20,6 +20,8 @@ namespace Doody.Framework.ObjectiveSystem
         public event Action<Objective> OnCompleted;
         public event Action<Objective, int> OnProgressChanged;
 
+
+
         public virtual void AddProgress(int amount)
         {
             if (!IsActive || IsComplete) return;
@@ -57,23 +59,33 @@ namespace Doody.Framework.ObjectiveSystem
     // Different objective types
     public class CountObjective : Objective
     {
-        public CountObjective(string id, string name, string description, int targetCount)
+        public CountObjective(string name, string description, int targetCount, string id = null)
         {
-            Id = id;
+            Id = string.IsNullOrEmpty(id) ? GenerateIdFromName(name) : id;
             Name = name;
             Description = description;
             MaxValue = targetCount;
+        }
+
+        private string GenerateIdFromName(string name)
+        {
+            return name.ToLower().Replace(" ", "_").Replace("-", "_");
         }
     }
 
     public class BooleanObjective : Objective
     {
-        public BooleanObjective(string id, string name, string description)
+        public BooleanObjective(string name, string description, string id = null)
         {
-            Id = id;
+            Id = string.IsNullOrEmpty(id) ? GenerateIdFromName(name) : id;
             Name = name;
             Description = description;
             MaxValue = 1;
+        }
+
+        private string GenerateIdFromName(string name)
+        {
+            return name.ToLower().Replace(" ", "_").Replace("-", "_");
         }
 
         public void Complete() => AddProgress(1);
@@ -83,12 +95,17 @@ namespace Doody.Framework.ObjectiveSystem
     {
         private HashSet<string> collectedItems = new HashSet<string>();
 
-        public CollectionObjective(string id, string name, string description, int requiredCount)
+        public CollectionObjective(string name, string description, int requiredCount, string id = null)
         {
-            Id = id;
+            Id = string.IsNullOrEmpty(id) ? GenerateIdFromName(name) : id;
             Name = name;
             Description = description;
             MaxValue = requiredCount;
+        }
+
+        private string GenerateIdFromName(string name)
+        {
+            return name.ToLower().Replace(" ", "_").Replace("-", "_");
         }
 
         public void CollectItem(string itemId)
@@ -97,63 +114,6 @@ namespace Doody.Framework.ObjectiveSystem
             {
                 AddProgress(1);
             }
-        }
-    }
-
-    // Manager to handle multiple objectives
-    public class ObjectiveManager
-    {
-        private Dictionary<string, Objective> objectives = new Dictionary<string, Objective>();
-
-        public event Action<Objective> OnObjectiveCompleted;
-        public event Action<Objective> OnObjectiveAdded;
-
-        public void AddObjective(Objective objective)
-        {
-            if (objectives.ContainsKey(objective.Id)) return;
-
-            objectives[objective.Id] = objective;
-            objective.OnCompleted += HandleObjectiveCompleted;
-            OnObjectiveAdded?.Invoke(objective);
-        }
-
-        public void RemoveObjective(string id)
-        {
-            if (objectives.TryGetValue(id, out var objective))
-            {
-                objective.OnCompleted -= HandleObjectiveCompleted;
-                objectives.Remove(id);
-            }
-        }
-
-        public Objective GetObjective(string id)
-        {
-            objectives.TryGetValue(id, out var objective);
-            return objective;
-        }
-
-        public IEnumerable<Objective> GetActiveObjectives()
-        {
-            return objectives.Values.Where(o => o.IsActive);
-        }
-
-        public IEnumerable<Objective> GetCompletedObjectives()
-        {
-            return objectives.Values.Where(o => o.IsComplete);
-        }
-
-        private void HandleObjectiveCompleted(Objective objective)
-        {
-            OnObjectiveCompleted?.Invoke(objective);
-        }
-
-        public void Clear()
-        {
-            foreach (var objective in objectives.Values)
-            {
-                objective.OnCompleted -= HandleObjectiveCompleted;
-            }
-            objectives.Clear();
         }
     }
 }

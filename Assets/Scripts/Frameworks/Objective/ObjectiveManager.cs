@@ -1,6 +1,9 @@
 using Doody.Framework.ObjectiveSystem;
 using Doody.GameEvents;
+using System;
 using System.Collections.Generic;
+using System.Linq;
+using UnityEngine;
 
 public class ObjectiveManager : EventListener
 {
@@ -8,6 +11,9 @@ public class ObjectiveManager : EventListener
     public static ObjectiveManager Instance => instance;
 
     private Dictionary<string, Objective> objectives = new Dictionary<string, Objective>();
+
+    public event Action<Objective> OnObjectiveCompleted;
+    public event Action<Objective> OnObjectiveAdded;
 
     void Awake()
     {
@@ -19,21 +25,68 @@ public class ObjectiveManager : EventListener
         instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // Subscribe to game events
+        // CRITICAL: Listen for objectives being published
+        Listen<CountObjective>(obj => AddObjective(obj));
+        Listen<CollectionObjective>(obj => AddObjective(obj));
+        Listen<BooleanObjective>(obj => AddObjective(obj));
+
+        // Listen for progress events
         Listen<EnemyKilledEvent>(OnEnemyKilled);
         Listen<ItemCollectedEvent>(OnItemCollected);
         Listen<ObjectiveProgressEvent>(OnObjectiveProgress);
+
+        Debug.Log("ObjectiveManager initialized and listening for objectives");
+    }
+
+    public void AddObjective(Objective objective)
+    {
+        if (objectives.ContainsKey(objective.Id))
+        {
+            Debug.LogWarning($"Objective with ID '{objective.Id}' already exists!");
+            return;
+        }
+
+        objectives[objective.Id] = objective;
+        objective.OnCompleted += HandleObjectiveCompleted;
+        OnObjectiveAdded?.Invoke(objective);
+
+        Debug.Log($"Objective added: {objective.Name} (ID: {objective.Id})");
+    }
+
+    public void RemoveObjective(string id)
+    {
+        if (objectives.TryGetValue(id, out var objective))
+        {
+            objective.OnCompleted -= HandleObjectiveCompleted;
+            objectives.Remove(id);
+        }
+    }
+
+    public Objective GetObjective(string id)
+    {
+        objectives.TryGetValue(id, out var objective);
+        return objective;
+    }
+
+    public IEnumerable<Objective> GetActiveObjectives()
+    {
+        return objectives.Values.Where(o => o.IsActive);
+    }
+
+    public IEnumerable<Objective> GetCompletedObjectives()
+    {
+        return objectives.Values.Where(o => o.IsComplete);
+    }
+
+    private void HandleObjectiveCompleted(Objective objective)
+    {
+        OnObjectiveCompleted?.Invoke(objective);
     }
 
     private void OnEnemyKilled(EnemyKilledEvent e)
     {
-        // Check which objectives care about this enemy type
         var objective = GetObjective("kill_enemies");
         objective?.AddProgress(e.Count);
-
-        // Or if tracking specific enemy types:
-        var specificObjective = GetObjective($"kill_{e.EnemyType}");
-        specificObjective?.AddProgress(e.Count);
     }
 
     private void OnItemCollected(ItemCollectedEvent e)
@@ -51,10 +104,12 @@ public class ObjectiveManager : EventListener
         objective?.AddProgress(e.Amount);
     }
 
-    // Your existing ObjectiveManager code...
-    public void AddObjective(Objective objective) { /* ... */ }
-    public Objective GetObjective(string id)
+    public void Clear()
     {
-        return null;
+        foreach (var objective in objectives.Values)
+        {
+            objective.OnCompleted -= HandleObjectiveCompleted;
+        }
+        objectives.Clear();
     }
 }
