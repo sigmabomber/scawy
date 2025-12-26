@@ -1,13 +1,12 @@
-
 using Doody.Framework.DialogueSystem;
 using Doody.GameEvents;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
+using UnityEngine.EventSystems;
 using UnityEngine.UI;
 
-// UI CONTROLLER - Uses EventListener
 
 public class DialogueUI : EventListener
 {
@@ -18,6 +17,16 @@ public class DialogueUI : EventListener
     public TextMeshProUGUI dialogueText;
     public Transform optionsContainer;
     public GameObject optionButtonPrefab;
+
+    [Header("Button Colors")]
+    [Tooltip("Normal button color")]
+    public Color normalButtonColor = Color.white;
+    [Tooltip("Button color when hovered")]
+    public Color hoverButtonColor = new Color(0.8f, 0.8f, 0.8f, 1f);
+    [Tooltip("Button color when pressed")]
+    public Color pressedButtonColor = new Color(0.6f, 0.6f, 0.6f, 1f);
+    [Tooltip("Button color when disabled")]
+    public Color disabledButtonColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
 
     [Header("Typewriter Effect")]
     [Tooltip("Enable typewriter effect")]
@@ -31,6 +40,8 @@ public class DialogueUI : EventListener
     private List<GameObject> activeButtons = new List<GameObject>();
     private Coroutine typewriterCoroutine;
     private bool isTyping = false;
+    private List<DialogueOption> cachedOptions = null; // Cache options for use after typewriter
+    private string currentFullText = ""; // Store the full text for skipping
 
     void Update()
     {
@@ -43,16 +54,32 @@ public class DialogueUI : EventListener
 
     void Start()
     {
-      
         Listen<DialogueStartedEvent>(OnDialogueStarted);
         Listen<DialogueEndedEvent>(OnDialogueEnded);
 
         // Hide UI at start
-        dialoguePanel.SetActive(false);
+        if (dialoguePanel != null)
+            dialoguePanel.SetActive(false);
+        else
+            Debug.LogError("dialoguePanel is not assigned in the inspector!");
     }
+
 
     void OnDialogueStarted(DialogueStartedEvent evt)
     {
+        Debug.Log($"DialogueUI: Received DialogueStartedEvent");
+        Debug.Log($"  Tree: {evt.Tree != null}");
+        Debug.Log($"  Node: {evt.Node != null}");
+        Debug.Log($"  Speaker: {evt.Tree?.speakerName}");
+        Debug.Log($"  Text: {evt.Node?.dialogueText}");
+        Debug.Log($"  Options: {evt.Node?.options != null}");
+
+        if (evt.Tree == null || evt.Node == null)
+        {
+            Debug.LogError("DialogueUI: Received null tree or node!");
+            return;
+        }
+
         DisplayDialogue(evt.Node, evt.Tree);
     }
 
@@ -63,6 +90,12 @@ public class DialogueUI : EventListener
 
     void DisplayDialogue(DialogueNode node, DialogueTree tree)
     {
+        Debug.Log($"DisplayDialogue called with:");
+        Debug.Log($"  Node: {node}");
+        Debug.Log($"  Tree: {tree}");
+        Debug.Log($"  Node text: {node?.dialogueText}");
+        Debug.Log($"  Node options: {node?.options}");
+
         // Stop any ongoing typewriter
         if (typewriterCoroutine != null)
         {
@@ -71,72 +104,191 @@ public class DialogueUI : EventListener
             isTyping = false;
         }
 
+        // Clear options buttons immediately when starting new dialogue
+        ClearOptionButtons();
+
+        // Check if UI elements are assigned
+        if (dialoguePanel == null)
+        {
+            Debug.LogError("dialoguePanel is not assigned!");
+            return;
+        }
+
         // Show panel
         dialoguePanel.SetActive(true);
 
         // Set speaker info
-        if (!string.IsNullOrEmpty(tree.speakerName))
-            speakerNameText.text = tree.speakerName;
-
-     
-
-      
-        // Start typewriter effect or display immediately
-        if (useTypewriter)
+        if (speakerNameText != null)
         {
-            currentTypeSpeed = node.typewriterSpeed;
-            float speed = node.typewriterSpeed > 0 ? node.typewriterSpeed : defaultTypewriterSpeed;
-            typewriterCoroutine = StartCoroutine(TypewriterEffect(node.dialogueText, node.options, speed));
+            if (!string.IsNullOrEmpty(tree.speakerName))
+                speakerNameText.text = tree.speakerName;
+            else
+                speakerNameText.text = "Unknown Speaker";
         }
         else
         {
-            dialogueText.text = node.dialogueText;
-            CreateOptionButtons(node.options);
+            Debug.LogError("speakerNameText is not assigned!");
+        }
+
+        // Store the full text for skipping
+        currentFullText = node.dialogueText ?? "";
+
+        // Clear previous options cache
+        cachedOptions = null;
+
+        // Start typewriter effect or display immediately
+        if (useTypewriter)
+        {
+            // Cache options for later use - use empty list if null
+            cachedOptions = node.options ?? new List<DialogueOption>();
+
+            currentTypeSpeed = node.typewriterSpeed > 0 ? node.typewriterSpeed : defaultTypewriterSpeed;
+            float speed = currentTypeSpeed;
+
+            // Clear dialogue text
+            if (dialogueText != null)
+            {
+                dialogueText.text = "";
+            }
+            else
+            {
+                Debug.LogError("dialogueText is not assigned!");
+                return;
+            }
+
+            typewriterCoroutine = StartCoroutine(TypewriterEffect(currentFullText, speed));
+        }
+        else
+        {
+            if (dialogueText != null)
+            {
+                dialogueText.text = currentFullText;
+            }
+            else
+            {
+                Debug.LogError("dialogueText is not assigned!");
+                return;
+            }
+            CreateOptionButtons(node.options ?? new List<DialogueOption>());
         }
     }
 
-    IEnumerator TypewriterEffect(string fullText, List<DialogueOption> options, float speed)
+    IEnumerator TypewriterEffect(string fullText, float speed)
     {
         isTyping = true;
+
+        if (dialogueText == null)
+        {
+            Debug.LogError("dialogueText is null in TypewriterEffect!");
+            yield break;
+        }
+
         dialogueText.text = "";
 
-        float delay = 1f / currentTypeSpeed;
+        // Calculate delay per character
+        float delayPerCharacter = 1f / speed;
 
-        foreach (char c in fullText)
+        for (int i = 0; i < fullText.Length; i++)
         {
-            dialogueText.text += c;
-            yield return new WaitForSeconds(delay);
+            dialogueText.text += fullText[i];
+
+            // Check if we should skip
+            if (isTyping) // Check flag in case SkipTypewriter was called
+            {
+                yield return new WaitForSeconds(delayPerCharacter);
+            }
         }
 
         isTyping = false;
         typewriterCoroutine = null;
 
         // Show options after text is complete
-        CreateOptionButtons(options);
+        if (cachedOptions != null)
+        {
+            CreateOptionButtons(cachedOptions);
+        }
     }
 
     void SkipTypewriter()
     {
-        if (typewriterCoroutine != null)
+        if (typewriterCoroutine != null && isTyping)
         {
             StopCoroutine(typewriterCoroutine);
             typewriterCoroutine = null;
-        }
+            isTyping = false;
 
-        // This is a bit hacky but works we'll set it in the next frame
-        isTyping = false;
+            // Show the entire text immediately
+            if (dialogueText != null)
+            {
+                dialogueText.text = currentFullText;
+            }
+
+            // Show options immediately
+            if (cachedOptions != null)
+            {
+                CreateOptionButtons(cachedOptions);
+            }
+        }
     }
 
     void CreateOptionButtons(List<DialogueOption> options)
     {
+        Debug.Log($"CreateOptionButtons called with {options?.Count ?? 0} options");
+
+        // Clear existing buttons first
+        ClearOptionButtons();
+
+        // Check if options exist
+        if (options == null || options.Count == 0)
+        {
+            Debug.LogWarning("No dialogue options provided");
+            return;
+        }
+
+        // Check if optionButtonPrefab is assigned
+        if (optionButtonPrefab == null)
+        {
+            Debug.LogError("Option button prefab is not assigned!");
+            return;
+        }
+
+        // Check if optionsContainer is assigned
+        if (optionsContainer == null)
+        {
+            Debug.LogError("Options container is not assigned!");
+            return;
+        }
+
         // Create option buttons
         foreach (DialogueOption option in options)
         {
             GameObject btnObj = Instantiate(optionButtonPrefab, optionsContainer);
             Button btn = btnObj.GetComponent<Button>();
-            TextMeshProUGUI btnText = btnObj.GetComponentInChildren<TextMeshProUGUI>();
+            TMP_Text btnText = btnObj.GetComponentInChildren<TMP_Text>();
+            Image btnImage = btnObj.GetComponent<Image>();
+
+            if (btn == null || btnText == null)
+            {
+                Debug.LogError("Option button prefab is missing Button or TextMeshProUGUI component!");
+                Destroy(btnObj);
+                continue;
+            }
 
             btnText.text = option.optionText;
+
+            // Set up button color transition
+            ColorBlock colors = btn.colors;
+            colors.normalColor = normalButtonColor;
+            colors.highlightedColor = hoverButtonColor;
+            colors.pressedColor = pressedButtonColor;
+            colors.disabledColor = disabledButtonColor;
+            colors.fadeDuration = 0.1f; // Smooth transition
+            btn.colors = colors;
+
+         
+            
+          
+            
 
             // Capture option in closure
             DialogueOption capturedOption = option;
@@ -146,9 +298,37 @@ public class DialogueUI : EventListener
         }
     }
 
+
+    void ClearOptionButtons()
+    {
+        foreach (GameObject btn in activeButtons)
+        {
+            if (btn != null)
+            {
+                // Remove listeners before destroying
+                Button button = btn.GetComponent<Button>();
+                if (button != null)
+                {
+                    button.onClick.RemoveAllListeners();
+                }
+                Destroy(btn);
+            }
+        }
+        activeButtons.Clear();
+    }
+
     void OnOptionClicked(DialogueOption option)
     {
-        DialogueManager.Instance.ChooseOption(option);
+        ClearOptionButtons();
+
+        if (DialogueManager.Instance != null)
+        {
+            DialogueManager.Instance.ChooseOption(option);
+        }
+        else
+        {
+            Debug.LogError("DialogueManager.Instance is null!");
+        }
     }
 
     void HideDialogue()
@@ -161,59 +341,16 @@ public class DialogueUI : EventListener
             isTyping = false;
         }
 
-        dialoguePanel.SetActive(false);
+        if (dialoguePanel != null)
+        {
+            dialoguePanel.SetActive(false);
+        }
 
         // Clear buttons
-        foreach (GameObject btn in activeButtons)
-            Destroy(btn);
-        activeButtons.Clear();
+        ClearOptionButtons();
+
+        // Clear cache
+        cachedOptions = null;
+        currentFullText = "";
     }
 }
-
-// DIALOGUE STARTER EXAMPLE
-
-/*public class DialogueStarter : MonoBehaviour
-{
-    [Header("Dialogue Setup")]
-    [Tooltip("Drag your dialogue tree here")]
-    public DialogueTree dialogueToStart;
-
-    [Header("Trigger Settings")]
-    public KeyCode interactKey = KeyCode.E;
-    public bool requirePlayerNearby = true;
-
-    private bool playerInRange = false;
-
-    void Update()
-    {
-        if (playerInRange && Input.GetKeyDown(interactKey))
-        {
-            StartDialogue();
-        }
-    }
-
-    public void StartDialogue()
-    {
-        if (dialogueToStart != null)
-        {
-            DialogueManager.Instance.StartDialogue(dialogueToStart);
-        }
-    }
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (requirePlayerNearby && other.CompareTag("Player"))
-        {
-            playerInRange = true;
-        }
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (requirePlayerNearby && other.CompareTag("Player"))
-        {
-            playerInRange = false;
-        }
-    }
-}*/
-

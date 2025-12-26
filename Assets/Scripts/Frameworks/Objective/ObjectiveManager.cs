@@ -50,7 +50,6 @@ public class ObjectiveManager : EventListener
         objective.OnCompleted += HandleObjectiveCompleted;
         OnObjectiveAdded?.Invoke(objective);
 
-        Debug.Log($"Objective added: {objective.Name} (ID: {objective.Id})");
     }
 
     public void RemoveObjective(string id)

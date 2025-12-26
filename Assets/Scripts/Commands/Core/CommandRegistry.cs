@@ -298,7 +298,8 @@ namespace Doody.Debugging
             RegisterCommand("addobjective", "Adds a new Objective", "addobjective [name] [amount] [type]",
                 "Objective", CommandPermission.Developer, AddObjectiveCommand, "addtask");
 
-            
+            RegisterCommand("addnote", "Adds a new note to the journal", "addnote [title] [content] [date?]",
+         "Journal", CommandPermission.Developer, AddNoteCommand, "createnote");
 
 
         }
@@ -1123,9 +1124,124 @@ namespace Doody.Debugging
                     break;
             }
         }
-       
-        
-       
+
+
+
+        #endregion
+
+        #region Notes Commands
+        private void AddNoteCommand(string[] args)
+        {
+            if (args.Length < 2)
+            {
+                ConsoleUI.PrintError(
+                    "Usage: addnote [title] [content] [date?]\n" +
+                    "Note: Use quotes for multi-word titles/content: addnote \"Ancient Scroll\" \"Found in the crypt...\" \"Day 15\"");
+                ConsoleUI.Print(
+                    "Examples:\n" +
+                    "addnote \"Mysterious Herb\" \"Found glowing blue herbs in cave. Need to identify.\" \"Day 7\"\n" +
+                    "addnote \"Villager Rumor\" \"Old man mentioned missing children near the woods\"\n" +
+                    "addnote \"Password\" \"Temple entrance code: 7429\"");
+                return;
+            }
+
+            // Support for quoted strings
+            List<string> parsedArgs = ParseQuotedArguments(args);
+
+            if (parsedArgs.Count < 2)
+            {
+                ConsoleUI.PrintError("Title and content are required.");
+                return;
+            }
+
+            string title = parsedArgs[0];
+            string content = parsedArgs[1];
+            string date = parsedArgs.Count > 2 ? parsedArgs[2] : "";
+
+            // Optional: Title length limit
+            if (title.Length > 50)
+            {
+                ConsoleUI.PrintWarning($"Note title is long ({title.Length} chars). Consider shortening.");
+            }
+
+            // Optional: Content length limit
+            if (content.Length > 500)
+            {
+                ConsoleUI.PrintWarning($"Note content is long ({content.Length} chars). Consider splitting into multiple notes.");
+            }
+
+            // Check if note with similar title already exists
+            var existingNotes = NoteManager.Instance?.GetAllNotes();
+            if (existingNotes != null)
+            {
+                foreach (var note in existingNotes)
+                {
+                    if (note.Title.Equals(title, StringComparison.OrdinalIgnoreCase))
+                    {
+                        ConsoleUI.PrintWarning($"A note with title \"{title}\" already exists. Continue? (y/n)");
+                        // You'd need to handle confirmation here, or just proceed
+                        // For simplicity, we'll proceed with a warning
+                        break;
+                    }
+                }
+            }
+
+            // Add the note using event system
+            Events.Publish(new AddNoteEvent(title, content, date));
+
+            ConsoleUI.PrintSuccess($"Note added: \"{title}\"");
+            if (!string.IsNullOrEmpty(date))
+            {
+                ConsoleUI.Print($"Date: {date}");
+            }
+        }
+
+        // Helper method to parse quoted arguments (supports spaces within quotes)
+        private List<string> ParseQuotedArguments(string[] args)
+        {
+            List<string> result = new List<string>();
+            string currentArg = "";
+            bool inQuotes = false;
+
+            foreach (string arg in args)
+            {
+                if (inQuotes)
+                {
+                    currentArg += " " + arg;
+                    if (arg.EndsWith("\""))
+                    {
+                        result.Add(currentArg.Trim().Trim('"'));
+                        currentArg = "";
+                        inQuotes = false;
+                    }
+                }
+                else if (arg.StartsWith("\""))
+                {
+                    if (arg.EndsWith("\"") && arg.Length > 1)
+                    {
+                        result.Add(arg.Substring(1, arg.Length - 2));
+                    }
+                    else
+                    {
+                        currentArg = arg.Substring(1);
+                        inQuotes = true;
+                    }
+                }
+                else
+                {
+                    result.Add(arg);
+                }
+            }
+
+            // Add any remaining argument
+            if (!string.IsNullOrEmpty(currentArg))
+            {
+                result.Add(currentArg.Trim('"'));
+            }
+
+            return result;
+        }
+
         #endregion
 
         #endregion

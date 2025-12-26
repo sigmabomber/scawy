@@ -1,8 +1,8 @@
 using UnityEngine;
 using Doody.GameEvents;
 using Doody.Framework.DialogueSystem;
+using System.Collections.Generic;
 
-// DIALOGUE DEBUGGER
 public class DialogueDebugger : MonoBehaviour
 {
     [Header("Quick Test Setup")]
@@ -29,19 +29,43 @@ public class DialogueDebugger : MonoBehaviour
 
     private int currentTestIndex = 0;
 
+    void Start()
+    {
+        // Check if DialogueManager exists
+        if (DialogueManager.Instance == null)
+        {
+            Debug.LogError("DialogueManager.Instance is null! Make sure you have a DialogueManager in the scene.");
+        }
+    }
+
     void Update()
     {
         // Test dialogue trees from array
         if (Input.GetKeyDown(testKey))
         {
+            Debug.Log("Test key pressed");
+
+            if (DialogueManager.Instance == null)
+            {
+                Debug.LogError("Cannot start dialogue: DialogueManager.Instance is null!");
+                return;
+            }
+
             if (testDialogues != null && testDialogues.Length > 0)
             {
                 DialogueTree tree = testDialogues[currentTestIndex % testDialogues.Length];
                 if (tree != null)
                 {
                     Debug.Log($"Starting test dialogue: {tree.name}");
+                    Debug.Log($"Dialogue text: {tree.dialogue?.dialogueText}");
+                    Debug.Log($"Options count: {tree.dialogue?.options?.Count}");
+
                     DialogueManager.Instance.StartDialogue(tree);
                     currentTestIndex++;
+                }
+                else
+                {
+                    Debug.LogError("DialogueTree is null!");
                 }
             }
             else if (createTestDialogue)
@@ -57,59 +81,100 @@ public class DialogueDebugger : MonoBehaviour
         // Quick flag testing
         if (Input.GetKeyDown(KeyCode.F))
         {
-            DialogueManager.Instance.SetFlag("TestFlag");
-            Debug.Log("Set flag: TestFlag");
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.SetFlag("TestFlag");
+                Debug.Log("Set flag: TestFlag");
+            }
         }
 
         if (Input.GetKeyDown(KeyCode.C))
         {
-            DialogueManager.Instance.ClearAllFlags();
-            Debug.Log("Cleared all flags");
+            if (DialogueManager.Instance != null)
+            {
+                DialogueManager.Instance.ClearAllFlags();
+                Debug.Log("Cleared all flags");
+            }
         }
     }
 
     void CreateAndTestRuntimeDialogue()
     {
+        Debug.Log("Creating runtime test dialogue chain...");
+
         // Create dialogue chain at runtime
         DialogueTree dialogue3 = ScriptableObject.CreateInstance<DialogueTree>();
         dialogue3.speakerName = "Excited Person";
-        dialogue3.dialogue = new DialogueNode
+
+        // Create node with initialized options list
+        DialogueNode node3 = new DialogueNode
         {
             dialogueText = testText3,
             typewriterSpeed = testSpeed3,
-            options = new System.Collections.Generic.List<DialogueOption>
-            {
-                new DialogueOption { optionText = "Wow, that was fast!", nextDialogue = null }
-            }
+            options = new List<DialogueOption>()
         };
+
+        // Add option
+        node3.options.Add(new DialogueOption
+        {
+            optionText = "Wow, that was fast!",
+            nextDialogue = null
+        });
+
+        dialogue3.dialogue = node3;
 
         DialogueTree dialogue2 = ScriptableObject.CreateInstance<DialogueTree>();
         dialogue2.speakerName = "Mysterious Stranger";
-        dialogue2.dialogue = new DialogueNode
+
+        DialogueNode node2 = new DialogueNode
         {
             dialogueText = testText2,
             typewriterSpeed = testSpeed2,
-            options = new System.Collections.Generic.List<DialogueOption>
-            {
-                new DialogueOption { optionText = "Tell me more...", nextDialogue = dialogue3 },
-                new DialogueOption { optionText = "No thanks.", nextDialogue = null }
-            }
+            options = new List<DialogueOption>()
         };
+
+        node2.options.Add(new DialogueOption
+        {
+            optionText = "Tell me more...",
+            nextDialogue = dialogue3
+        });
+
+        node2.options.Add(new DialogueOption
+        {
+            optionText = "No thanks.",
+            nextDialogue = null
+        });
+
+        dialogue2.dialogue = node2;
 
         DialogueTree dialogue1 = ScriptableObject.CreateInstance<DialogueTree>();
         dialogue1.speakerName = "Test NPC";
-        dialogue1.dialogue = new DialogueNode
+
+        DialogueNode node1 = new DialogueNode
         {
             dialogueText = testText1,
             typewriterSpeed = testSpeed1,
-            options = new System.Collections.Generic.List<DialogueOption>
-            {
-                new DialogueOption { optionText = "Yeah, it's pretty neat!", nextDialogue = dialogue2 },
-                new DialogueOption { optionText = "Meh, I've seen better.", nextDialogue = dialogue3 }
-            }
+            options = new List<DialogueOption>()
         };
 
-        Debug.Log("Starting runtime test dialogue chain");
+        node1.options.Add(new DialogueOption
+        {
+            optionText = "Yeah, it's pretty neat!",
+            nextDialogue = dialogue2
+        });
+
+        node1.options.Add(new DialogueOption
+        {
+            optionText = "Meh, I've seen better.",
+            nextDialogue = dialogue3
+        });
+
+        dialogue1.dialogue = node1;
+
+        Debug.Log($"Starting dialogue: {dialogue1.speakerName}");
+        Debug.Log($"Dialogue text: {dialogue1.dialogue.dialogueText}");
+        Debug.Log($"Options count: {dialogue1.dialogue.options.Count}");
+
         DialogueManager.Instance.StartDialogue(dialogue1);
     }
 
@@ -136,72 +201,18 @@ public class DialogueDebugger : MonoBehaviour
             GUILayout.Label("No dialogues assigned!");
         }
 
+        // Show DialogueManager status
+        GUILayout.Space(10);
+        if (DialogueManager.Instance != null)
+        {
+            GUILayout.Label("DialogueManager: OK");
+        }
+        else
+        {
+            GUILayout.Label("DialogueManager: NULL!");
+        }
+
         GUILayout.EndArea();
     }
 }
 
-// ============================================
-// DIALOGUE STATS MONITOR - Shows live info
-// ============================================
-public class DialogueStatsMonitor : EventListener
-{
-    [Header("Display Settings")]
-    public bool showStats = true;
-    public bool logEvents = true;
-
-    private string currentDialogue = "None";
-    private string lastChoice = "None";
-    private int flagCount = 0;
-
-    void Start()
-    {
-        Listen<DialogueStartedEvent>(OnDialogueStarted);
-        Listen<DialogueEndedEvent>(OnDialogueEnded);
-        Listen<DialogueOptionChosenEvent>(OnOptionChosen);
-        Listen<DialogueFlagSetEvent>(OnFlagSet);
-    }
-
-    void OnDialogueStarted(DialogueStartedEvent evt)
-    {
-        currentDialogue = evt.Tree.speakerName + ": " + evt.Node.dialogueText.Substring(0, Mathf.Min(30, evt.Node.dialogueText.Length)) + "...";
-
-        if (logEvents)
-            Debug.Log($"[DIALOGUE] Started: {evt.Tree.speakerName} | Speed: {evt.Node.typewriterSpeed} | Options: {evt.Node.options.Count}");
-    }
-
-    void OnDialogueEnded(DialogueEndedEvent evt)
-    {
-        currentDialogue = "None";
-
-        if (logEvents)
-            Debug.Log("[DIALOGUE] Ended");
-    }
-
-    void OnOptionChosen(DialogueOptionChosenEvent evt)
-    {
-        lastChoice = evt.OptionText;
-
-        if (logEvents)
-            Debug.Log($"[DIALOGUE] Choice: {evt.OptionText}");
-    }
-
-    void OnFlagSet(DialogueFlagSetEvent evt)
-    {
-        flagCount++;
-
-        if (logEvents)
-            Debug.Log($"[DIALOGUE] Flag Set: {evt.Flag}");
-    }
-
-    void OnGUI()
-    {
-        if (!showStats) return;
-
-        GUILayout.BeginArea(new Rect(Screen.width - 310, 10, 300, 150));
-        GUILayout.Label("=== DIALOGUE STATS ===");
-        GUILayout.Label($"Current: {currentDialogue}");
-        GUILayout.Label($"Last Choice: {lastChoice}");
-        GUILayout.Label($"Flags Set: {flagCount}");
-        GUILayout.EndArea();
-    }
-}

@@ -2,8 +2,10 @@ using UnityEngine;
 using UnityEngine.UI;
 using System.Collections.Generic;
 using Doody.Framework.ObjectiveSystem;
+using Doody.Framework.NoteSystem; // Add this
 using Doody.GameEvents;
 using Doody.Framework.UI;
+using TMPro;
 
 public class JournalUI : MonoBehaviour
 {
@@ -13,27 +15,37 @@ public class JournalUI : MonoBehaviour
     public Button photosButton;
 
     [Header("Content Area")]
-    public Transform contentContainer; 
+    public Transform contentContainer;
+
+    [Header("Page Navigation")]
+    public Button previousPageButton;
+    public Button nextPageButton;
+    public TMP_Text pageNumberText;
+    [SerializeField] private int entriesPerPage = 5;
 
     [Header("Prefabs")]
     public GameObject objectiveEntryPrefab;
     public GameObject noteEntryPrefab;
     public GameObject photoEntryPrefab;
 
+    [Header("Settings")]
+    public GameObject journal;
+    [SerializeField] private KeyCode journalKeycode = KeyCode.J;
+
     private GameObject objectiveOutline;
     private GameObject noteOutline;
     private GameObject photoOutline;
 
     private JournalSection currentSection = JournalSection.Objectives;
+    private int currentPage = 0;
+    private int totalPages = 0;
 
-    private List<NoteEntry> notes = new List<NoteEntry>();
+    // REMOVE THIS OLD LIST:
+    // private List<NoteEntry> notes = new List<NoteEntry>();
     private List<PhotoEntry> photos = new List<PhotoEntry>();
 
-    public GameObject journal;
-    [SerializeField] private KeyCode journalKeycode = KeyCode.J;
-
     private void Start()
-    { 
+    {
         if (objectivesButton != null)
         {
             objectiveOutline = objectivesButton.transform.Find("Outline").gameObject;
@@ -70,11 +82,30 @@ public class JournalUI : MonoBehaviour
             });
         }
 
+        // Setup page navigation buttons
+        if (previousPageButton != null)
+        {
+            previousPageButton.onClick.AddListener(() => ChangePage(-1));
+        }
+
+        if (nextPageButton != null)
+        {
+            nextPageButton.onClick.AddListener(() => ChangePage(1));
+        }
+
         // Subscribe to objective events
         if (ObjectiveManager.Instance != null)
         {
             ObjectiveManager.Instance.OnObjectiveAdded += OnObjectiveAdded;
             ObjectiveManager.Instance.OnObjectiveCompleted += OnObjectiveCompleted;
+        }
+
+        // Subscribe to note events
+        if (NoteManager.Instance != null)
+        {
+            NoteManager.Instance.OnNoteAdded += OnNoteAdded;
+            NoteManager.Instance.OnNoteUpdated += OnNoteUpdated;
+            NoteManager.Instance.OnNoteDeleted += OnNoteDeleted;
         }
 
         // Show objectives section by default
@@ -92,6 +123,14 @@ public class JournalUI : MonoBehaviour
             ObjectiveManager.Instance.OnObjectiveAdded -= OnObjectiveAdded;
             ObjectiveManager.Instance.OnObjectiveCompleted -= OnObjectiveCompleted;
         }
+
+        // Unsubscribe from note events
+        if (NoteManager.Instance != null)
+        {
+            NoteManager.Instance.OnNoteAdded -= OnNoteAdded;
+            NoteManager.Instance.OnNoteUpdated -= OnNoteUpdated;
+            NoteManager.Instance.OnNoteDeleted -= OnNoteDeleted;
+        }
     }
 
     private void OnObjectiveAdded(Objective objective)
@@ -102,15 +141,12 @@ public class JournalUI : MonoBehaviour
             LoadObjectivesContent();
         }
     }
-
     private void Update()
     {
         if (Input.GetKeyUp(journalKeycode))
         {
-
             bool isOpen = !journal.activeSelf;
             Events.Publish(new UIRequestToggleEvent(journal));
-
 
             if (isOpen)
             {
@@ -123,8 +159,20 @@ public class JournalUI : MonoBehaviour
                 Cursor.visible = false;
             }
         }
-    }
 
+        // Keyboard shortcuts for page navigation
+        if (journal != null && journal.activeInHierarchy)
+        {
+            if (Input.GetKeyDown(KeyCode.LeftArrow))
+            {
+                ChangePage(-1);
+            }
+            else if (Input.GetKeyDown(KeyCode.RightArrow))
+            {
+                ChangePage(1);
+            }
+        }
+    }
     private void OnObjectiveCompleted(Objective objective)
     {
         // Refresh objectives view if currently viewing
@@ -136,12 +184,35 @@ public class JournalUI : MonoBehaviour
         Debug.Log($"Objective completed: {objective.Name}");
     }
 
+    // Add note event handlers
+    private void OnNoteAdded(Note note)
+    {
+        if (currentSection == JournalSection.Notes)
+        {
+            LoadNotesContent();
+        }
+    }
+
+    private void OnNoteUpdated(Note note)
+    {
+        if (currentSection == JournalSection.Notes)
+        {
+            LoadNotesContent();
+        }
+    }
+
+    private void OnNoteDeleted(string noteId)
+    {
+        if (currentSection == JournalSection.Notes)
+        {
+            LoadNotesContent();
+        }
+    }
+
     public void ShowSection(JournalSection section)
     {
         currentSection = section;
-
-        // Clear the content container
-        ClearContent();
+        currentPage = 0; // Reset to first page when changing sections
 
         // Load the appropriate content
         switch (section)
@@ -158,6 +229,63 @@ public class JournalUI : MonoBehaviour
         }
 
         UpdateButtonStates();
+    }
+
+    private void ChangePage(int direction)
+    {
+        int newPage = currentPage + direction;
+
+        // Clamp to valid page range
+        if (newPage < 0 || newPage >= totalPages)
+            return;
+
+        currentPage = newPage;
+
+        // Reload current section with new page
+        switch (currentSection)
+        {
+            case JournalSection.Objectives:
+                LoadObjectivesContent();
+                break;
+            case JournalSection.Notes:
+                LoadNotesContent();
+                break;
+            case JournalSection.Photos:
+                LoadPhotosContent();
+                break;
+        }
+    }
+
+    private void UpdatePageNavigation(int totalEntries)
+    {
+        totalPages = Mathf.Max(1, Mathf.CeilToInt((float)totalEntries / entriesPerPage));
+
+        // Clamp current page
+        currentPage = Mathf.Clamp(currentPage, 0, totalPages - 1);
+
+        bool showNavigation = totalPages > 1;
+
+        // Page number
+        if (pageNumberText != null)
+        {
+            pageNumberText.gameObject.SetActive(showNavigation);
+            if (showNavigation)
+                pageNumberText.text = $"{currentPage + 1}/{totalPages}";
+        }
+
+        // Previous button
+        if (previousPageButton != null)
+        {
+            previousPageButton.gameObject.SetActive(showNavigation);
+            previousPageButton.interactable = showNavigation && currentPage > 0;
+        }
+
+        // Next button
+        if (nextPageButton != null)
+        {
+            nextPageButton.gameObject.SetActive(showNavigation);
+            nextPageButton.interactable = showNavigation && currentPage < totalPages - 1;
+        }
     }
 
     private void ClearContent()
@@ -188,21 +316,26 @@ public class JournalUI : MonoBehaviour
         if (ObjectiveManager.Instance == null)
         {
             Debug.LogWarning("ObjectiveManager instance not found!");
+            UpdatePageNavigation(0);
             return;
         }
 
-        // Load active objectives first
-        var activeObjectives = ObjectiveManager.Instance.GetActiveObjectives();
-        foreach (var objective in activeObjectives)
-        {
-            CreateObjectiveEntry(objective);
-        }
+        // Combine active and completed objectives
+        var allObjectives = new List<Objective>();
+        allObjectives.AddRange(ObjectiveManager.Instance.GetActiveObjectives());
+        allObjectives.AddRange(ObjectiveManager.Instance.GetCompletedObjectives());
 
-        // Load completed objectives
-        var completedObjectives = ObjectiveManager.Instance.GetCompletedObjectives();
-        foreach (var objective in completedObjectives)
+        // Calculate pagination
+        int totalEntries = allObjectives.Count;
+        UpdatePageNavigation(totalEntries);
+
+        // Get objectives for current page
+        int startIndex = currentPage * entriesPerPage;
+        int endIndex = Mathf.Min(startIndex + entriesPerPage, totalEntries);
+
+        for (int i = startIndex; i < endIndex; i++)
         {
-            CreateObjectiveEntry(objective);
+            CreateObjectiveEntry(allObjectives[i]);
         }
     }
 
@@ -231,22 +364,16 @@ public class JournalUI : MonoBehaviour
     #endregion
 
     #region Notes Section
-    public void AddNote(string title, string content)
+    public void AddNote(string title, string content, string date = "")
     {
-        NoteEntry note = new NoteEntry
+        // Use the NoteManager instead of local list
+        if (NoteManager.Instance != null)
         {
-            id = System.Guid.NewGuid().ToString(),
-            title = title,
-            content = content,
-            dateCreated = System.DateTime.Now
-        };
-
-        notes.Add(note);
-
-        // Refresh if currently viewing notes
-        if (currentSection == JournalSection.Notes)
+            NoteManager.Instance.AddNote(title, content, date);
+        }
+        else
         {
-            LoadNotesContent();
+            Debug.LogError("NoteManager.Instance is null!");
         }
 
         SaveJournalData();
@@ -254,8 +381,11 @@ public class JournalUI : MonoBehaviour
 
     public void DeleteNote(string id)
     {
-        notes.RemoveAll(n => n.id == id);
-        LoadNotesContent();
+        if (NoteManager.Instance != null)
+        {
+            NoteManager.Instance.DeleteNote(id);
+        }
+
         SaveJournalData();
     }
 
@@ -263,7 +393,22 @@ public class JournalUI : MonoBehaviour
     {
         ClearContent();
 
-        foreach (var note in notes)
+        if (NoteManager.Instance == null)
+        {
+            Debug.LogWarning("NoteManager instance not found!");
+            UpdatePageNavigation(0);
+            return;
+        }
+
+        List<Note> allNotes = NoteManager.Instance.GetAllNotes();
+        int totalEntries = allNotes.Count;
+        UpdatePageNavigation(totalEntries);
+
+        // Get notes for current page
+        int startIndex = currentPage * entriesPerPage;
+        int endIndex = Mathf.Min(startIndex + entriesPerPage, totalEntries);
+
+        for (int i = startIndex; i < endIndex; i++)
         {
             if (noteEntryPrefab != null)
             {
@@ -271,7 +416,8 @@ public class JournalUI : MonoBehaviour
                 NoteEntryUI entryUI = entry.GetComponent<NoteEntryUI>();
                 if (entryUI != null)
                 {
-                    entryUI.Setup(note, this);
+                    // Pass the Note object instead of NoteEntry
+                    entryUI.Setup(allNotes[i], this);
                 }
             }
         }
@@ -311,7 +457,14 @@ public class JournalUI : MonoBehaviour
     {
         ClearContent();
 
-        foreach (var photo in photos)
+        int totalEntries = photos.Count;
+        UpdatePageNavigation(totalEntries);
+
+        // Get photos for current page
+        int startIndex = currentPage * entriesPerPage;
+        int endIndex = Mathf.Min(startIndex + entriesPerPage, totalEntries);
+
+        for (int i = startIndex; i < endIndex; i++)
         {
             if (photoEntryPrefab != null)
             {
@@ -319,7 +472,7 @@ public class JournalUI : MonoBehaviour
                 PhotoEntryUI entryUI = entry.GetComponent<PhotoEntryUI>();
                 if (entryUI != null)
                 {
-                    entryUI.Setup(photo, this);
+                    entryUI.Setup(photos[i], this);
                 }
             }
         }
@@ -330,31 +483,31 @@ public class JournalUI : MonoBehaviour
     private void SaveJournalData()
     {
         // Implement your save system here (PlayerPrefs, JSON, etc.)
+        if (NoteManager.Instance != null)
+        {
+            NoteManager.Instance.SaveNotes();
+        }
         Debug.Log("Journal data saved");
     }
 
     private void LoadJournalData()
     {
         // Implement your load system here
+        if (NoteManager.Instance != null)
+        {
+            NoteManager.Instance.LoadNotes();
+        }
         Debug.Log("Journal data loaded");
     }
     #endregion
 }
 
+// Keep these enums/classes, but NoteEntryUI needs to be updated
 public enum JournalSection
 {
     Objectives,
     Notes,
     Photos
-}
-
-[System.Serializable]
-public class NoteEntry
-{
-    public string id;
-    public string title;
-    public string content;
-    public System.DateTime dateCreated;
 }
 
 [System.Serializable]
@@ -364,34 +517,6 @@ public class PhotoEntry
     public Sprite sprite;
     public string caption;
     public System.DateTime dateCreated;
-}
-
-
-// Helper UI component for note entries
-public class NoteEntryUI : MonoBehaviour
-{
-    public Text titleText;
-    public Text contentText;
-    public Text dateText;
-    public Button deleteButton;
-    private NoteEntry data;
-    private JournalUI journal;
-
-    public void Setup(NoteEntry note, JournalUI journalUI)
-    {
-        data = note;
-        journal = journalUI;
-
-        if (titleText) titleText.text = note.title;
-        if (contentText) contentText.text = note.content;
-        if (dateText) dateText.text = note.dateCreated.ToString("MMM dd, yyyy");
-        if (deleteButton) deleteButton.onClick.AddListener(OnDelete);
-    }
-
-    private void OnDelete()
-    {
-        journal.DeleteNote(data.id);
-    }
 }
 
 // Helper UI component for photo entries

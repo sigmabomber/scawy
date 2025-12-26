@@ -28,11 +28,26 @@ public class DialogueManager : MonoBehaviour
     // Start a dialogue
     public void StartDialogue(DialogueTree tree)
     {
-        if (tree == null || tree.dialogue == null)
+        Debug.Log($"DialogueManager.StartDialogue called with tree: {tree != null}");
+
+        if (tree == null)
         {
-            Debug.LogError("Cannot start dialogue - tree is null or empty!");
+            Debug.LogError("Tree is null!");
             return;
         }
+
+        Debug.Log($"Tree speaker: {tree.speakerName}");
+        Debug.Log($"Tree dialogue: {tree.dialogue != null}");
+
+        if (tree.dialogue == null)
+        {
+            Debug.LogError("Tree.dialogue is null!");
+            return;
+        }
+
+        Debug.Log($"Dialogue text: {tree.dialogue.dialogueText}");
+        Debug.Log($"Dialogue options: {tree.dialogue.options != null}");
+        Debug.Log($"Options count: {tree.dialogue.options?.Count ?? 0}");
 
         // Check if player meets requirements
         if (!MeetsRequirements(tree.dialogue))
@@ -40,7 +55,7 @@ public class DialogueManager : MonoBehaviour
             Debug.Log("Player doesn't meet requirements for this dialogue");
             return;
         }
-
+        PlayerController.Instance.DisablePlayerInput();
         // Play voice line if available
         if (tree.dialogue.voiceLine != null && audioSource != null)
         {
@@ -54,7 +69,6 @@ public class DialogueManager : MonoBehaviour
             Tree = tree
         });
     }
-
     // Player selects an option
     public void ChooseOption(DialogueOption option)
     {
@@ -77,6 +91,7 @@ public class DialogueManager : MonoBehaviour
         // Continue to next dialogue or end
         if (option.nextDialogue != null)
         {
+
             StartDialogue(option.nextDialogue);
         }
         else
@@ -88,6 +103,7 @@ public class DialogueManager : MonoBehaviour
     // End the conversation
     public void EndDialogue()
     {
+        PlayerController.Instance.EnablePlayerInput();
         Events.Publish(new DialogueEndedEvent());
     }
 

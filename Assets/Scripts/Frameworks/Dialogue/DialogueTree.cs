@@ -8,5 +8,5 @@ public class DialogueTree : ScriptableObject
 
     [Header("Speaker Info (Optional)")]
     public string speakerName;
-    public Sprite speakerPortrait;
+    public Color dialogueTextColor;
 }
