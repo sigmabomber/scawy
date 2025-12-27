@@ -14,7 +14,7 @@ OcclusionCullingSettings:
 RenderSettings:
   m_ObjectHideFlags: 0
   serializedVersion: 9
-  m_Fog: 1
+  m_Fog: 0
   m_FogColor: {r: 0, g: 0, b: 0, a: 1}
   m_FogMode: 3
   m_FogDensity: 0.1
@@ -3117,6 +3117,22 @@ PrefabInstance:
       propertyPath: m_AnchoredPosition.y
       value: -167.92
       objectReference: {fileID: 0}
+    - target: {fileID: 3936433704001013809, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3936433704001013809, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3936433704001013809, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 3936433704001013809, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
+      objectReference: {fileID: 0}
     - target: {fileID: 4033976955507343012, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -72.69336
@@ -3460,6 +3476,22 @@ PrefabInstance:
     - target: {fileID: 8706013979304860872, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -56.138184
+      objectReference: {fileID: 0}
+    - target: {fileID: 8748310884320821116, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchorMax.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8748310884320821116, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchorMin.y
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8748310884320821116, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchoredPosition.x
+      value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 8748310884320821116, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_AnchoredPosition.y
+      value: 0
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects:
