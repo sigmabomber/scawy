@@ -1,137 +1,306 @@
-using Doody.Framework.DialogueSystem;
 using Doody.GameEvents;
 using System.Collections.Generic;
 using UnityEngine;
-public class DialogueManager : MonoBehaviour
+
+namespace Doody.Framework.DialogueSystem
 {
-    public static DialogueManager Instance;
-
-    [Header("Audio")]
-    public AudioSource audioSource;
-
-    // Track player's choices
-    private HashSet<string> activeFlags = new HashSet<string>();
-
-    void Awake()
+    public class DialogueManager : MonoBehaviour
     {
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
-    }
+        public static DialogueManager Instance;
 
-    // Start a dialogue
-    public void StartDialogue(DialogueTree tree)
-    {
-        Debug.Log($"DialogueManager.StartDialogue called with tree: {tree != null}");
+        [Header("Audio")]
+        public AudioSource audioSource;
 
-        if (tree == null)
+        // Track player's choices
+        private HashSet<string> activeFlags = new HashSet<string>();
+
+        void Awake()
         {
-            Debug.LogError("Tree is null!");
-            return;
-        }
-
-        Debug.Log($"Tree speaker: {tree.speakerName}");
-        Debug.Log($"Tree dialogue: {tree.dialogue != null}");
-
-        if (tree.dialogue == null)
-        {
-            Debug.LogError("Tree.dialogue is null!");
-            return;
+            if (Instance == null)
+            {
+                Instance = this;
+                DontDestroyOnLoad(gameObject);
+            }
+            else
+            {
+                Destroy(gameObject);
+            }
         }
 
-        Debug.Log($"Dialogue text: {tree.dialogue.dialogueText}");
-        Debug.Log($"Dialogue options: {tree.dialogue.options != null}");
-        Debug.Log($"Options count: {tree.dialogue.options?.Count ?? 0}");
-
-        // Check if player meets requirements
-        if (!MeetsRequirements(tree.dialogue))
+        // Start a dialogue
+        public void StartDialogue(DialogueTree tree)
         {
-            Debug.Log("Player doesn't meet requirements for this dialogue");
-            return;
+            if (tree == null)
+            {
+                Debug.LogError("Tree is null!");
+                return;
+            }
+
+            if (tree.dialogue == null)
+            {
+                Debug.LogError("Tree.dialogue is null!");
+                return;
+            }
+
+            if (!MeetsRequirements(tree.dialogue))
+            {
+                Debug.Log("Player doesn't meet requirements for this dialogue");
+                return;
+            }
+
+            if (PlayerController.Instance != null)
+            {
+                PlayerController.Instance.DisablePlayerInput();
+            }
+
+            if (tree.dialogue.voiceLine != null && audioSource != null)
+            {
+                audioSource.PlayOneShot(tree.dialogue.voiceLine);
+            }
+
+            Events.Publish(new DialogueStartedEvent
+            {
+                Node = tree.dialogue,
+                Tree = tree
+            });
         }
-        PlayerController.Instance.DisablePlayerInput();
-        // Play voice line if available
-        if (tree.dialogue.voiceLine != null && audioSource != null)
+
+        // Player selects an option
+        public void ChooseOption(DialogueOption option)
         {
-            audioSource.PlayOneShot(tree.dialogue.voiceLine);
+            if (option == null) return;
+
+            Events.Publish(new DialogueOptionChosenEvent
+            {
+                Option = option,
+                OptionText = option.optionText
+            });
+
+            // Apply any flags from this choice
+            foreach (string flag in option.setFlags)
+            {
+                activeFlags.Add(flag);
+                Events.Publish(new DialogueFlagSetEvent { Flag = flag });
+            }
+
+            // Execute all actions for this option
+            ExecuteActions(option.actions);
+
+            // Continue to next dialogue or end
+            if (option.nextDialogue != null)
+            {
+                StartDialogue(option.nextDialogue);
+            }
+            else
+            {
+                EndDialogue();
+            }
         }
 
-        // Publish event for UI to display
-        Events.Publish(new DialogueStartedEvent
+        // Execute dialogue actions
+        private void ExecuteActions(List<DialogueAction> actions)
         {
-            Node = tree.dialogue,
-            Tree = tree
-        });
-    }
-    // Player selects an option
-    public void ChooseOption(DialogueOption option)
-    {
-        if (option == null) return;
+            if (actions == null || actions.Count == 0) return;
 
-        // Publish option chosen event
-        Events.Publish(new DialogueOptionChosenEvent
+            foreach (DialogueAction action in actions)
+            {
+                ExecuteAction(action);
+            }
+        }
+
+        // Execute a single dialogue action
+        private void ExecuteAction(DialogueAction action)
         {
-            Option = option,
-            OptionText = option.optionText
-        });
+            if (action == null) return;
 
-        // Apply any flags from this choice
-        foreach (string flag in option.setFlags)
+            switch (action.actionType)
+            {
+                case DialogueActionType.None:
+                    break;
+
+                case DialogueActionType.GiveItem:
+                    if (action.item != null && InventorySystem.Instance != null)
+                    {
+                        InventorySystem.Instance.AddItem(action.item, action.itemQuantity);
+                        Debug.Log($"[Dialogue] Gave {action.itemQuantity}x {action.item.itemName}");
+                    }
+                    break;
+
+                case DialogueActionType.RemoveItem:
+                    if (action.item != null && InventorySystem.Instance != null)
+                    {
+                        InventorySystem.Instance.RemoveItem(action.item, action.itemQuantity);
+                        Debug.Log($"[Dialogue] Removed {action.itemQuantity}x {action.item.itemName}");
+                    }
+                    break;
+
+               
+
+                
+
+                case DialogueActionType.TeleportPlayer:
+                    if (action.teleportLocation != null && PlayerController.Instance != null)
+                    {
+                        PlayerController.Instance.transform.position = action.teleportLocation.position;
+                        PlayerController.Instance.transform.rotation = action.teleportLocation.rotation;
+                        Debug.Log($"[Dialogue] Teleported player to {action.teleportLocation.name}");
+                    }
+                    break;
+
+                case DialogueActionType.PlaySound:
+                    if (action.soundToPlay != null && audioSource != null)
+                    {
+                        audioSource.PlayOneShot(action.soundToPlay);
+                        Debug.Log($"[Dialogue] Playing sound: {action.soundToPlay.name}");
+                    }
+                    break;
+
+                case DialogueActionType.StartQuest:
+                    // Add your quest system here
+                    Debug.Log($"[Dialogue] Start quest: {action.questId} (not implemented)");
+                    break;
+
+                case DialogueActionType.CompleteQuest:
+                    // Add your quest system here
+                    Debug.Log($"[Dialogue] Complete quest: {action.questId} (not implemented)");
+                    break;
+
+                case DialogueActionType.SpawnObject:
+                    if (action.targetObject != null && action.spawnLocation != null)
+                    {
+                        Instantiate(action.targetObject, action.spawnLocation.position, action.spawnLocation.rotation);
+                        Debug.Log($"[Dialogue] Spawned {action.targetObject.name}");
+                    }
+                    break;
+
+                case DialogueActionType.DestroyObject:
+                    if (action.targetObject != null)
+                    {
+                        Destroy(action.targetObject);
+                        Debug.Log($"[Dialogue] Destroyed {action.targetObject.name}");
+                    }
+                    break;
+
+                case DialogueActionType.EnableObject:
+                    if (action.targetObject != null)
+                    {
+                        action.targetObject.SetActive(true);
+                        Debug.Log($"[Dialogue] Enabled {action.targetObject.name}");
+                    }
+                    break;
+
+                case DialogueActionType.DisableObject:
+                    if (action.targetObject != null)
+                    {
+                        action.targetObject.SetActive(false);
+                        Debug.Log($"[Dialogue] Disabled {action.targetObject.name}");
+                    }
+                    break;
+
+                case DialogueActionType.LoadScene:
+                    if (!string.IsNullOrEmpty(action.sceneName))
+                    {
+                        UnityEngine.SceneManagement.SceneManager.LoadScene(action.sceneName);
+                        Debug.Log($"[Dialogue] Loading scene: {action.sceneName}");
+                    }
+                    break;
+
+                case DialogueActionType.Custom:
+                    if (action.customAction != null)
+                    {
+                        action.customAction.Invoke();
+                        Debug.Log($"[Dialogue] Executed custom action");
+                    }
+                    break;
+            }
+        }
+
+        // End the conversation
+        public void EndDialogue()
+        {
+            if (PlayerController.Instance != null)
+            {
+                PlayerController.Instance.EnablePlayerInput();
+            }
+
+            Events.Publish(new DialogueEndedEvent());
+        }
+
+        // Check if player meets requirements for a dialogue node
+        public bool MeetsRequirements(DialogueNode node)
+        {
+            if (node == null) return false;
+
+            foreach (string flag in node.requiredFlags)
+            {
+                if (flag.StartsWith("!"))
+                {
+                    string flagName = flag.Substring(1);
+                    if (activeFlags.Contains(flagName))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!activeFlags.Contains(flag))
+                    {
+                        Debug.Log($"[Dialogue] Missing required flag: {flag}");
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Check if player meets requirements for a dialogue option
+        public bool MeetsOptionRequirements(DialogueOption option)
+        {
+            if (option == null) return false;
+
+            foreach (string flag in option.requiredFlags)
+            {
+                if (flag.StartsWith("!"))
+                {
+                    string flagName = flag.Substring(1);
+                    if (activeFlags.Contains(flagName))
+                    {
+                        return false;
+                    }
+                }
+                else
+                {
+                    if (!activeFlags.Contains(flag))
+                    {
+                        return false;
+                    }
+                }
+            }
+            return true;
+        }
+
+        // Utility methods
+        public void SetFlag(string flag)
         {
             activeFlags.Add(flag);
             Events.Publish(new DialogueFlagSetEvent { Flag = flag });
         }
 
-        // Continue to next dialogue or end
-        if (option.nextDialogue != null)
+        public void ClearFlag(string flag) => activeFlags.Remove(flag);
+        public bool HasFlag(string flag) => activeFlags.Contains(flag);
+        public void ClearAllFlags() => activeFlags.Clear();
+
+        public string[] GetAllFlags()
         {
-
-            StartDialogue(option.nextDialogue);
+            string[] flagArray = new string[activeFlags.Count];
+            activeFlags.CopyTo(flagArray);
+            return flagArray;
         }
-        else
+
+        void OnDestroy()
         {
-            EndDialogue();
+            if (Instance == this)
+                Instance = null;
         }
-    }
-
-    // End the conversation
-    public void EndDialogue()
-    {
-        PlayerController.Instance.EnablePlayerInput();
-        Events.Publish(new DialogueEndedEvent());
-    }
-
-    // Check if player meets requirements
-    private bool MeetsRequirements(DialogueNode node)
-    {
-        foreach (string flag in node.requiredFlags)
-        {
-            if (!activeFlags.Contains(flag))
-                return false;
-        }
-        return true;
-    }
-
-    // Utility methods
-    public void SetFlag(string flag)
-    {
-        activeFlags.Add(flag);
-        Events.Publish(new DialogueFlagSetEvent { Flag = flag });
-    }
-
-    public void ClearFlag(string flag) => activeFlags.Remove(flag);
-    public bool HasFlag(string flag) => activeFlags.Contains(flag);
-    public void ClearAllFlags() => activeFlags.Clear();
-
-    void OnDestroy()
-    {
-        if (Instance == this)
-            Instance = null;
     }
 }

@@ -35,7 +35,6 @@ public class ObjectiveManager : EventListener
         Listen<ItemCollectedEvent>(OnItemCollected);
         Listen<ObjectiveProgressEvent>(OnObjectiveProgress);
 
-        Debug.Log("ObjectiveManager initialized and listening for objectives");
     }
 
     public void AddObjective(Objective objective)

@@ -44,6 +44,8 @@ namespace Doody.InventoryFramework
         }
     }
 
+
+
     // Item equipped
     public class ItemEquippedEvent : InventoryEvent
     {

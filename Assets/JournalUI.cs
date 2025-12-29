@@ -497,7 +497,6 @@ public class JournalUI : MonoBehaviour
         {
             NoteManager.Instance.LoadNotes();
         }
-        Debug.Log("Journal data loaded");
     }
     #endregion
 }

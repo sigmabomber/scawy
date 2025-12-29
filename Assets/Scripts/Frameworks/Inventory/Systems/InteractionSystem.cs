@@ -153,6 +153,7 @@ public class InteractionSystem : MonoBehaviour
                 else
                 {
                     reticleUI.sprite = interactIcon;
+
                     reticleUI.gameObject.SetActive(true);
                 }
 
