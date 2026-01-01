@@ -6,9 +6,7 @@ using System.Collections.Generic;
 using Doody.GameEvents;
 using Doody.Framework.DialogueSystem;
 
-// ============================================
-// SIMPLE UI CONTROLLER - Uses EventListener
-// ============================================
+// UI CONTROLLER - Uses EventListener
 public class DialogueUI : EventListener
 {
     [Header("UI References")]
@@ -27,6 +25,29 @@ public class DialogueUI : EventListener
     [Tooltip("Key to skip typewriter effect")]
     public KeyCode skipKey = KeyCode.Space;
 
+    [Header("Typewriter SFX")]
+    [Tooltip("Audio source for typewriter SFX")]
+    public AudioSource audioSource;
+    [Tooltip("Sound clip for each character typed")]
+    public AudioClip typeSound;
+    [Tooltip("Sound clip played when typewriter completes")]
+    public AudioClip completeSound;
+    [Tooltip("Minimum pitch variation for type sounds")]
+    public float minPitch = 0.95f;
+    [Tooltip("Maximum pitch variation for type sounds")]
+    public float maxPitch = 1.05f;
+    [Tooltip("Volume for type sounds")]
+    public float typeVolume = 0.7f;
+    [Tooltip("Volume for complete sound")]
+    public float completeVolume = 1f;
+    [Tooltip("Characters per type sound (1 = every character, 2 = every other, etc.)")]
+    public int charactersPerSound = 1;
+    [Tooltip("Play sound for spaces")]
+    public bool playSoundForSpaces = false;
+    [Tooltip("Play sound for punctuation")]
+    public bool playSoundForPunctuation = true;
+    [Tooltip("Delay before playing complete sound (seconds)")]
+    public float completeSoundDelay = 0.1f;
 
     [Header("Button Colors")]
     [Tooltip("Normal button color")]
@@ -41,6 +62,7 @@ public class DialogueUI : EventListener
     private List<GameObject> activeButtons = new List<GameObject>();
     private Coroutine typewriterCoroutine;
     private bool isTyping = false;
+    private int characterCount = 0;
 
     void Update()
     {
@@ -59,6 +81,17 @@ public class DialogueUI : EventListener
 
         // Hide UI at start
         dialoguePanel.SetActive(false);
+
+        // Ensure audio source is set up
+        if (audioSource == null)
+        {
+            audioSource = GetComponent<AudioSource>();
+            if (audioSource == null)
+            {
+                audioSource = gameObject.AddComponent<AudioSource>();
+                audioSource.playOnAwake = false;
+            }
+        }
     }
 
     void OnDialogueStarted(DialogueStartedEvent evt)
@@ -88,15 +121,6 @@ public class DialogueUI : EventListener
         if (!string.IsNullOrEmpty(tree.speakerName))
             speakerNameText.text = tree.speakerName;
 
-        if (tree.speakerPortrait != null)
-        {
-           // speakerPortrait.sprite = tree.speakerPortrait;
-          //  speakerPortrait.gameObject.SetActive(true);
-        }
-        else
-        {
-           // speakerPortrait.gameObject.SetActive(false);
-        }
 
         // Clear old buttons (hide during typing)
         foreach (GameObject btn in activeButtons)
@@ -113,6 +137,12 @@ public class DialogueUI : EventListener
         {
             dialogueText.text = node.dialogueText;
             CreateOptionButtons(node.options);
+
+            // Play complete sound if not typing
+            if (completeSound != null)
+            {
+                audioSource.PlayOneShot(completeSound, completeVolume);
+            }
         }
     }
 
@@ -120,20 +150,72 @@ public class DialogueUI : EventListener
     {
         isTyping = true;
         dialogueText.text = "";
+        characterCount = 0;
 
         float delay = 1f / speed;
 
         foreach (char c in fullText)
         {
             dialogueText.text += c;
+            characterCount++;
+
+            // Check if we should play a sound for this character
+            bool shouldPlaySound = false;
+
+            if (typeSound != null)
+            {
+                // Check character type
+                if (c == ' ' && !playSoundForSpaces)
+                {
+                    shouldPlaySound = false;
+                }
+                else if (IsPunctuation(c) && !playSoundForPunctuation)
+                {
+                    shouldPlaySound = false;
+                }
+                else if (characterCount % charactersPerSound == 0)
+                {
+                    shouldPlaySound = true;
+                }
+
+                // Play type sound
+                if (shouldPlaySound)
+                {
+                    PlayTypeSound();
+                }
+            }
+
             yield return new WaitForSeconds(delay);
         }
 
         isTyping = false;
         typewriterCoroutine = null;
 
+        // Play completion sound
+        if (completeSound != null)
+        {
+            yield return new WaitForSeconds(completeSoundDelay);
+            audioSource.PlayOneShot(completeSound, completeVolume);
+        }
+
         // Show options after text is complete
         CreateOptionButtons(options);
+    }
+
+    void PlayTypeSound()
+    {
+        if (typeSound != null && audioSource != null)
+        {
+            // Apply random pitch variation for natural sound
+            audioSource.pitch = Random.Range(minPitch, maxPitch);
+            audioSource.PlayOneShot(typeSound, typeVolume);
+        }
+    }
+
+    bool IsPunctuation(char c)
+    {
+        char[] punctuation = { '.', ',', '!', '?', ';', ':', '-', '—', '(', ')', '[', ']', '{', '}', '\'', '"' };
+        return System.Array.Exists(punctuation, p => p == c);
     }
 
     void SkipTypewriter()
@@ -144,14 +226,17 @@ public class DialogueUI : EventListener
             typewriterCoroutine = null;
         }
 
-        // This is a bit hacky but works - we'll set it in the next frame
         isTyping = false;
+
+        // Play complete sound when skipped
+        if (completeSound != null && audioSource != null)
+        {
+            audioSource.PlayOneShot(completeSound, completeVolume);
+        }
     }
 
     void CreateOptionButtons(List<DialogueOption> options)
     {
-       
-
         if (options == null || options.Count == 0)
         {
             Debug.LogWarning("No dialogue options provided");
@@ -279,51 +364,5 @@ public class DialogueStarter : MonoBehaviour
         {
             playerInRange = false;
         }
-    }
-}
-
-// ============================================
-// OPTIONAL: Listen to dialogue events elsewhere
-// ============================================
-// Example of how your teammates can listen to dialogue events
-public class ExampleDialogueListener : EventListener
-{
-    void Start()
-    {
-        // Listen to when dialogue starts
-        Listen<DialogueStartedEvent>(OnDialogueStart);
-
-        // Listen to when player chooses an option
-        Listen<DialogueOptionChosenEvent>(OnOptionChosen);
-
-        // Listen to when flags are set
-        Listen<DialogueFlagSetEvent>(OnFlagSet);
-
-        // Listen to when dialogue ends
-        Listen<DialogueEndedEvent>(OnDialogueEnd);
-    }
-
-    void OnDialogueStart(DialogueStartedEvent evt)
-    {
-        Debug.Log($"Dialogue started: {evt.Tree.speakerName}");
-        // Maybe pause player movement, disable other UI, etc.
-    }
-
-    void OnOptionChosen(DialogueOptionChosenEvent evt)
-    {
-        Debug.Log($"Player chose: {evt.OptionText}");
-        // Track analytics, save choices, etc.
-    }
-
-    void OnFlagSet(DialogueFlagSetEvent evt)
-    {
-        Debug.Log($"Flag set: {evt.Flag}");
-        // React to story flags (unlock areas, trigger quests, etc.)
-    }
-
-    void OnDialogueEnd(DialogueEndedEvent evt)
-    {
-        Debug.Log("Dialogue ended");
-        // Resume player movement, re-enable UI, etc.
     }
 }
