@@ -4,7 +4,7 @@ using TMPro;
 using UnityEngine;
 using UnityEngine.UI;
 
-public class InteractionSystem : MonoBehaviour
+public class InteractionSystem : InputScript
 {
     [Header("Settings")]
     [SerializeField] private KeyCode interactKey = KeyCode.E;
@@ -57,7 +57,7 @@ public class InteractionSystem : MonoBehaviour
         }
     }
 
-    private void Update()
+    protected override void HandleInput()
     {
         CheckForInteractable();
 

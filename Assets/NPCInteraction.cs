@@ -10,7 +10,7 @@ public class NPCInteraction : EventListener, IInteractable
     public bool isTalking = false;
     public bool lookAtPlayer = true;
     public LookAtPlayer lapScript;
-
+    public Transform head;
     void Start()
     {
         // Listen for dialogue events
@@ -54,6 +54,8 @@ public class NPCInteraction : EventListener, IInteractable
 
         // Start the dialogue
         DialogueManager.Instance.StartDialogue(validDialogue);
+
+        Events.Publish(new FocusOnObject(head != null ? head : transform));
     }
 
     // Find the first dialogue that meets all requirements
@@ -86,5 +88,8 @@ public class NPCInteraction : EventListener, IInteractable
         if (lookAtPlayer)
             lapScript.enabled = false;
 
-    }
+
+        Events.Publish(new UnFocusObject());
+    
+}
 }

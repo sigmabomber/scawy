@@ -37,7 +37,7 @@ namespace Doody.InventoryFramework.Modules
 
         public void Update(float deltaTime)
         {
-            if (Input.GetKeyDown(toggleKey))
+            if (Input.GetKeyDown(toggleKey) && InputScript.InputEnabled)
             {
                 foreach (var system in inventorySystems)
                 {

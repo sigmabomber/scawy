@@ -10,21 +10,23 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8d5f6394d95a8dd4bb8ae921e379ba56, type: 3}
-  m_Name: New Dialogue 3
+  m_Name: New Dialogue 2
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: 67 ammo?
+    dialogueText: Hello, traveler! Welcome to my <highlight(red) shake(2,20) delay(1)shop>.
     voiceLine: {fileID: 0}
-    typewriterSpeed: 10
+    typewriterSpeed: 0
     options:
-    - optionText: Yes
+    - optionText: Example one
       nextDialogue: {fileID: 0}
-      requiredFlags: []
-      setFlags: []
+      requiredFlags:
+      - '!HasRevolver'
+      setFlags:
+      - 
       actions:
-      - actionType: 1
-        item: {fileID: 11400000, guid: abedd256f88b2ac459b6fc292153818c, type: 2}
-        itemQuantity: 67
+      - actionType: 12
+        item: {fileID: 0}
+        itemQuantity: 0
         teleportLocation: {fileID: 0}
         soundToPlay: {fileID: 0}
         questId: 
@@ -34,6 +36,6 @@ MonoBehaviour:
         customAction:
           m_PersistentCalls:
             m_Calls: []
-    requiredFlags: []
-  speakerName: E
-  speakerPortrait: {fileID: 0}
+    requiredFlags:
+    - '!HasRevolver'
+  speakerName: 

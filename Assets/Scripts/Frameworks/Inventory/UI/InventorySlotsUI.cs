@@ -252,6 +252,7 @@ public class InventorySlotsUI : EventListener,
         else
         {
             hasUsableLogic = itemData.prefab.GetComponent<IItemUsable>() != null;
+            print(itemData.prefab.name);
         }
 
         if (!hasUsableLogic)

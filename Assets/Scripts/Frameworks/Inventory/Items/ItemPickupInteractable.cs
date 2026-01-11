@@ -51,26 +51,23 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
             var playerSystem = InventoryFramework.Instance.GetInventorySystem("player_inventory");
             if (playerSystem != null)
             {
-                success = playerSystem.AddItem(itemData, quantity, slotPriority, gameObject);
+                // Do NOT drop when full for manual pickups
+                success = playerSystem.AddItem(itemData, quantity, slotPriority, gameObject, false);
             }
         }
         else
         {
             if (InventorySystem.Instance != null)
             {
-                success = InventorySystem.Instance.AddItem(itemData, quantity, slotPriority, gameObject);
+                // Do NOT drop when full for manual pickups
+                success = InventorySystem.Instance.AddItem(itemData, quantity, slotPriority, gameObject, false);
             }
         }
 
         if (success)
         {
             PlayPickupEffects();
-
-          
-            
-
             gameObject.SetActive(false);
-
         }
         else
         {
@@ -84,11 +81,9 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
             }
 
             Events.Publish(new InventoryFullEvent("player_inventory", itemData, quantity));
-
             isBeingPickedUp = false;
         }
     }
-
     public bool CanInteract()
     {
         return !isBeingPickedUp &&

@@ -72,9 +72,6 @@ public class DialogueInventoryIntegration : MonoBehaviour
         if (evt.SystemId != "player_inventory")
             return;
 
-        // SKIP SlotChanged during add operations - ItemAddedEvent will handle it
-        // SlotChanged fires too early (before item is fully added), causing Count: 0
-        // We only care about SlotChanged for moves/transfers/removals
 
         if (logFlagChanges)
             Debug.Log($"[DialogueInventory] SlotChangedEvent received - checking if it's a removal...");
@@ -92,8 +89,6 @@ public class DialogueInventoryIntegration : MonoBehaviour
     {
         if (evt.ItemData != null)
         {
-            // Item was added - just set the flag directly
-            // Don't check GetItemCount() because timing issues
             string flagName = $"Has{evt.ItemData.itemName}";
 
             if (!DialogueManager.Instance.HasFlag(flagName))

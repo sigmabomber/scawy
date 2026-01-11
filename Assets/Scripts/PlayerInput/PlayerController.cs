@@ -2,7 +2,7 @@ using UnityEngine;
 using Doody.GameEvents;
 
 [RequireComponent(typeof(CharacterController))]
-public class PlayerController : MonoBehaviour
+public class PlayerController : InputScript
 {
     // Singleton
     public static PlayerController Instance { get; private set; }
@@ -139,7 +139,7 @@ public class PlayerController : MonoBehaviour
         CacheBaseMovementValues();
     }
 
-    private void Update()
+    protected override void HandleInput()
     {
         if (Input.GetKeyDown(toggleCursorKey))
         {

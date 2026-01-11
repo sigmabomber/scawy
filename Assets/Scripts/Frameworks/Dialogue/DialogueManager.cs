@@ -48,10 +48,9 @@ namespace Doody.Framework.DialogueSystem
                 return;
             }
 
-            if (PlayerController.Instance != null)
-            {
-                PlayerController.Instance.DisablePlayerInput();
-            }
+            InputScript.InputEnabled = false;
+            Cursor.lockState = CursorLockMode.None;
+            Cursor.visible = true;
 
             if (tree.dialogue.voiceLine != null && audioSource != null)
             {
@@ -121,7 +120,7 @@ namespace Doody.Framework.DialogueSystem
                 case DialogueActionType.GiveItem:
                     if (action.item != null && InventorySystem.Instance != null)
                     {
-                        InventorySystem.Instance.AddItem(action.item, action.itemQuantity);
+                        InventorySystem.Instance.GiveItem(action.item, action.itemQuantity);
                         Debug.Log($"[Dialogue] Gave {action.itemQuantity}x {action.item.itemName}");
                     }
                     break;
@@ -218,11 +217,9 @@ namespace Doody.Framework.DialogueSystem
         // End the conversation
         public void EndDialogue()
         {
-            if (PlayerController.Instance != null)
-            {
-                PlayerController.Instance.EnablePlayerInput();
-            }
-
+            InputScript.InputEnabled = true;
+            Cursor.lockState = CursorLockMode.Locked;
+            Cursor.visible = false;
             Events.Publish(new DialogueEndedEvent());
         }
 

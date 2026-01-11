@@ -5,16 +5,11 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-/// <summary>
-/// Updated InventorySystem - can work standalone or with framework
-/// If InventoryUIModule is enabled, it will handle input. Otherwise, this handles it.
-/// </summary>
-public class InventorySystem : MonoBehaviour
+public class InventorySystem : InputScript
 {
     public GameObject inventory;
     public InventorySlotsUI currentlyEquippedSlot;
     public static InventorySystem Instance;
-
 
     // Prefabs
     public GameObject normalSlotsPrefab;
@@ -28,6 +23,12 @@ public class InventorySystem : MonoBehaviour
     // List to track all inventory slots
     public List<InventorySlotsUI> normalInventorySlots = new();
     public List<InventorySlotsUI> dedicatedInventorySlots = new();
+
+    // Drop settings
+    [Header("Drop Settings")]
+    [SerializeField] private Transform dropReferencePoint;
+    [SerializeField] private float dropForwardOffset = 1.5f;
+    [SerializeField] private float dropUpOffset = 0.5f;
 
     // Framework integration
     private bool useFrameworkInput = false;
@@ -44,6 +45,11 @@ public class InventorySystem : MonoBehaviour
     {
         InitializeSlots();
         CheckFrameworkIntegration();
+
+        if (dropReferencePoint == null && PlayerController.Instance != null)
+        {
+            dropReferencePoint = PlayerController.Instance.transform;
+        }
     }
 
     private void InitializeSlots()
@@ -102,7 +108,7 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    void Update()
+    protected override void HandleInput()
     {
         if (!useFrameworkInput)
         {
@@ -134,7 +140,8 @@ public class InventorySystem : MonoBehaviour
         }
     }
 
-    public bool AddItem(ItemData itemData, int quantity = 1, SlotPriority slotPriority = SlotPriority.Normal, GameObject itemObj = null)
+    public bool AddItem(ItemData itemData, int quantity = 1, SlotPriority slotPriority = SlotPriority.Normal,
+                     GameObject itemObj = null, bool dropWhenFull = false)
     {
         if (itemData == null)
         {
@@ -173,12 +180,22 @@ public class InventorySystem : MonoBehaviour
         }
         else
         {
-            PublishInventoryFull(itemData, quantity);
+            // Only drop if dropWhenFull is true
+            if (dropWhenFull && remainingQuantity > 0)
+            {
+                DropItemWhenFull(itemData, remainingQuantity, itemObj, slotPriority);
+                PublishInventoryFull(itemData, quantity);
+            }
+            else
+            {
+                PublishInventoryFull(itemData, quantity);
+            }
+
+            return false; // Return false to indicate item wasn't added to inventory
         }
 
         return success;
     }
-
     private bool AddToSlots(List<InventorySlotsUI> slots, ItemData itemData, ref int remainingQuantity,
                            GameObject itemObj, out bool wasStacked)
     {
@@ -226,6 +243,162 @@ public class InventorySystem : MonoBehaviour
         return remainingQuantity == 0;
     }
 
+    private void DropItemWhenFull(ItemData itemData, int quantity, GameObject itemObj, SlotPriority slotPriority)
+    {
+        if (itemData == null || quantity <= 0)
+            return;
+
+        Vector3 dropPosition = CalculateDropPosition();
+
+        GameObject droppedItem = null;
+
+        // If we have a specific item object to drop, use it
+        if (itemObj != null)
+        {
+            droppedItem = itemObj;
+            PrepareItemForDrop(droppedItem, dropPosition);
+        }
+        else
+        {
+            // Create a new item object if we don't have one
+            droppedItem = CreateDroppedItem(itemData, quantity, dropPosition, slotPriority);
+        }
+
+        if (droppedItem != null)
+        {
+            PublishItemDropped(itemData, quantity, droppedItem, dropPosition);
+            Debug.Log($"Inventory full! Dropped {quantity} x {itemData.itemName}");
+        }
+    }
+
+    private Vector3 CalculateDropPosition()
+    {
+        if (dropReferencePoint != null)
+        {
+            return dropReferencePoint.position +
+                   dropReferencePoint.forward * dropForwardOffset +
+                   dropReferencePoint.up * dropUpOffset;
+        }
+
+        // Default to player position if no reference point
+        return Vector3.zero;
+    }
+
+    private void PrepareItemForDrop(GameObject itemObj, Vector3 dropPosition)
+    {
+        itemObj.transform.position = dropPosition;
+
+        // Add Rigidbody if not present
+        Rigidbody rb = itemObj.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = itemObj.AddComponent<Rigidbody>();
+        }
+        rb.useGravity = true;
+        rb.isKinematic = false;
+        rb.velocity = Vector3.zero;
+        rb.angularVelocity = Vector3.zero;
+
+        // Enable collider
+        Collider col = itemObj.GetComponent<Collider>();
+        if (col != null)
+        {
+            col.enabled = true;
+        }
+
+        // Set layer to Interactable
+        foreach (Transform t in itemObj.GetComponentsInChildren<Transform>(true))
+        {
+            t.gameObject.layer = LayerMask.NameToLayer("Interactable");
+        }
+
+        // Enable ItemPickupInteractable
+        ItemPickupInteractable pickup = itemObj.GetComponent<ItemPickupInteractable>();
+        if (pickup != null)
+        {
+            pickup.enabled = true;
+        }
+
+        // Set state to InWorld
+        ItemStateTracker stateTracker = itemObj.GetComponent<ItemStateTracker>();
+        if (stateTracker != null)
+        {
+            stateTracker.SetState(ItemState.InWorld);
+        }
+
+        // Call OnDroppedInWorld on IItemUsable components
+        var usableComponents = itemObj.GetComponents<IItemUsable>();
+        foreach (var usable in usableComponents)
+        {
+            var dropMethod = usable.GetType().GetMethod("OnDroppedInWorld");
+            if (dropMethod != null)
+            {
+                dropMethod.Invoke(usable, null);
+            }
+        }
+    }
+
+    private GameObject CreateDroppedItem(ItemData itemData, int quantity, Vector3 dropPosition, SlotPriority slotPriority)
+    {
+        if (itemData.prefab == null)
+        {
+            Debug.LogWarning($"Cannot drop {itemData.itemName}: No prefab assigned!");
+            return null;
+        }
+
+        GameObject droppedItem = Instantiate(itemData.prefab, dropPosition, itemData.prefab.transform.rotation);
+
+        // Add ItemStateTracker if not present
+        if (droppedItem.GetComponent<ItemStateTracker>() == null)
+        {
+            droppedItem.AddComponent<ItemStateTracker>();
+        }
+
+        // Add ItemPickupInteractable if not present
+        ItemPickupInteractable pickup = droppedItem.GetComponent<ItemPickupInteractable>();
+        if (pickup == null)
+        {
+            pickup = droppedItem.AddComponent<ItemPickupInteractable>();
+        }
+        pickup.itemData = itemData;
+        pickup.quantity = quantity;
+        pickup.slotPriority = slotPriority;
+        pickup.isBeingPickedUp = false;
+
+        // Add Rigidbody if not present
+        Rigidbody rb = droppedItem.GetComponent<Rigidbody>();
+        if (rb == null)
+        {
+            rb = droppedItem.AddComponent<Rigidbody>();
+        }
+        rb.useGravity = true;
+        rb.isKinematic = false;
+
+        // Enable collider
+        Collider col = droppedItem.GetComponent<Collider>();
+        if (col != null)
+        {
+            col.enabled = true;
+        }
+
+        // Set layer to Interactable
+        foreach (Transform t in droppedItem.GetComponentsInChildren<Transform>(true))
+        {
+            t.gameObject.layer = LayerMask.NameToLayer("Interactable");
+        }
+
+        // Set state to InWorld
+        var stateTracker = droppedItem.GetComponent<ItemStateTracker>();
+        if (stateTracker != null)
+        {
+            stateTracker.SetState(ItemState.InWorld);
+        }
+
+        droppedItem.SetActive(true);
+
+        return droppedItem;
+    }
+
     private void PrepareItemForInventory(GameObject itemObj)
     {
         ItemPickupInteractable pickup = itemObj.GetComponent<ItemPickupInteractable>();
@@ -236,6 +409,14 @@ public class InventorySystem : MonoBehaviour
 
         Collider col = itemObj.GetComponent<Collider>();
         if (col != null) col.enabled = false;
+
+        Rigidbody rb = itemObj.GetComponent<Rigidbody>();
+        if (rb != null)
+        {
+            rb.isKinematic = true;
+            rb.velocity = Vector3.zero;
+            rb.angularVelocity = Vector3.zero;
+        }
 
         ItemStateTracker stateTracker = itemObj.GetComponent<ItemStateTracker>();
         if (stateTracker != null)
@@ -383,7 +564,6 @@ public class InventorySystem : MonoBehaviour
         Events.Publish(new InventoryFullEvent("player_inventory", itemData, attemptedQuantity));
     }
 
-
     public void NotifyItemEquipped(InventorySlotsUI slot, IEquippable equippable)
     {
         PublishItemEquipped(slot, equippable);
@@ -398,5 +578,25 @@ public class InventorySystem : MonoBehaviour
     {
         Events.Publish(new ItemUsedEvent("player_inventory", slot.itemData,
                                         slot.quantity, slot, wasConsumed));
+    }
+
+    public bool GiveItem(ItemData itemData, int quantity)
+    {
+        return AddItem(itemData, quantity, SlotPriority.Normal, null, true);
+    }
+
+    public bool GiveItem(ItemData itemData, int quantity, SlotPriority slotPriority)
+    {
+        return AddItem(itemData, quantity, slotPriority, null, true);
+    }
+
+    public bool GiveItem(ItemData itemData, int quantity, SlotPriority slotPriority, GameObject itemObj)
+    {
+        return AddItem(itemData, quantity, slotPriority, itemObj, true);
+    }
+
+    public bool PickupItem(ItemData itemData, int quantity, SlotPriority slotPriority, GameObject itemObj)
+    {
+        return AddItem(itemData, quantity, slotPriority, itemObj, false);
     }
 }

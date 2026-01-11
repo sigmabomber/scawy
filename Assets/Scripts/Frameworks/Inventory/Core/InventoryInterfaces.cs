@@ -32,7 +32,7 @@ namespace Doody.InventoryFramework
     {
         string SystemId { get; }
 
-        bool AddItem(ItemData itemData, int quantity, SlotPriority priority, GameObject itemObj);
+        bool AddItem(ItemData itemData, int quantity, SlotPriority priority, GameObject itemObj, bool dropWhenFull = false);
         bool RemoveItem(ItemData itemData, int quantity);
         bool HasItem(ItemData itemData, int quantity);
         int GetItemCount(ItemData itemData);

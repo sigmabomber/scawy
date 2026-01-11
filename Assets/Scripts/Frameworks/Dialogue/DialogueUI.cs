@@ -1,133 +1,136 @@
-using UnityEngine;
+﻿using UnityEngine;
 using UnityEngine.UI;
 using TMPro;
 using System.Collections;
 using System.Collections.Generic;
+using System.Text;
+using System.Text.RegularExpressions;
 using Doody.GameEvents;
 using Doody.Framework.DialogueSystem;
 
 // UI CONTROLLER - Uses EventListener
 public class DialogueUI : EventListener
 {
+    #region UI References
     [Header("UI References")]
-    public GameObject dialoguePanel;
-    public TextMeshProUGUI speakerNameText;
-    public Image speakerPortrait;
-    public TextMeshProUGUI dialogueText;
-    public Transform optionsContainer;
-    public GameObject optionButtonPrefab;
+    [SerializeField] private GameObject dialoguePanel;
+    [SerializeField] private TextMeshProUGUI speakerNameText;
+    [SerializeField] private Image speakerPortrait;
+    [SerializeField] private TextMeshProUGUI dialogueText;
+    [SerializeField] private Transform optionsContainer;
+    [SerializeField] private GameObject optionButtonPrefab;
+    #endregion
 
+    #region Typewriter Settings
     [Header("Typewriter Effect")]
-    [Tooltip("Enable typewriter effect")]
-    public bool useTypewriter = true;
-    [Tooltip("Default characters per second (used when dialogue has 0)")]
-    public float defaultTypewriterSpeed = 30f;
-    [Tooltip("Key to skip typewriter effect")]
-    public KeyCode skipKey = KeyCode.Space;
+    [SerializeField] private bool useTypewriter = true;
+    [SerializeField] private float defaultTypewriterSpeed = 30f;
+    [SerializeField] private KeyCode skipKey = KeyCode.Space;
+    [SerializeField] private bool allowSkip = true;
+    #endregion
 
+    #region Visual Effects
+    [Header("Visual Effects")]
+    [SerializeField] private bool useSineEffect = true;
+    [SerializeField] private float sineAmplitude = 10f;
+    [SerializeField] private float sineFrequency = 2f;
+    [SerializeField] private float sineEffectDuration = 0.5f;
+
+    [SerializeField] private float defaultShakeIntensity = 2f;
+    [SerializeField] private float defaultShakeSpeed = 20f;
+
+    [SerializeField, Range(1, 120)] private int effectsUpdateFPS = 30;
+    private float effectsUpdateInterval;
+    #endregion
+
+    #region Audio Settings
     [Header("Typewriter SFX")]
-    [Tooltip("Audio source for typewriter SFX")]
-    public AudioSource audioSource;
-    [Tooltip("Sound clip for each character typed")]
-    public AudioClip typeSound;
-    [Tooltip("Sound clip played when typewriter completes")]
-    public AudioClip completeSound;
-    [Tooltip("Minimum pitch variation for type sounds")]
-    public float minPitch = 0.95f;
-    [Tooltip("Maximum pitch variation for type sounds")]
-    public float maxPitch = 1.05f;
-    [Tooltip("Volume for type sounds")]
-    public float typeVolume = 0.7f;
-    [Tooltip("Volume for complete sound")]
-    public float completeVolume = 1f;
-    [Tooltip("Characters per type sound (1 = every character, 2 = every other, etc.)")]
-    public int charactersPerSound = 1;
-    [Tooltip("Play sound for spaces")]
-    public bool playSoundForSpaces = false;
-    [Tooltip("Play sound for punctuation")]
-    public bool playSoundForPunctuation = true;
-    [Tooltip("Delay before playing complete sound (seconds)")]
-    public float completeSoundDelay = 0.1f;
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip typeSound;
+    [SerializeField] private AudioClip completeSound;
+    [SerializeField, Range(0.95f, 1.05f)] private float minPitch = 0.95f;
+    [SerializeField, Range(0.95f, 1.05f)] private float maxPitch = 1.05f;
+    [SerializeField, Range(0f, 1f)] private float typeVolume = 0.7f;
+    [SerializeField, Range(0f, 1f)] private float completeVolume = 1f;
+    [SerializeField] private int charactersPerSound = 1;
+    [SerializeField] private bool playSoundForSpaces = false;
+    [SerializeField] private bool playSoundForPunctuation = true;
+    [SerializeField] private float completeSoundDelay = 0.1f;
+    #endregion
 
+    #region Button Colors
     [Header("Button Colors")]
-    [Tooltip("Normal button color")]
-    public Color normalButtonColor = Color.white;
-    [Tooltip("Button color when hovered")]
-    public Color hoverButtonColor = new Color(0.8f, 0.8f, 0.8f, 1f);
-    [Tooltip("Button color when pressed")]
-    public Color pressedButtonColor = new Color(0.6f, 0.6f, 0.6f, 1f);
-    [Tooltip("Button color when disabled")]
-    public Color disabledButtonColor = new Color(0.5f, 0.5f, 0.5f, 0.5f);
+    [SerializeField] private Color normalButtonColor = Color.white;
+    [SerializeField] private Color hoverButtonColor = new(0.8f, 0.8f, 0.8f, 1f);
+    [SerializeField] private Color pressedButtonColor = new(0.6f, 0.6f, 0.6f, 1f);
+    [SerializeField] private Color disabledButtonColor = new(0.5f, 0.5f, 0.5f, 0.5f);
+    #endregion
 
-    private List<GameObject> activeButtons = new List<GameObject>();
+    #region Data Classes
+    private class CharacterEffectData
+    {
+        public int visualCharIndex; // Index in the visible text (not including TMP tags)
+        public bool shouldShake;
+        public float shakeIntensity;
+        public float shakeSpeed;
+        public float sineStartTime;
+    }
+    #endregion
+
+    #region Private Fields
+    private readonly List<GameObject> activeButtons = new();
+    private readonly List<CharacterEffectData> characterEffects = new();
     private Coroutine typewriterCoroutine;
+    private Coroutine effectsCoroutine;
     private bool isTyping = false;
     private int characterCount = 0;
+    private StringBuilder richTextBuilder = new();
+    private DialogueTextParser textParser;
 
-    void Update()
+    // For storing original vertex positions
+    private List<Vector3>[] originalVertices;
+    #endregion
+
+    #region Unity Lifecycle
+    private void Update()
     {
-        // Allow skipping typewriter effect
-        if (isTyping && Input.GetKeyDown(skipKey))
+        if (isTyping && allowSkip && Input.GetKeyDown(skipKey))
         {
             SkipTypewriter();
         }
     }
 
-    void Start()
+    private void Start()
     {
-        // Subscribe to dialogue events using your framework
         Listen<DialogueStartedEvent>(OnDialogueStarted);
         Listen<DialogueEndedEvent>(OnDialogueEnded);
-
-        // Hide UI at start
         dialoguePanel.SetActive(false);
-
-        // Ensure audio source is set up
-        if (audioSource == null)
-        {
-            audioSource = GetComponent<AudioSource>();
-            if (audioSource == null)
-            {
-                audioSource = gameObject.AddComponent<AudioSource>();
-                audioSource.playOnAwake = false;
-            }
-        }
+        SetupAudioSource();
+        effectsUpdateInterval = 1f / effectsUpdateFPS;
+        textParser = new DialogueTextParser(defaultShakeIntensity, defaultShakeSpeed);
     }
 
-    void OnDialogueStarted(DialogueStartedEvent evt)
+    private void OnDestroy()
     {
-        DisplayDialogue(evt.Node, evt.Tree);
+        StopAllCoroutines();
+        ClearOptions();
     }
+    #endregion
 
-    void OnDialogueEnded(DialogueEndedEvent evt)
+    #region Event Handlers
+    private void OnDialogueStarted(DialogueStartedEvent evt) => DisplayDialogue(evt.Node, evt.Tree);
+    private void OnDialogueEnded(DialogueEndedEvent evt) => HideDialogue();
+    #endregion
+
+    #region Dialogue Display
+    private void DisplayDialogue(DialogueNode node, DialogueTree tree)
     {
-        HideDialogue();
-    }
+        StopActiveCoroutines();
+        ClearOptions();
 
-    void DisplayDialogue(DialogueNode node, DialogueTree tree)
-    {
-        // Stop any ongoing typewriter
-        if (typewriterCoroutine != null)
-        {
-            StopCoroutine(typewriterCoroutine);
-            typewriterCoroutine = null;
-            isTyping = false;
-        }
-
-        // Show panel
         dialoguePanel.SetActive(true);
+        SetSpeakerInfo(tree.speakerName);
 
-        // Set speaker info
-        if (!string.IsNullOrEmpty(tree.speakerName))
-            speakerNameText.text = tree.speakerName;
-
-
-        // Clear old buttons (hide during typing)
-        foreach (GameObject btn in activeButtons)
-            Destroy(btn);
-        activeButtons.Clear();
-
-        // Start typewriter effect or display immediately
         if (useTypewriter)
         {
             float speed = node.typewriterSpeed > 0 ? node.typewriterSpeed : defaultTypewriterSpeed;
@@ -135,107 +138,367 @@ public class DialogueUI : EventListener
         }
         else
         {
-            dialogueText.text = node.dialogueText;
+            DisplayFullText(node.dialogueText);
             CreateOptionButtons(node.options);
-
-            // Play complete sound if not typing
-            if (completeSound != null)
-            {
-                audioSource.PlayOneShot(completeSound, completeVolume);
-            }
+            PlayCompleteSound();
         }
     }
 
-    IEnumerator TypewriterEffect(string fullText, List<DialogueOption> options, float speed)
+    private void DisplayFullText(string dialogueText)
     {
-        isTyping = true;
-        dialogueText.text = "";
-        characterCount = 0;
-
-        float delay = 1f / speed;
-
-        foreach (char c in fullText)
-        {
-            dialogueText.text += c;
-            characterCount++;
-
-            // Check if we should play a sound for this character
-            bool shouldPlaySound = false;
-
-            if (typeSound != null)
-            {
-                // Check character type
-                if (c == ' ' && !playSoundForSpaces)
-                {
-                    shouldPlaySound = false;
-                }
-                else if (IsPunctuation(c) && !playSoundForPunctuation)
-                {
-                    shouldPlaySound = false;
-                }
-                else if (characterCount % charactersPerSound == 0)
-                {
-                    shouldPlaySound = true;
-                }
-
-                // Play type sound
-                if (shouldPlaySound)
-                {
-                    PlayTypeSound();
-                }
-            }
-
-            yield return new WaitForSeconds(delay);
-        }
-
-        isTyping = false;
-        typewriterCoroutine = null;
-
-        // Play completion sound
-        if (completeSound != null)
-        {
-            yield return new WaitForSeconds(completeSoundDelay);
-            audioSource.PlayOneShot(completeSound, completeVolume);
-        }
-
-        // Show options after text is complete
-        CreateOptionButtons(options);
+        var tokens = textParser.ParseText(dialogueText);
+        ApplyTokensToText(tokens);
+        StartEffectsCoroutine();
     }
 
-    void PlayTypeSound()
+    private void HideDialogue()
     {
-        if (typeSound != null && audioSource != null)
-        {
-            // Apply random pitch variation for natural sound
-            audioSource.pitch = Random.Range(minPitch, maxPitch);
-            audioSource.PlayOneShot(typeSound, typeVolume);
-        }
+        StopActiveCoroutines();
+        dialoguePanel.SetActive(false);
+        ClearOptions();
+        characterEffects.Clear();
+        richTextBuilder.Clear();
+        originalVertices = null;
     }
 
-    bool IsPunctuation(char c)
-    {
-        char[] punctuation = { '.', ',', '!', '?', ';', ':', '-', '�', '(', ')', '[', ']', '{', '}', '\'', '"' };
-        return System.Array.Exists(punctuation, p => p == c);
-    }
-
-    void SkipTypewriter()
+    private void StopActiveCoroutines()
     {
         if (typewriterCoroutine != null)
         {
             StopCoroutine(typewriterCoroutine);
             typewriterCoroutine = null;
         }
+        if (effectsCoroutine != null)
+        {
+            StopCoroutine(effectsCoroutine);
+            effectsCoroutine = null;
+        }
+        isTyping = false;
+    }
+    #endregion
 
+    #region Typewriter System
+    private IEnumerator TypewriterEffect(string fullText, List<DialogueOption> options, float speed)
+    {
+        isTyping = true;
+        characterEffects.Clear();
+        richTextBuilder.Clear();
+        originalVertices = null;
+
+        var tokens = textParser.ParseText(fullText);
+        dialogueText.text = "";
+        characterCount = 0;
+        float delay = 1f / speed;
+
+        StartEffectsCoroutine();
+
+        int visualCharIndex = 0;
+
+        foreach (var token in tokens)
+        {
+            if (token.delayBefore > 0)
+                yield return new WaitForSeconds(token.delayBefore);
+
+            // Add opening color tag if needed
+            if (token.hasHighlight)
+            {
+                richTextBuilder.Append($"<color=#{ColorUtility.ToHtmlStringRGBA(token.highlightColor)}>");
+            }
+
+            foreach (char c in token.text)
+            {
+                richTextBuilder.Append(c);
+                dialogueText.text = richTextBuilder.ToString();
+
+                // Create effect data for this visual character
+                if (token.shakeIntensity > 0)
+                {
+                    var effectData = new CharacterEffectData
+                    {
+                        visualCharIndex = visualCharIndex,
+                        shouldShake = true,
+                        shakeIntensity = token.shakeIntensity,
+                        shakeSpeed = token.shakeSpeed,
+                        sineStartTime = Time.time
+                    };
+                    characterEffects.Add(effectData);
+                }
+
+                visualCharIndex++;
+                characterCount++;
+
+                TryPlayCharacterSound(c);
+                yield return new WaitForSeconds(delay);
+            }
+
+            // Add closing color tag if needed
+            if (token.hasHighlight)
+            {
+                richTextBuilder.Append("</color>");
+                dialogueText.text = richTextBuilder.ToString();
+            }
+        }
+
+        CompleteTyping(options);
+    }
+
+    private void TryPlayCharacterSound(char c)
+    {
+        if (typeSound == null) return;
+        if (c == ' ' && !playSoundForSpaces) return;
+        if (IsPunctuation(c) && !playSoundForPunctuation) return;
+        if (characterCount % charactersPerSound != 0) return;
+
+        PlayTypeSound();
+    }
+
+    private void CompleteTyping(List<DialogueOption> options)
+    {
+        isTyping = false;
+        typewriterCoroutine = null;
+
+        if (completeSound != null)
+            StartCoroutine(PlayDelayedCompleteSound());
+
+        CreateOptionButtons(options);
+    }
+
+    private IEnumerator PlayDelayedCompleteSound()
+    {
+        yield return new WaitForSeconds(completeSoundDelay);
+        audioSource.PlayOneShot(completeSound, completeVolume);
+    }
+
+    private void SkipTypewriter()
+    {
+        if (typewriterCoroutine == null) return;
+
+        StopCoroutine(typewriterCoroutine);
+        typewriterCoroutine = null;
         isTyping = false;
 
-        // Play complete sound when skipped
-        if (completeSound != null && audioSource != null)
+        dialogueText.text = richTextBuilder.ToString();
+        dialogueText.ForceMeshUpdate();
+
+        PlayCompleteSound();
+    }
+    #endregion
+
+    #region Visual Effects (Position Only)
+    private void StartEffectsCoroutine()
+    {
+        if (effectsCoroutine != null)
+            StopCoroutine(effectsCoroutine);
+        effectsCoroutine = StartCoroutine(UpdateTextEffectsOptimized());
+    }
+
+    private IEnumerator UpdateTextEffectsOptimized()
+    {
+        WaitForSeconds waitInterval = new WaitForSeconds(effectsUpdateInterval);
+
+        while (true)
         {
-            audioSource.PlayOneShot(completeSound, completeVolume);
+            yield return waitInterval;
+
+            if (characterEffects.Count == 0)
+                continue;
+
+            dialogueText.ForceMeshUpdate();
+            var textInfo = dialogueText.textInfo;
+
+            if (textInfo.characterCount == 0)
+                continue;
+
+            // Initialize original vertices storage if needed
+            if (originalVertices == null || originalVertices.Length != textInfo.meshInfo.Length)
+            {
+                originalVertices = new List<Vector3>[textInfo.meshInfo.Length];
+                for (int i = 0; i < textInfo.meshInfo.Length; i++)
+                {
+                    originalVertices[i] = new List<Vector3>();
+                }
+            }
+
+            // Store original vertices for each mesh
+            for (int meshIndex = 0; meshIndex < textInfo.meshInfo.Length; meshIndex++)
+            {
+                var meshInfo = textInfo.meshInfo[meshIndex];
+                var vertices = meshInfo.vertices;
+
+                originalVertices[meshIndex].Clear();
+                originalVertices[meshIndex].AddRange(vertices);
+            }
+
+            bool meshUpdated = false;
+
+            // Apply position effects only
+            for (int i = 0; i < characterEffects.Count; i++)
+            {
+                var effect = characterEffects[i];
+
+                if (effect.visualCharIndex >= textInfo.characterCount)
+                    continue;
+
+                var charInfo = textInfo.characterInfo[effect.visualCharIndex];
+                if (!charInfo.isVisible) continue;
+
+                if (ApplyPositionEffects(effect.visualCharIndex, effect, textInfo))
+                {
+                    meshUpdated = true;
+                }
+            }
+
+            if (meshUpdated)
+                UpdateMeshes(textInfo);
         }
     }
 
-    void CreateOptionButtons(List<DialogueOption> options)
+    private bool ApplyPositionEffects(int index, CharacterEffectData effect, TMP_TextInfo textInfo)
+    {
+        var charInfo = textInfo.characterInfo[index];
+        if (!charInfo.isVisible) return false;
+
+        int vertexIndex = charInfo.vertexIndex;
+        int materialIndex = charInfo.materialReferenceIndex;
+
+        if (materialIndex >= textInfo.meshInfo.Length)
+            return false;
+
+        Vector3[] vertices = textInfo.meshInfo[materialIndex].vertices;
+
+        if (vertexIndex < 0 || vertexIndex + 3 >= vertices.Length)
+            return false;
+
+        // Calculate offset for position effects
+        Vector3 offset = CalculateOffset(effect, index);
+
+        if (offset == Vector3.zero)
+            return false;
+
+        // Apply vertex position offset relative to original positions
+        bool hasOriginalData = originalVertices != null && materialIndex < originalVertices.Length &&
+                              originalVertices[materialIndex].Count > vertexIndex + 3;
+
+        if (hasOriginalData)
+        {
+            for (int j = 0; j < 4; j++)
+            {
+                vertices[vertexIndex + j] = originalVertices[materialIndex][vertexIndex + j] + offset;
+            }
+            return true;
+        }
+
+        return false;
+    }
+
+    private Vector3 CalculateOffset(CharacterEffectData effect, int index)
+    {
+        Vector3 offset = Vector3.zero;
+        float timeSinceStart = Time.time - effect.sineStartTime;
+
+        if (useSineEffect && timeSinceStart < sineEffectDuration)
+        {
+            float progress = timeSinceStart / sineEffectDuration;
+            float sineValue = Mathf.Sin(timeSinceStart * sineFrequency * Mathf.PI * 2);
+            offset.y += sineValue * sineAmplitude * (1 - progress);
+        }
+
+        if (effect.shouldShake)
+        {
+            offset.x += Mathf.Sin(Time.time * effect.shakeSpeed + index) * effect.shakeIntensity;
+            offset.y += Mathf.Cos(Time.time * effect.shakeSpeed * 1.3f + index) * effect.shakeIntensity;
+        }
+
+        return offset;
+    }
+
+    private void UpdateMeshes(TMP_TextInfo textInfo)
+    {
+        for (int i = 0; i < textInfo.meshInfo.Length; i++)
+        {
+            var meshInfo = textInfo.meshInfo[i];
+            meshInfo.mesh.vertices = meshInfo.vertices;
+            dialogueText.UpdateGeometry(meshInfo.mesh, i);
+        }
+    }
+
+    private void ApplyTokensToText(List<TextToken> tokens)
+    {
+        characterEffects.Clear();
+        richTextBuilder.Clear();
+        originalVertices = null;
+        int visualCharIndex = 0;
+
+        foreach (var token in tokens)
+        {
+            // Add opening color tag if needed
+            if (token.hasHighlight)
+            {
+                richTextBuilder.Append($"<color=#{ColorUtility.ToHtmlStringRGBA(token.highlightColor)}>");
+            }
+
+            foreach (char c in token.text)
+            {
+                richTextBuilder.Append(c);
+
+                // Create effect data for shake/sine
+                if (token.shakeIntensity > 0)
+                {
+                    var effectData = new CharacterEffectData
+                    {
+                        visualCharIndex = visualCharIndex,
+                        shouldShake = true,
+                        shakeIntensity = token.shakeIntensity,
+                        shakeSpeed = token.shakeSpeed,
+                        sineStartTime = Time.time
+                    };
+                    characterEffects.Add(effectData);
+                }
+
+                visualCharIndex++;
+            }
+
+            // Add closing color tag if needed
+            if (token.hasHighlight)
+            {
+                richTextBuilder.Append("</color>");
+            }
+        }
+
+        dialogueText.text = richTextBuilder.ToString();
+        dialogueText.ForceMeshUpdate();
+    }
+    #endregion
+
+    #region Audio
+    private void SetupAudioSource()
+    {
+        if (audioSource == null)
+            audioSource = gameObject.AddComponent<AudioSource>();
+        audioSource.playOnAwake = false;
+    }
+
+    private void PlayTypeSound()
+    {
+        if (typeSound == null || audioSource == null) return;
+        audioSource.pitch = Random.Range(minPitch, maxPitch);
+        audioSource.PlayOneShot(typeSound, typeVolume);
+    }
+
+    private void PlayCompleteSound()
+    {
+        if (completeSound != null && audioSource != null)
+            audioSource.PlayOneShot(completeSound, completeVolume);
+    }
+
+    private static readonly char[] punctuationChars =
+        { '.', ',', '!', '?', ';', ':', '-', '—', '(', ')', '[', ']', '{', '}', '\'', '"' };
+
+    private static bool IsPunctuation(char c) => System.Array.IndexOf(punctuationChars, c) >= 0;
+    #endregion
+
+    #region Options Management
+    private void CreateOptionButtons(List<DialogueOption> options)
     {
         if (options == null || options.Count == 0)
         {
@@ -243,126 +506,86 @@ public class DialogueUI : EventListener
             return;
         }
 
-        if (optionButtonPrefab == null)
-        {
-            Debug.LogError("Option button prefab is not assigned!");
-            return;
-        }
+        ValidateOptionComponents();
 
-        if (optionsContainer == null)
-        {
-            Debug.LogError("Options container is not assigned!");
-            return;
-        }
-
-        // Create option buttons (only for options that meet requirements)
         foreach (DialogueOption option in options)
         {
-            // Check if player meets requirements for this option
             if (!DialogueManager.Instance.MeetsOptionRequirements(option))
             {
                 Debug.Log($"[DialogueUI] Hiding option '{option.optionText}' - requirements not met");
-                continue; // Skip this option
-            }
-
-            GameObject btnObj = Instantiate(optionButtonPrefab, optionsContainer);
-            Button btn = btnObj.GetComponent<Button>();
-            TMP_Text btnText = btnObj.GetComponentInChildren<TMP_Text>();
-
-            if (btn == null || btnText == null)
-            {
-                Debug.LogError("Option button prefab is missing Button or TextMeshProUGUI component!");
-                Destroy(btnObj);
                 continue;
             }
 
-            btnText.text = option.optionText;
-
-            // Set up button colors...
-            ColorBlock colors = btn.colors;
-            colors.normalColor = normalButtonColor;
-            colors.highlightedColor = hoverButtonColor;
-            colors.pressedColor = pressedButtonColor;
-            colors.disabledColor = disabledButtonColor;
-            colors.fadeDuration = 0.1f;
-            btn.colors = colors;
-
-            // Capture option in closure
-            DialogueOption capturedOption = option;
-            btn.onClick.AddListener(() => OnOptionClicked(capturedOption));
-
-            activeButtons.Add(btnObj);
+            GameObject button = Instantiate(optionButtonPrefab, optionsContainer);
+            if (SetupButton(button, option))
+                activeButtons.Add(button);
         }
     }
 
-    void OnOptionClicked(DialogueOption option)
+    private void ValidateOptionComponents()
     {
-        DialogueManager.Instance.ChooseOption(option);
+        if (optionButtonPrefab == null)
+            throw new System.NullReferenceException("Option button prefab is not assigned!");
+        if (optionsContainer == null)
+            throw new System.NullReferenceException("Options container is not assigned!");
     }
 
-    void HideDialogue()
+    private bool SetupButton(GameObject buttonObj, DialogueOption option)
     {
-        // Stop typewriter if running
-        if (typewriterCoroutine != null)
+        var button = buttonObj.GetComponent<Button>();
+        var text = buttonObj.GetComponentInChildren<TMP_Text>();
+
+        if (button == null || text == null)
         {
-            StopCoroutine(typewriterCoroutine);
-            typewriterCoroutine = null;
-            isTyping = false;
+            Debug.LogError("Option button prefab is missing required components!");
+            Destroy(buttonObj);
+            return false;
         }
 
-        dialoguePanel.SetActive(false);
+        text.text = option.optionText;
+        button.colors = CreateButtonColors();
+        button.onClick.AddListener(() => OnOptionClicked(option));
+        return true;
+    }
 
-        // Clear buttons
-        foreach (GameObject btn in activeButtons)
-            Destroy(btn);
+    private ColorBlock CreateButtonColors() => new()
+    {
+        normalColor = normalButtonColor,
+        highlightedColor = hoverButtonColor,
+        pressedColor = pressedButtonColor,
+        disabledColor = disabledButtonColor,
+        fadeDuration = 0.1f,
+        colorMultiplier = 1f
+    };
+
+    private void OnOptionClicked(DialogueOption option) => DialogueManager.Instance.ChooseOption(option);
+
+    private void ClearOptions()
+    {
+        foreach (GameObject button in activeButtons)
+        {
+            if (button != null)
+                Destroy(button);
+        }
         activeButtons.Clear();
     }
+    #endregion
+
+    #region Helper Methods
+    private void SetSpeakerInfo(string speakerName)
+    {
+        if (!string.IsNullOrEmpty(speakerName))
+            speakerNameText.text = speakerName;
+    }
+    #endregion
 }
 
-// ============================================
-// DIALOGUE STARTER - Put this on NPCs/triggers
-// ============================================
-public class DialogueStarter : MonoBehaviour
+public class TextToken
 {
-    [Header("Dialogue Setup")]
-    [Tooltip("Drag your dialogue tree here")]
-    public DialogueTree dialogueToStart;
-
-    [Header("Trigger Settings")]
-    public KeyCode interactKey = KeyCode.E;
-    public bool requirePlayerNearby = true;
-
-    private bool playerInRange = false;
-
-    void Update()
-    {
-        if (playerInRange && Input.GetKeyDown(interactKey))
-        {
-            StartDialogue();
-        }
-    }
-
-    public void StartDialogue()
-    {
-        if (dialogueToStart != null)
-        {
-            DialogueManager.Instance.StartDialogue(dialogueToStart);
-        }
-    }
-
-    void OnTriggerEnter(Collider other)
-    {
-        if (requirePlayerNearby && other.CompareTag("Player"))
-        {
-            playerInRange = true;
-        }
-    }
-
-    void OnTriggerExit(Collider other)
-    {
-        if (requirePlayerNearby && other.CompareTag("Player"))
-        {
-            playerInRange = false;
-        }
-    }
+    public string text;
+    public float delayBefore;
+    public float shakeIntensity;
+    public float shakeSpeed;
+    public Color highlightColor;
+    public bool hasHighlight;
 }

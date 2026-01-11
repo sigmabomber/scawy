@@ -13,18 +13,9 @@ MonoBehaviour:
   m_Name: New Dialogue
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: skbidididididididdi s9dj aisd hasiudu oas dijasj duiewhy riyasd
-      ijodash cuiye huehc iuweh fiuwehfiu w
+    dialogueText: Hello, traveler! Welcome to my shop.
     voiceLine: {fileID: 0}
-    typewriterSpeed: 42.1
-    options:
-    - optionText: bleh
-      nextDialogue: {fileID: 11400000, guid: 8766504ea2ebd6746a7bd8a12164349f, type: 2}
-      setFlags: []
-    - optionText: Bye
-      nextDialogue: {fileID: 0}
-      setFlags: []
+    typewriterSpeed: 0
+    options: []
     requiredFlags: []
-  speakerName: ggg
-  speakerPortrait: {fileID: 0}
-  dialogueTextColor: {r: 0, g: 0, b: 0, a: 0}
+  speakerName: 

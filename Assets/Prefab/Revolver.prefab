@@ -405,7 +405,7 @@ Transform:
   m_GameObject: {fileID: 3542332379745696588}
   serializedVersion: 2
   m_LocalRotation: {x: -2.0441474e-33, y: -4.136804e-17, z: 4.9413685e-17, w: 1}
-  m_LocalPosition: {x: 6.166, y: 2.067991, z: 0.55221725}
+  m_LocalPosition: {x: 2.94, y: 2.067991, z: 0.55221725}
   m_LocalScale: {x: 0.15, y: 0.15, z: 0.15}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -546,10 +546,27 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   animator: {fileID: 313172334609579312}
   ammoText: {fileID: 6559316693928649088}
-  reloadClip: {fileID: 7400000, guid: dd90ea11319f26641b0a299d13f82408, type: 2}
-  maxAmmo: 6
-  currentAmmoCount: 5
-  ammoPerShot: 1
+  gunData:
+    gunName: Gun
+    maxAmmo: 6
+    ammoPerShot: 1
+    fireRate: 0.5
+    damage: 25
+    reloadType: 0
+    reloadTime: 2
+    canCancelReload: 1
+    recoilRotation: {x: -4, y: 0, z: 0}
+    recoilPosition: {x: 0, y: 0, z: -0.15}
+    recoilVariation: 0.5
+    aimRecoilMultiplier: 0.6
+    aimFOV: 40
+    aimPosition: {x: 0, y: -0.15, z: 0.3}
+    aimRotation: {x: 0, y: 0, z: 0, w: 1}
+    aimMovementSpeedMultiplier: 0.5
+    aimSensitivityMultiplier: 0.6
+    hasTinnitus: 1
+    tinnitusDuration: 2
+    tinnitusVolume: 0.3
   playerCamera: {fileID: 0}
   maxRaycastDistance: 100
   raycastMask:
@@ -558,28 +575,21 @@ MonoBehaviour:
   holdUntilInspect: 1
   inspectDuration: 2
   aimKey: 324
-  aimFOV: 40
-  normalFOV: 60
   aimSpeed: 8
-  aimPosition: {x: 0.074, y: -0.43, z: 0.24}
-  aimRotation: {x: 0, y: 0, z: 0, w: 1}
-  normalRotation: {x: 0, y: 0, z: 0, w: 0}
+  normalFOV: 60
   normalPosition: {x: 0.47499847, y: -0.6000061, z: 0.55200005}
-  aimMovementSpeedMultiplier: 0.5
-  aimSensitivityMultiplier: 0.6
+  normalRotation: {x: 0, y: 0, z: 0, w: 0}
   aimReticle: {fileID: 0}
   audioSource: {fileID: -9101295362616403008}
   tinnitusAudioSource: {fileID: -2075765808759555459}
-  reloadIntroSound: {fileID: 8300000, guid: 33eb9bc53ebdd8b47872bcc80e380076, type: 3}
-  reloadOutroSound: {fileID: 8300000, guid: f5c477666cb7f6f4cb37328fbcd5c865, type: 3}
   shootSound: {fileID: 8300000, guid: ef7c47f1a7306a344aa25ff91832acd5, type: 3}
   reloadSound: {fileID: 8300000, guid: 3553bf77e45adc84db57daa9f2e486cb, type: 3}
+  reloadIntroSound: {fileID: 8300000, guid: 33eb9bc53ebdd8b47872bcc80e380076, type: 3}
+  reloadOutroSound: {fileID: 8300000, guid: f5c477666cb7f6f4cb37328fbcd5c865, type: 3}
   tinnitusSound: {fileID: 8300000, guid: ab1ba1079cd2f174fa0e1d254ae7459d, type: 3}
-  emptyClickSound: {fileID: 8300000, guid: f8339e082f4aab94f97b9ad83b469fea, type: 3}
-  tinnitusDuration: 5
+  emptyClickSound: {fileID: 8300000, guid: 54e773fd55e4e144cace6b9106a89f55, type: 3}
   tinnitusFadeInTime: 0.05
   tinnitusFadeOutTime: 2
-  tinnitusVolume: 0.1
   volumeReduction: 1
   fadeCurve:
     serializedVersion: 2
@@ -606,12 +616,6 @@ MonoBehaviour:
     m_PostInfinity: 2
     m_RotationOrder: 4
   cameraRecoil: {fileID: 0}
-  recoilRotation: {x: -6, y: 0, z: 0}
-  recoilPosition: {x: 0, y: 0, z: -0.2}
-  recoilVariation: 0.7
-  aimRecoilMultiplier: 0.6
-  isReloading: 0
-  isShooting: 0
 --- !u!114 &1420075229565130237
 MonoBehaviour:
   m_ObjectHideFlags: 0

@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class DoorInteractable : MonoBehaviour, IInteractable, IRevolverHit
+public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
 {
     [SerializeField] private string doorID;
 
@@ -57,7 +57,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IRevolverHit
 
         return interactionIcon != null ? interactionIcon : null;
     }
-    public void OnRevolverHit()
+    public void OnGunHit(GunData data)
     {
         if (isUnlocked) return;
         UnlockDoor();
