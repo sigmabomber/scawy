@@ -63,14 +63,24 @@ public enum DialogueActionType
     
     TeleportPlayer,
     PlaySound,
-    StartQuest,
-    CompleteQuest,
+
+    StartObjective,
+    ProgressObjective,
+    CompleteObjective,
     SpawnObject,
     DestroyObject,
     EnableObject,
     DisableObject,
     LoadScene,
     Custom 
+}
+
+public enum ObjectiveTypes
+{
+
+    Boolean,
+    Collective,
+    Count
 }
 
 [System.Serializable]
@@ -90,8 +100,12 @@ public class DialogueAction
     [Header("Sound Action")]
     public AudioClip soundToPlay;
 
-    [Header("Quest Actions (StartQuest/CompleteQuest)")]
-    public string questId;
+    [Header("Objective Actions (StartObjective/CompleteObjective)")]
+    public string objectiveName;
+    public ObjectiveTypes objectiveType;
+
+    [Header ("If objective is boolean ignore")]
+    public int objectiveAmount;
 
     [Header("Object Actions (Spawn/Destroy/Enable/Disable)")]
     public GameObject targetObject;
@@ -121,7 +135,7 @@ public class DialogueOption
     [Tooltip("Flags to set when this option is chosen")]
     public List<string> setFlags = new List<string>();
 
-    [Header("Actions (Optional)")]  // ADD THIS
+    [Header("Actions (Optional)")] 
     [Tooltip("Actions to perform when this option is chosen")]
     public List<DialogueAction> actions = new List<DialogueAction>(); 
 }
@@ -193,9 +207,19 @@ public class DialogueActionDrawer : PropertyDrawer
                 DrawField(property, "soundToPlay", x, ref y, width);
                 break;
 
-            case DialogueActionType.StartQuest:
-            case DialogueActionType.CompleteQuest:
-                DrawField(property, "questId", x, ref y, width);
+            case DialogueActionType.StartObjective:
+                DrawField(property, "objectiveName", x, ref y, width);
+                DrawField(property, "objectiveType", x, ref y, width);
+
+                break;
+            case DialogueActionType.CompleteObjective:
+
+                DrawField(property, "objectiveName", x, ref y, width);
+                break;
+            case DialogueActionType.ProgressObjective:
+                DrawField(property, "objectiveName", x, ref y, width);
+               
+                DrawField(property, "objectiveAmount", x, ref y, width);
                 break;
 
             case DialogueActionType.SpawnObject:
@@ -283,9 +307,21 @@ public class DialogueActionDrawer : PropertyDrawer
                 Add("soundToPlay");
                 break;
 
-            case DialogueActionType.StartQuest:
-            case DialogueActionType.CompleteQuest:
-                Add("questId");
+            case DialogueActionType.StartObjective:
+                Add("objectiveName");
+                Add("objectiveType");
+
+                break;
+            case DialogueActionType.CompleteObjective:
+                Add("objectiveName");
+                
+                break;
+
+            case DialogueActionType.ProgressObjective:
+
+                Add("objectiveName");
+           
+                Add("objectiveAmount");
                 break;
 
             case DialogueActionType.SpawnObject:

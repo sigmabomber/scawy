@@ -25,12 +25,10 @@ public class ObjectiveManager : EventListener
         instance = this;
         DontDestroyOnLoad(gameObject);
 
-        // CRITICAL: Listen for objectives being published
         Listen<CountObjective>(obj => AddObjective(obj));
         Listen<CollectionObjective>(obj => AddObjective(obj));
         Listen<BooleanObjective>(obj => AddObjective(obj));
 
-        // Listen for progress events
         Listen<EnemyKilledEvent>(OnEnemyKilled);
         Listen<ItemCollectedEvent>(OnItemCollected);
         Listen<ObjectiveProgressEvent>(OnObjectiveProgress);

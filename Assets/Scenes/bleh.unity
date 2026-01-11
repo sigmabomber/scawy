@@ -7284,6 +7284,14 @@ PrefabInstance:
       propertyPath: emptyClickSound
       value: 
       objectReference: {fileID: 8300000, guid: 3492af76836fcaa478a9ce2c96f0a135, type: 3}
+    - target: {fileID: -4319161272273523786, guid: e8fa11c74ac0f004ea49289c135264b3, type: 3}
+      propertyPath: reloadIntroSound
+      value: 
+      objectReference: {fileID: 8300000, guid: 66c915e314affec469e651f7c05efea0, type: 3}
+    - target: {fileID: -4319161272273523786, guid: e8fa11c74ac0f004ea49289c135264b3, type: 3}
+      propertyPath: reloadOutroSound
+      value: 
+      objectReference: {fileID: 8300000, guid: be4eac4e264870b4ea62855443fa596e, type: 3}
     - target: {fileID: 218997190515756231, guid: e8fa11c74ac0f004ea49289c135264b3, type: 3}
       propertyPath: m_LocalPosition.x
       value: 56.038

@@ -34,3 +34,6 @@ MonoBehaviour:
   - id: revolver
     itemData: {fileID: 11400000, guid: 0d27ef2b1db6202439ff1e81147759af, type: 2}
     slotPriority: 1
+  - id: pistol
+    itemData: {fileID: 11400000, guid: bc8d5cbb6cd4f7548a614926006a585d, type: 2}
+    slotPriority: 1

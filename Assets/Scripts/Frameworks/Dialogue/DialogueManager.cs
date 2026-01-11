@@ -1,3 +1,4 @@
+using Doody.Framework.ObjectiveSystem;
 using Doody.GameEvents;
 using System.Collections.Generic;
 using UnityEngine;
@@ -121,7 +122,6 @@ namespace Doody.Framework.DialogueSystem
                     if (action.item != null && InventorySystem.Instance != null)
                     {
                         InventorySystem.Instance.GiveItem(action.item, action.itemQuantity);
-                        Debug.Log($"[Dialogue] Gave {action.itemQuantity}x {action.item.itemName}");
                     }
                     break;
 
@@ -129,20 +129,14 @@ namespace Doody.Framework.DialogueSystem
                     if (action.item != null && InventorySystem.Instance != null)
                     {
                         InventorySystem.Instance.RemoveItem(action.item, action.itemQuantity);
-                        Debug.Log($"[Dialogue] Removed {action.itemQuantity}x {action.item.itemName}");
                     }
                     break;
-
-               
-
-                
 
                 case DialogueActionType.TeleportPlayer:
                     if (action.teleportLocation != null && PlayerController.Instance != null)
                     {
                         PlayerController.Instance.transform.position = action.teleportLocation.position;
                         PlayerController.Instance.transform.rotation = action.teleportLocation.rotation;
-                        Debug.Log($"[Dialogue] Teleported player to {action.teleportLocation.name}");
                     }
                     break;
 
@@ -150,18 +144,19 @@ namespace Doody.Framework.DialogueSystem
                     if (action.soundToPlay != null && audioSource != null)
                     {
                         audioSource.PlayOneShot(action.soundToPlay);
-                        Debug.Log($"[Dialogue] Playing sound: {action.soundToPlay.name}");
                     }
                     break;
 
-                case DialogueActionType.StartQuest:
-                    // Add your quest system here
-                    Debug.Log($"[Dialogue] Start quest: {action.questId} (not implemented)");
+                case DialogueActionType.StartObjective:
+                    StartObjectiveAction(action);
                     break;
 
-                case DialogueActionType.CompleteQuest:
-                    // Add your quest system here
-                    Debug.Log($"[Dialogue] Complete quest: {action.questId} (not implemented)");
+                case DialogueActionType.CompleteObjective:
+                    CompleteObjectiveAction(action);
+                    break;
+
+                case DialogueActionType.ProgressObjective:
+                    ProgressObjectiveAction(action);
                     break;
 
                 case DialogueActionType.SpawnObject:
@@ -214,6 +209,114 @@ namespace Doody.Framework.DialogueSystem
             }
         }
 
+        private void StartObjectiveAction(DialogueAction action)
+        {
+            if (action.objectiveName == null || action.objectiveName.Length == 0)
+            {
+                Debug.LogWarning("Objective name is null or empty. Aborting");
+                return;
+            }
+
+            string name = string.Join(" ", action.objectiveName);
+
+            switch (action.objectiveType)
+            {
+                case ObjectiveTypes.Boolean:
+                    string description =  $"Complete: {name}";
+
+               
+                    
+                        Events.Publish(new BooleanObjective(name, description));
+                    
+                    
+                break;
+
+                case ObjectiveTypes.Collective:
+                case ObjectiveTypes.Count:
+                    string objectiveDescription = name;
+
+                   
+                    
+                    if (action.objectiveType == ObjectiveTypes.Count)
+                    {
+                       Events.Publish(new CountObjective(name, objectiveDescription, action.objectiveAmount));
+                    }
+                    else
+                    {
+                       Events.Publish(new CollectionObjective(name, objectiveDescription, action.objectiveAmount));
+                    }
+                    
+                
+                break;
+            }
+
+            
+        }
+
+        private void ProgressObjectiveAction(DialogueAction action)
+        {
+            if (action.objectiveName == null || action.objectiveName.Length == 0)
+            {
+                Debug.LogWarning("Objective name is null or empty. Aborting");
+                return;
+            }
+
+            string name = string.Join(" ", action.objectiveName);
+
+            switch (action.objectiveType)
+            {
+                case ObjectiveTypes.Boolean:
+
+
+
+                    Events.Publish(new CompleteObjective(name));
+
+
+                    break;
+
+                case ObjectiveTypes.Collective:
+                case ObjectiveTypes.Count:
+                    string objectiveDescription = name;
+
+
+
+                    
+                        Events.Publish(new ProgressObjective(name, action.objectiveAmount));
+                  
+
+
+                    break;
+            }
+
+        }
+
+        private void CompleteObjectiveAction(DialogueAction action)
+        {
+            if (action.objectiveName == null || action.objectiveName.Length == 0)
+            {
+                Debug.LogWarning("Objective name is null or empty. Aborting");
+                return;
+            }
+
+            string name = string.Join(" ", action.objectiveName);
+
+            
+
+
+
+            Events.Publish(new CompleteObjective(name));
+
+
+                  
+
+
+
+
+
+
+               
+        }
+        
         // End the conversation
         public void EndDialogue()
         {

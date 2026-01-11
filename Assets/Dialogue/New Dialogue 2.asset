@@ -17,19 +17,21 @@ MonoBehaviour:
     voiceLine: {fileID: 0}
     typewriterSpeed: 0
     options:
-    - optionText: Example one
+    - optionText: Start objective
       nextDialogue: {fileID: 0}
       requiredFlags:
       - '!HasRevolver'
       setFlags:
       - 
       actions:
-      - actionType: 12
+      - actionType: 5
         item: {fileID: 0}
         itemQuantity: 0
         teleportLocation: {fileID: 0}
         soundToPlay: {fileID: 0}
-        questId: 
+        objectiveName: Retard
+        objectiveType: 0
+        objectiveAmount: 0
         targetObject: {fileID: 0}
         spawnLocation: {fileID: 0}
         sceneName: 
