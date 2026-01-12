@@ -7,13 +7,11 @@ using UnityEngine;
 public class NPCInteraction : EventListener, IInteractable
 {
     public DialogueTree[] npcDialogues;
-    public bool isTalking = false;
+    private bool isTalking = false;
     public bool lookAtPlayer = true;
     public LookAtPlayer lapScript;
-    public Transform head;
     void Start()
     {
-        // Listen for dialogue events
         Listen<DialogueStartedEvent>(OnDialogueStarted);
         Listen<DialogueEndedEvent>(OnDialogueEnded);
     }
@@ -38,7 +36,6 @@ public class NPCInteraction : EventListener, IInteractable
         if (isTalking) return;
         if (npcDialogues == null || npcDialogues.Length == 0) return;
 
-        // Find the first dialogue that meets requirements
         DialogueTree validDialogue = FindFirstValidDialogue();
 
         if (validDialogue == null)
@@ -46,35 +43,29 @@ public class NPCInteraction : EventListener, IInteractable
             return;
         }
 
-        // Only set isTalking if we found a valid dialogue
         isTalking = true;
 
         if (lookAtPlayer)
             lapScript.enabled = true;
 
-        // Start the dialogue
         DialogueManager.Instance.StartDialogue(validDialogue);
 
-        Events.Publish(new FocusOnObject(head != null ? head : transform));
+        Events.Publish(new FocusOnObject(lapScript.transform != null ? lapScript.transform : transform));
     }
 
-    // Find the first dialogue that meets all requirements
     private DialogueTree FindFirstValidDialogue()
     {
         foreach (DialogueTree dialogue in npcDialogues)
         {
-            // Skip null or invalid dialogues
             if (dialogue == null || dialogue.dialogue == null)
                 continue;
 
-            // Check if player meets requirements
             if (DialogueManager.Instance.MeetsRequirements(dialogue.dialogue))
             {
                 return dialogue;
             }
         }
 
-        // No valid dialogue found
         return null;
     }
 

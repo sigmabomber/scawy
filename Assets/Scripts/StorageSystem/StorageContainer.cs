@@ -4,8 +4,7 @@ using Doody.InventoryFramework;
 using Doody.GameEvents;
 
 /// <summary>
-/// Individual storage container - stores its own data
-/// Uses shared UI when opened via interaction system
+/// Individual storage container with save support
 /// </summary>
 public class StorageContainer : MonoBehaviour, IInteractable
 {
@@ -22,14 +21,40 @@ public class StorageContainer : MonoBehaviour, IInteractable
 
     private void Start()
     {
-        for (int i = 0; i < slotCount; i++)
-        {
-            storedItems.Add(new StorageSlotData());
-        }
+        InitializeSlots();
 
         if (string.IsNullOrEmpty(storageId))
         {
             storageId = $"storage_{GetInstanceID()}";
+        }
+
+        if (StorageManager.Instance != null)
+        {
+            StorageManager.Instance.RegisterStorage(this);
+        }
+        else
+        {
+            Debug.LogWarning("StorageManager not found. Creating one.");
+            GameObject managerObj = new GameObject("StorageManager");
+            managerObj.AddComponent<StorageManager>();
+            StorageManager.Instance.RegisterStorage(this);
+        }
+    }
+
+    private void OnDestroy()
+    {
+        if (StorageManager.Instance != null)
+        {
+            StorageManager.Instance.UnregisterStorage(this);
+        }
+    }
+
+    private void InitializeSlots()
+    {
+        storedItems.Clear();
+        for (int i = 0; i < slotCount; i++)
+        {
+            storedItems.Add(new StorageSlotData());
         }
     }
 
@@ -98,7 +123,9 @@ public class StorageContainer : MonoBehaviour, IInteractable
         return new List<StorageSlotData>(storedItems);
     }
 
-    // For saving
+    /// <summary>
+    /// Get save data for this storage container
+    /// </summary>
     public StorageSaveData GetSaveData()
     {
         StorageSaveData data = new StorageSaveData
@@ -123,8 +150,13 @@ public class StorageContainer : MonoBehaviour, IInteractable
         return data;
     }
 
+    /// <summary>
+    /// Load save data into this storage container
+    /// </summary>
     public void LoadSaveData(StorageSaveData data)
     {
+        if (data == null) return;
+
         // Clear all slots
         for (int i = 0; i < storedItems.Count; i++)
         {
@@ -134,11 +166,63 @@ public class StorageContainer : MonoBehaviour, IInteractable
         // Load saved items
         foreach (var slotData in data.slots)
         {
-            // ItemData item = ItemDatabase.GetItemByName(slotData.itemName);
-            // SetSlotData(slotData.slotIndex, item, slotData.quantity);
+            if (slotData.slotIndex >= 0 && slotData.slotIndex < storedItems.Count)
+            {
+                ItemData item = FindItemByName(slotData.itemName);
+                if (item != null)
+                {
+                    SetSlotData(slotData.slotIndex, item, slotData.quantity);
+                }
+                else
+                {
+                    Debug.LogWarning($"Item not found for storage {storageId}: {slotData.itemName}");
+                }
+            }
         }
     }
+
+    private ItemData FindItemByName(string itemName)
+    {
+        if (ItemDatabaseManager.Instance == null)
+        {
+            Debug.LogError("ItemDatabaseManager.Instance is null!");
+            return null;
+        }
+
+        // Get all items and find by name
+        var allItems = ItemDatabaseManager.Instance.GetAllItems();
+        foreach (var item in allItems)
+        {
+            if (item.itemName == itemName)
+                return item;
+        }
+
+        Debug.LogWarning($"Item not found: {itemName}");
+        return null;
+    }
+
+    /// <summary>
+    /// Clear all items from this storage container
+    /// </summary>
+    public void ClearAllSlots()
+    {
+        for (int i = 0; i < storedItems.Count; i++)
+        {
+            ClearSlot(i);
+        }
+    }
+
+    /// <summary>
+    /// Get the number of occupied slots
+    /// </summary>
+    public int GetOccupiedSlotCount()
+    {
+        int count = 0;
+        foreach (var slot in storedItems)
+        {
+            if (slot.itemData != null)
+                count++;
+        }
+        return count;
+    }
 }
-
-
-

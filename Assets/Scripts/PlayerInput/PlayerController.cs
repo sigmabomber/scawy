@@ -483,6 +483,7 @@ public class PlayerController : InputScript
         return Physics.Raycast(rayStart, Vector3.up, checkHeight);
     }
 
+ 
     private float GetCurrentSpeed()
     {
         switch (currentMovementState)

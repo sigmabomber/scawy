@@ -1,4 +1,5 @@
 // Data classes
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -10,12 +11,21 @@ public class StorageSlotData
     public GameObject itemPrefab;
 }
 
+
 [System.Serializable]
 public class StorageSaveData
 {
     public string storageId;
     public List<StorageSlotSaveData> slots;
+    public List<ContainerSaveData> containers = new List<ContainerSaveData>();
+
+    public StorageSaveData()
+    {
+        slots = new List<StorageSlotSaveData>();
+    }
 }
+
+
 
 [System.Serializable]
 public class StorageSlotSaveData
@@ -24,6 +34,7 @@ public class StorageSlotSaveData
     public string itemName;
     public int quantity;
 }
+
 
 // Events 
 namespace Doody.InventoryFramework

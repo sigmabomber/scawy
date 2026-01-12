@@ -511,6 +511,7 @@ public class InventorySystem : InputScript
         return null;
     }
 
+
     public InventorySlotsUI FindItem(ItemData itemData)
     {
         return GetAllSlots().FirstOrDefault(slot => slot.itemData == itemData);

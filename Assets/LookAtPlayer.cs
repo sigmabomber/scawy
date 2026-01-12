@@ -4,7 +4,7 @@ using UnityEngine;
 
 public class LookAtPlayer : MonoBehaviour
 {
-    public Transform target;
+    private Transform target;
     public float turnSpeed = 8f;
     public float returnSpeed = 4f;
 
@@ -20,6 +20,8 @@ public class LookAtPlayer : MonoBehaviour
     void Start()
     {
         initialLocalRotation = transform.localRotation;
+
+        target = FindAnyObjectByType<PlayerController>().transform.Find("Main Camera").transform;
     }
 
     void LateUpdate()
