@@ -52,6 +52,7 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
             if (playerSystem != null)
             {
                 // Do NOT drop when full for manual pickups
+
                 success = playerSystem.AddItem(itemData, quantity, slotPriority, gameObject, false);
             }
         }

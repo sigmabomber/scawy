@@ -55,7 +55,6 @@ public class SaveEventManager : MonoBehaviour
             InitializeSaveDirectories();
             InitializeEventSubscriptions();
 
-            Debug.Log($"[SaveSystem] Initialized. Primary: {saveDirectory}, Fallback: {fallbackSaveDirectory}");
         }
         catch (Exception e)
         {

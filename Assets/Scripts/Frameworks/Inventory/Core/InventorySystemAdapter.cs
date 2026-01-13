@@ -26,7 +26,6 @@ public class InventorySystemAdapter : MonoBehaviour, IInventorySystem
         }
     }
 
-    // Fix: Remove namespace prefix since SlotPriority is now in global namespace
     public bool AddItem(ItemData itemData, int quantity, SlotPriority priority, GameObject itemObj, bool dropWhenFull = false)
     {
         return inventorySystem.AddItem(itemData, quantity, priority, itemObj, dropWhenFull);

@@ -31,7 +31,6 @@ public class StorageManager : MonoBehaviour
         if (!allStorageContainers.ContainsKey(storage.StorageId))
         {
             allStorageContainers.Add(storage.StorageId, storage);
-            Debug.Log($"Registered storage: {storage.StorageId}");
         }
     }
 
@@ -43,7 +42,7 @@ public class StorageManager : MonoBehaviour
         if (allStorageContainers.ContainsKey(storage.StorageId))
         {
             allStorageContainers.Remove(storage.StorageId);
-            Debug.Log($"Unregistered storage: {storage.StorageId}");
+           
         }
     }
 
