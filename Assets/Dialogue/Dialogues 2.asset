@@ -13,7 +13,8 @@ MonoBehaviour:
   m_Name: Dialogues 2
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: "Hey, my name is Darla. I need you to look into something for me.\r"
+    dialogueText: "<shake(1,2)Hey, my name is Darla. I need you to look into something
+      for me.>\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     nextDialogue: {fileID: 11400000, guid: 4ad642ef0afc5fa458ef86ceffc425f6, type: 2}

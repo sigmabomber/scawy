@@ -6,7 +6,7 @@ public class CameraMouseRotate : MonoBehaviour
     public float rotationSpeed = 5f;
     public float maxAngleX = 30f;
     public float maxAngleY = 60f;
-
+    public bool rotate = true;
     private Quaternion originalRotation;  
     private Quaternion targetRotation;
 
@@ -17,6 +17,7 @@ public class CameraMouseRotate : MonoBehaviour
 
     void Update()
     {
+        if (!rotate) return;
         Vector3 mouseViewPos = Camera.main.ScreenToViewportPoint(Input.mousePosition);
 
         float x = (mouseViewPos.x - 0.5f) * 2f;
@@ -34,5 +35,10 @@ public class CameraMouseRotate : MonoBehaviour
             targetRotation,
             rotationSpeed * Time.deltaTime
         );
+    }
+
+    public void ToggleRotate()
+    {
+        rotate = true;
     }
 }

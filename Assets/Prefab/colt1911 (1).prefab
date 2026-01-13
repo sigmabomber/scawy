@@ -652,10 +652,10 @@ MonoBehaviour:
   tinnitusAudioSource: {fileID: 0}
   shootSound: {fileID: 8300000, guid: f348f010899cef242bfee173fdcb9147, type: 3}
   reloadSound: {fileID: 8300000, guid: 713b648fad6a9974796d477650562a38, type: 3}
-  reloadIntroSound: {fileID: 8300000, guid: be4eac4e264870b4ea62855443fa596e, type: 3}
-  reloadOutroSound: {fileID: 8300000, guid: 66c915e314affec469e651f7c05efea0, type: 3}
+  reloadIntroSound: {fileID: 8300000, guid: 66c915e314affec469e651f7c05efea0, type: 3}
+  reloadOutroSound: {fileID: 8300000, guid: be4eac4e264870b4ea62855443fa596e, type: 3}
   tinnitusSound: {fileID: 0}
-  emptyClickSound: {fileID: 0}
+  emptyClickSound: {fileID: 8300000, guid: 3492af76836fcaa478a9ce2c96f0a135, type: 3}
   tinnitusFadeInTime: 0.2
   tinnitusFadeOutTime: 0.5
   volumeReduction: 0.3

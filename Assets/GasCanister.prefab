@@ -13,6 +13,8 @@ GameObject:
   - component: {fileID: 2697346112667941866}
   - component: {fileID: 885474178874308913}
   - component: {fileID: 6018539600622977360}
+  - component: {fileID: 6678323677704603856}
+  - component: {fileID: 405023156596114350}
   m_Layer: 7
   m_Name: GasCanister
   m_TagString: Untagged
@@ -28,13 +30,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 9050727030060375522}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.7071068, y: 0, z: -0, w: 0.7071067}
+  m_LocalRotation: {x: -0.7069834, y: 0, z: 0, w: 0.7072302}
   m_LocalPosition: {x: 58.9, y: 170.79968, z: 22.46}
   m_LocalScale: {x: 50, y: 50, z: 50}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -89.98, y: 0, z: 0}
 --- !u!33 &1207433039797014340
 MeshFilter:
   m_ObjectHideFlags: 0
@@ -118,7 +120,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: c4ebcdd8769f41a41ab3889c0b952d36, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  itemData: {fileID: 0}
+  itemData: {fileID: 11400000, guid: 733b794b8118b2949ad556488df50eeb, type: 2}
   quantity: 1
   slotPriority: 0
   customPrompt: 
@@ -126,3 +128,45 @@ MonoBehaviour:
   isBeingPickedUp: 0
   pickupEffect: {fileID: 0}
   pickupSound: {fileID: 0}
+--- !u!114 &6678323677704603856
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9050727030060375522}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 920f46fc7f10420469726faf1f1c9cc4, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  equippedPosition: {x: 0.5, y: -0.3, z: 0.5}
+  equippedRotation: {x: 0, y: 0, z: 0}
+  equippedScale: {x: 1, y: 1, z: 1}
+--- !u!54 &405023156596114350
+Rigidbody:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 9050727030060375522}
+  serializedVersion: 4
+  m_Mass: 1
+  m_Drag: 0
+  m_AngularDrag: 0.05
+  m_CenterOfMass: {x: 0, y: 0, z: 0}
+  m_InertiaTensor: {x: 1, y: 1, z: 1}
+  m_InertiaRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ImplicitCom: 1
+  m_ImplicitTensor: 1
+  m_UseGravity: 1
+  m_IsKinematic: 0
+  m_Interpolate: 0
+  m_Constraints: 0
+  m_CollisionDetection: 0
