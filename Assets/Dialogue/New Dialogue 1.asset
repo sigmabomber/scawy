@@ -19,8 +19,8 @@ MonoBehaviour:
     options:
     - optionText: bleh
       nextDialogue: {fileID: 0}
+      requiredFlags: []
       setFlags: []
+      actions: []
     requiredFlags: []
   speakerName: bleh
-  speakerPortrait: {fileID: 0}
-  dialogueTextColor: {r: 0, g: 0, b: 0, a: 0}
