@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8d5f6394d95a8dd4bb8ae921e379ba56, type: 3}
+  m_Name: Dialogues 8
+  m_EditorClassIdentifier: 
+  dialogue:
+    dialogueText: I did. There was this big search for weeks, but in the end, they
+      came up with nothing, not a single lead. They closed the case, and since then,
+      it's been eating at me. Your advertisement said you pick up where the police
+      left off?
+    voiceLine: {fileID: 0}
+    typewriterSpeed: 20
+    options: []
+    requiredFlags: []
+  speakerName: Caller
