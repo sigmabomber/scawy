@@ -35,6 +35,7 @@ namespace Doody.Framework.DialogueSystem
 
 // DIALOGUE NODE - Each piece of dialogue
 [System.Serializable]
+
 public class DialogueNode
 {
     [Header("Dialogue Content")]
@@ -47,6 +48,10 @@ public class DialogueNode
     [Header("Typewriter Settings")]
     [Tooltip("Characters per second. 0 = use default speed from DialogueUI")]
     public float typewriterSpeed = 0f;
+
+    [Header("Next Dialogue (No Options)")]
+    [Tooltip("If there are no player options, this dialogue will play next. Leave empty to end conversation.")]
+    public DialogueTree nextDialogue;
 
     [Header("Player Choices")]
     public List<DialogueOption> options = new List<DialogueOption>();

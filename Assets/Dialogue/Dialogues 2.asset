@@ -16,6 +16,7 @@ MonoBehaviour:
     dialogueText: "Hey, my name is Darla. I need you to look into something for me.\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    nextDialogue: {fileID: 11400000, guid: 4ad642ef0afc5fa458ef86ceffc425f6, type: 2}
     options: []
     requiredFlags: []
   speakerName: Caller

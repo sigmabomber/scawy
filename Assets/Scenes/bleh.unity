@@ -7299,6 +7299,18 @@ PrefabInstance:
       propertyPath: audioSource
       value: 
       objectReference: {fileID: 1751014939}
+    - target: {fileID: 5151891292088766200, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: continueButton
+      value: 
+      objectReference: {fileID: 7271041345676994752, guid: 5e4ea49b4eb0b3d41afbfab681791e9b, type: 3}
+    - target: {fileID: 5151891292088766200, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: exitPromptText
+      value: '[Exit]'
+      objectReference: {fileID: 0}
+    - target: {fileID: 5151891292088766200, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: continuePromptText
+      value: '[Continue]'
+      objectReference: {fileID: 0}
     - target: {fileID: 6344171725148584434, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_IsActive
       value: 0
@@ -8003,7 +8015,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   npcDialogues:
-  - {fileID: 11400000, guid: 5cadc0566f0c18b49b3a22680696ea75, type: 2}
+  - {fileID: 11400000, guid: 7d0df009bb7bd304d81011efb601f18c, type: 2}
   lookAtPlayer: 1
   lapScript: {fileID: 4761068502524085592}
 --- !u!1660057539 &9223372036854775807

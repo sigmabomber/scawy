@@ -26,8 +26,11 @@ public class DialogueUI : EventListener
     [SerializeField] private float defaultTypewriterSpeed = 30f;
     [SerializeField] private KeyCode skipKey = KeyCode.Space;
     [SerializeField] private bool allowSkip = true;
+    [SerializeField] private string continuePromptText = "Continue...";
+    [SerializeField] private string exitPromptText = "Exit";
     private List<TextToken> currentTokens;
     private List<DialogueOption> currentOptions;
+    private DialogueNode currentNode;
     #endregion
 
     #region Visual Effects
@@ -70,7 +73,7 @@ public class DialogueUI : EventListener
     #region Data Classes
     private class CharacterEffectData
     {
-        public int visualCharIndex; 
+        public int visualCharIndex;
         public bool shouldShake;
         public float shakeIntensity;
         public float shakeSpeed;
@@ -84,6 +87,7 @@ public class DialogueUI : EventListener
     private Coroutine typewriterCoroutine;
     private Coroutine effectsCoroutine;
     private bool isTyping = false;
+    private bool waitingForContinue = false;
     private int characterCount = 0;
     private StringBuilder richTextBuilder = new();
     private DialogueTextParser textParser;
@@ -95,9 +99,24 @@ public class DialogueUI : EventListener
     #region Unity Lifecycle
     private void Update()
     {
-        if (isTyping && allowSkip && Input.GetKeyDown(skipKey))
+        if (allowSkip && Input.GetKeyDown(skipKey))
         {
-            SkipTypewriter();
+            if (isTyping)
+            {
+                SkipTypewriter();
+            }
+            else if (waitingForContinue)
+            {
+                // Determine which action to take based on what button is showing
+                if (currentNode != null && currentNode.nextDialogue != null)
+                {
+                    OnContinueClicked();
+                }
+                else
+                {
+                    OnExitClicked();
+                }
+            }
         }
     }
 
@@ -110,8 +129,6 @@ public class DialogueUI : EventListener
         effectsUpdateInterval = 1f / effectsUpdateFPS;
         textParser = new DialogueTextParser(defaultShakeIntensity, defaultShakeSpeed);
     }
-
-  
     #endregion
 
     #region Event Handlers
@@ -125,6 +142,7 @@ public class DialogueUI : EventListener
         StopActiveCoroutines();
         ClearOptions();
 
+        currentNode = node;
         dialoguePanel.SetActive(true);
         SetSpeakerInfo(tree.speakerName);
 
@@ -136,7 +154,7 @@ public class DialogueUI : EventListener
         else
         {
             DisplayFullText(node.dialogueText);
-            CreateOptionButtons(node.options);
+            ShowOptionsOrContinue(node.options);
             PlayCompleteSound();
         }
     }
@@ -156,6 +174,8 @@ public class DialogueUI : EventListener
         characterEffects.Clear();
         richTextBuilder.Clear();
         originalVertices = null;
+        waitingForContinue = false;
+        currentNode = null;
     }
 
     private void StopActiveCoroutines()
@@ -255,11 +275,12 @@ public class DialogueUI : EventListener
         // Use the same method as DisplayFullText to apply all tokens
         ApplyTokensToText(currentTokens);
 
-        // Create the option buttons
-        CreateOptionButtons(currentOptions);
+        // Show options or continue button
+        ShowOptionsOrContinue(currentOptions);
 
         PlayCompleteSound();
     }
+
     private void TryPlayCharacterSound(char c)
     {
         if (typeSound == null) return;
@@ -278,7 +299,7 @@ public class DialogueUI : EventListener
         if (completeSound != null)
             StartCoroutine(PlayDelayedCompleteSound());
 
-        CreateOptionButtons(options);
+        ShowOptionsOrContinue(options);
     }
 
     private IEnumerator PlayDelayedCompleteSound()
@@ -286,8 +307,111 @@ public class DialogueUI : EventListener
         yield return new WaitForSeconds(completeSoundDelay);
         audioSource.PlayOneShot(completeSound, completeVolume);
     }
+    #endregion
 
-  
+    #region Continue System
+    private void ShowOptionsOrContinue(List<DialogueOption> options)
+    {
+        // Check if there are valid options after filtering
+        bool hasValidOptions = false;
+        if (options != null && options.Count > 0)
+        {
+            foreach (DialogueOption option in options)
+            {
+                if (DialogueManager.Instance.MeetsOptionRequirements(option))
+                {
+                    hasValidOptions = true;
+                    break;
+                }
+            }
+        }
+
+        if (hasValidOptions)
+        {
+            CreateOptionButtons(options);
+        }
+        else
+        {
+            // Check if there's a next dialogue to continue to
+            bool hasNextDialogue = currentNode != null && currentNode.nextDialogue != null;
+
+            if (hasNextDialogue)
+            {
+                CreateContinueButton();
+            }
+            else
+            {
+                CreateExitButton();
+            }
+        }
+    }
+
+    private void CreateContinueButton()
+    {
+        GameObject button = Instantiate(optionButtonPrefab, optionsContainer);
+        var buttonComponent = button.GetComponent<Button>();
+        var text = button.GetComponentInChildren<TMP_Text>();
+
+        if (buttonComponent != null && text != null)
+        {
+            text.text = continuePromptText;
+            buttonComponent.colors = CreateButtonColors();
+            buttonComponent.onClick.AddListener(OnContinueClicked);
+            activeButtons.Add(button);
+            waitingForContinue = true;
+        }
+        else
+        {
+            Debug.LogError("Option button prefab is missing required components!");
+            Destroy(button);
+        }
+    }
+
+    private void CreateExitButton()
+    {
+        GameObject button = Instantiate(optionButtonPrefab, optionsContainer);
+        var buttonComponent = button.GetComponent<Button>();
+        var text = button.GetComponentInChildren<TMP_Text>();
+
+        if (buttonComponent != null && text != null)
+        {
+            text.text = exitPromptText;
+            buttonComponent.colors = CreateButtonColors();
+            buttonComponent.onClick.AddListener(OnExitClicked);
+            activeButtons.Add(button);
+            waitingForContinue = true;
+        }
+        else
+        {
+            Debug.LogError("Option button prefab is missing required components!");
+            Destroy(button);
+        }
+    }
+
+    private void OnContinueClicked()
+    {
+        if (!waitingForContinue || currentNode == null) return;
+
+        waitingForContinue = false;
+
+        // Check if the current node has a next dialogue to continue to
+        if (currentNode.nextDialogue != null)
+        {
+            DialogueManager.Instance.StartDialogue(currentNode.nextDialogue);
+        }
+        else
+        {
+            DialogueManager.Instance.EndDialogue();
+        }
+    }
+
+    private void OnExitClicked()
+    {
+        if (!waitingForContinue) return;
+
+        waitingForContinue = false;
+        DialogueManager.Instance.EndDialogue();
+    }
     #endregion
 
     #region Visual Effects (Position Only)
@@ -508,7 +632,6 @@ public class DialogueUI : EventListener
     {
         if (options == null || options.Count == 0)
         {
-            Debug.LogWarning("No dialogue options provided");
             return;
         }
 
