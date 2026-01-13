@@ -8,7 +8,6 @@ using System.Text.RegularExpressions;
 using Doody.GameEvents;
 using Doody.Framework.DialogueSystem;
 
-// UI CONTROLLER - Uses EventListener
 public class DialogueUI : EventListener
 {
     #region UI References
@@ -27,6 +26,8 @@ public class DialogueUI : EventListener
     [SerializeField] private float defaultTypewriterSpeed = 30f;
     [SerializeField] private KeyCode skipKey = KeyCode.Space;
     [SerializeField] private bool allowSkip = true;
+    private List<TextToken> currentTokens;
+    private List<DialogueOption> currentOptions;
     #endregion
 
     #region Visual Effects
@@ -69,7 +70,7 @@ public class DialogueUI : EventListener
     #region Data Classes
     private class CharacterEffectData
     {
-        public int visualCharIndex; // Index in the visible text (not including TMP tags)
+        public int visualCharIndex; 
         public bool shouldShake;
         public float shakeIntensity;
         public float shakeSpeed;
@@ -110,11 +111,7 @@ public class DialogueUI : EventListener
         textParser = new DialogueTextParser(defaultShakeIntensity, defaultShakeSpeed);
     }
 
-    private void OnDestroy()
-    {
-        StopAllCoroutines();
-        ClearOptions();
-    }
+  
     #endregion
 
     #region Event Handlers
@@ -186,6 +183,11 @@ public class DialogueUI : EventListener
         originalVertices = null;
 
         var tokens = textParser.ParseText(fullText);
+
+        // Store tokens for skip functionality
+        currentTokens = tokens;
+        currentOptions = options;
+
         dialogueText.text = "";
         characterCount = 0;
         float delay = 1f / speed;
@@ -242,6 +244,22 @@ public class DialogueUI : EventListener
         CompleteTyping(options);
     }
 
+    private void SkipTypewriter()
+    {
+        if (typewriterCoroutine == null) return;
+
+        StopCoroutine(typewriterCoroutine);
+        typewriterCoroutine = null;
+        isTyping = false;
+
+        // Use the same method as DisplayFullText to apply all tokens
+        ApplyTokensToText(currentTokens);
+
+        // Create the option buttons
+        CreateOptionButtons(currentOptions);
+
+        PlayCompleteSound();
+    }
     private void TryPlayCharacterSound(char c)
     {
         if (typeSound == null) return;
@@ -269,19 +287,7 @@ public class DialogueUI : EventListener
         audioSource.PlayOneShot(completeSound, completeVolume);
     }
 
-    private void SkipTypewriter()
-    {
-        if (typewriterCoroutine == null) return;
-
-        StopCoroutine(typewriterCoroutine);
-        typewriterCoroutine = null;
-        isTyping = false;
-
-        dialogueText.text = richTextBuilder.ToString();
-        dialogueText.ForceMeshUpdate();
-
-        PlayCompleteSound();
-    }
+  
     #endregion
 
     #region Visual Effects (Position Only)

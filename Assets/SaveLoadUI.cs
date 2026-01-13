@@ -44,14 +44,7 @@ public class SaveLoadUI : MonoBehaviour
         Instance = this;
         DontDestroyOnLoad(gameObject);
 
-        if (canvasGroup == null)
-        {
-            canvasGroup = GetComponent<CanvasGroup>();
-            if (canvasGroup == null)
-            {
-                canvasGroup = gameObject.AddComponent<CanvasGroup>();
-            }
-        }
+       
 
         InitializeUI();
 
