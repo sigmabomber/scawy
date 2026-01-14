@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: Then I don't take it, simple as that.
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: d2c4c9e2f9c57f84ca7bd3a5c98880ab, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

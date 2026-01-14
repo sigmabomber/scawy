@@ -16,11 +16,8 @@ MonoBehaviour:
     dialogueText: "Yeah\u2026 go on.\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
-    options:
-    - optionText: 
-      nextDialogue: {fileID: 0}
-      requiredFlags: []
-      setFlags: []
-      actions: []
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: a85fe678b7c8459488d08b544e573c86, type: 2}
+    options: []
     requiredFlags: []
   speakerName: Henry

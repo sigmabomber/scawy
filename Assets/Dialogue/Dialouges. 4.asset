@@ -17,6 +17,8 @@ MonoBehaviour:
       left off>
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 11400000, guid: 6828e31be419586429240f269a5b3b48, type: 2}
     options: []
     requiredFlags: []
   speakerName: Darla

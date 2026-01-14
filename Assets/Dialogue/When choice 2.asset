@@ -18,16 +18,8 @@ MonoBehaviour:
 '
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
-    options:
-    - optionText: Sorry
-      nextDialogue: {fileID: 11400000, guid: 2c8a0f4c050df2443bf9292123d24499, type: 2}
-      requiredFlags: []
-      setFlags: []
-      actions: []
-    - optionText: Go on
-      nextDialogue: {fileID: 11400000, guid: 12a24c26afa52fb44a35f0481b2c8311, type: 2}
-      requiredFlags: []
-      setFlags: []
-      actions: []
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 11400000, guid: 366a09097d11cc54db3237b5ba879b62, type: 2}
+    options: []
     requiredFlags: []
   speakerName: Darla

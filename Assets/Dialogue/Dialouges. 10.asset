@@ -13,9 +13,11 @@ MonoBehaviour:
   m_Name: Dialouges. 10
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: Then I don't take it, simple as that.
+    dialogueText: ' Excuse me?'
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: e4db4a5fd8ff8be4a81a0a4035b3a2fd, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

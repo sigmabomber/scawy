@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: <shake(1,2) My child went missing.>
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 0}
     options:
     - optionText: When?
       nextDialogue: {fileID: 11400000, guid: 9db7035c7ffc92743a9dea4fc938a1e5, type: 2}

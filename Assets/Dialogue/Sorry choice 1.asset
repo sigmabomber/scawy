@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: "Sorry, I do not take calls as of now\r\xB4\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: 7b4dd4612630029488e8ef7beef8f52a, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

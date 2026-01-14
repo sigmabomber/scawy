@@ -10,14 +10,14 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8d5f6394d95a8dd4bb8ae921e379ba56, type: 3}
-  m_Name: Sorry choice 4
+  m_Name: Dialouges. 11
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: What is it?
+    dialogueText: <shake(1,2) By the old asylum outside town.>
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
-    typeWriterSfx: {fileID: 0}
-    nextDialogue: {fileID: 11400000, guid: a85fe678b7c8459488d08b544e573c86, type: 2}
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 11400000, guid: 8bbaa8a7237ecde4a9b3757c374015e9, type: 2}
     options: []
     requiredFlags: []
-  speakerName: Henry
+  speakerName: Darla

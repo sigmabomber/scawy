@@ -17,6 +17,8 @@ MonoBehaviour:
       for me.>
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 0}
     options:
     - optionText: Sorry
       nextDialogue: {fileID: 11400000, guid: 2c8a0f4c050df2443bf9292123d24499, type: 2}

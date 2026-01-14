@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: Did you report it to the authorities?
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: d56b4703afe9fa04e8b1324dc2aeee52, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

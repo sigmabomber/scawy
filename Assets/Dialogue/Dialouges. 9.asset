@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: <shake(1,2) You will.>
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 11400000, guid: d24f5a0633a9f9f42ac41d681996b9cc, type: 2}
     options: []
     requiredFlags: []
   speakerName: Darla

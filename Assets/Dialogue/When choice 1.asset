@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: When did it happen?
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: 6469fb4736fe2a943b70a7963096232a, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

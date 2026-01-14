@@ -10,14 +10,15 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 8d5f6394d95a8dd4bb8ae921e379ba56, type: 3}
-  m_Name: Sorry choice 4
+  m_Name: Dialouges. 14
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: What is it?
+    dialogueText: 'That place has been sealed for years. Nobody, let alone a kid,
+      would ever go inside. '
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 0}
-    nextDialogue: {fileID: 11400000, guid: a85fe678b7c8459488d08b544e573c86, type: 2}
+    nextDialogue: {fileID: 11400000, guid: c42524412a1aaf04b999b2734a873798, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry

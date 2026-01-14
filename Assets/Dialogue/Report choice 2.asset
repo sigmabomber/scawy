@@ -17,6 +17,8 @@ MonoBehaviour:
       in the end,\r\nthey came up with nothing, not a single lead.>"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}
+    nextDialogue: {fileID: 11400000, guid: ab2cb7b655b7ab440b6dcd17157ea475, type: 2}
     options: []
     requiredFlags: []
   speakerName: Darla

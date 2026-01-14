@@ -17,7 +17,7 @@ MonoBehaviour:
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 8300000, guid: a67f4a7317a3d8741931bdfa7cf6408d, type: 3}
-    nextDialogue: {fileID: 0}
+    nextDialogue: {fileID: 11400000, guid: bee6b49e9eb6f0f4b8577a8c434c787d, type: 2}
     options: []
     requiredFlags: []
   speakerName: Henry
