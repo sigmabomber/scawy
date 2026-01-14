@@ -49,6 +49,8 @@ public class DialogueNode
     [Tooltip("Characters per second. 0 = use default speed from DialogueUI")]
     public float typewriterSpeed = 0f;
 
+    public AudioClip typeWriterSfx;
+
     [Header("Next Dialogue (No Options)")]
     [Tooltip("If there are no player options, this dialogue will play next. Leave empty to end conversation.")]
     public DialogueTree nextDialogue;

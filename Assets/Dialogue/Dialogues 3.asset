@@ -16,6 +16,8 @@ MonoBehaviour:
     dialogueText: Yeah, go on.
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
+    typeWriterSfx: {fileID: 8300000, guid: a67f4a7317a3d8741931bdfa7cf6408d, type: 3}
+    nextDialogue: {fileID: 0}
     options: []
     requiredFlags: []
   speakerName: Invesigator

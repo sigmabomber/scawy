@@ -471,6 +471,7 @@ MonoBehaviour:
   rotationSpeed: 5
   maxAngleX: 2
   maxAngleY: 5
+  rotate: 1
 --- !u!82 &103723731
 AudioSource:
   m_ObjectHideFlags: 0
@@ -7168,8 +7169,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Play
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
-  m_sharedMaterial: {fileID: 2181413351908578262, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
+  m_sharedMaterial: {fileID: 2181413351908578262, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -8653,8 +8654,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Exit
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
-  m_sharedMaterial: {fileID: 2181413351908578262, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
+  m_sharedMaterial: {fileID: 2181413351908578262, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []
@@ -9163,8 +9164,8 @@ MonoBehaviour:
       m_Calls: []
   m_text: Options
   m_isRightToLeft: 0
-  m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
-  m_sharedMaterial: {fileID: 2181413351908578262, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
+  m_fontAsset: {fileID: 11400000, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
+  m_sharedMaterial: {fileID: 2181413351908578262, guid: 81c62f7bf379cc542a145575f758b901, type: 2}
   m_fontSharedMaterials: []
   m_fontMaterial: {fileID: 0}
   m_fontMaterials: []

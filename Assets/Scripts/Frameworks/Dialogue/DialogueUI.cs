@@ -50,7 +50,8 @@ public class DialogueUI : EventListener
     #region Audio Settings
     [Header("Typewriter SFX")]
     [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip typeSound;
+    private AudioClip typeSound;
+    [SerializeField] private AudioClip defaultTypeSound;
     [SerializeField] private AudioClip completeSound;
     [SerializeField, Range(0.95f, 1.05f)] private float minPitch = 0.95f;
     [SerializeField, Range(0.95f, 1.05f)] private float maxPitch = 1.05f;
@@ -145,11 +146,20 @@ public class DialogueUI : EventListener
         currentNode = node;
         dialoguePanel.SetActive(true);
         SetSpeakerInfo(tree.speakerName);
-
+        if (node.typeWriterSfx != null)
+        {
+            typeSound = node.typeWriterSfx;
+        }
+        else
+        {
+            typeSound = defaultTypeSound;
+        }
         if (useTypewriter)
         {
+
             float speed = node.typewriterSpeed > 0 ? node.typewriterSpeed : defaultTypewriterSpeed;
             typewriterCoroutine = StartCoroutine(TypewriterEffect(node.dialogueText, node.options, speed));
+           
         }
         else
         {
@@ -197,6 +207,7 @@ public class DialogueUI : EventListener
     #region Typewriter System
     private IEnumerator TypewriterEffect(string fullText, List<DialogueOption> options, float speed)
     {
+        
         isTyping = true;
         characterEffects.Clear();
         richTextBuilder.Clear();
