@@ -7,7 +7,7 @@ using UnityEngine;
 public class GasCanItemData : ItemData
 {
     public float maxAmount;
-    public float currentAmount;
+   
 
     
 
