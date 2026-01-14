@@ -376,6 +376,7 @@ public class InventorySlotsUI : EventListener,
         if (equipmentManager.IsEquipped())
         {
             equipmentManager.UnequipItem();
+            inventorySystem.currentlyEquippedSlot = null;
             isEquipped = false;
         }
 

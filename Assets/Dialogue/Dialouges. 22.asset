@@ -17,7 +17,8 @@ MonoBehaviour:
     voiceLine: {fileID: 0}
     typewriterSpeed: 0
     typeWriterSfx: {fileID: 0}
+    playTypewriterSfx: 0
     nextDialogue: {fileID: 11400000, guid: 687505f7b8dbb5843abfff976d63d84d, type: 2}
     options: []
     requiredFlags: []
-  speakerName: 
+  speakerName: ' '

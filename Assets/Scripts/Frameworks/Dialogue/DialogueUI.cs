@@ -154,6 +154,8 @@ public class DialogueUI : EventListener
         {
             typeSound = defaultTypeSound;
         }
+        if (!node.playTypewriterSfx)
+            typeSound = null;
         if (useTypewriter)
         {
 

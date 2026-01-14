@@ -50,6 +50,7 @@ public class DialogueNode
     public float typewriterSpeed = 0f;
 
     public AudioClip typeWriterSfx;
+    public bool playTypewriterSfx = true;
 
     [Header("Next Dialogue (No Options)")]
     [Tooltip("If there are no player options, this dialogue will play next. Leave empty to end conversation.")]

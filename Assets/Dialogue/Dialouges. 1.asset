@@ -13,10 +13,11 @@ MonoBehaviour:
   m_Name: Dialouges. 1
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: "Private invetigator J Wilson here. How can I help?\r"
+    dialogueText: "Private investigator J Wilson here. How can I help?\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 0}
+    playTypewriterSfx: 1
     nextDialogue: {fileID: 11400000, guid: cfe1b5bdd9bfe384b8c759d298427cce, type: 2}
     options: []
     requiredFlags: []

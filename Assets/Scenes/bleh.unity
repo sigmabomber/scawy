@@ -5688,6 +5688,42 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedScale.x
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedScale.y
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedScale.z
+      value: 15
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedPosition.x
+      value: -0.095
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedPosition.y
+      value: 0.384
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedPosition.z
+      value: -0.015
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedRotation.x
+      value: -85.053
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedRotation.y
+      value: 52.669
+      objectReference: {fileID: 0}
+    - target: {fileID: 6678323677704603856, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
+      propertyPath: equippedRotation.z
+      value: 124.88
+      objectReference: {fileID: 0}
     - target: {fileID: 9050727030060375522, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}
       propertyPath: m_Name
       value: GasCanister

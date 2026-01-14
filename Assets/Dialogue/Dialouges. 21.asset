@@ -17,7 +17,27 @@ MonoBehaviour:
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 0}
+    playTypewriterSfx: 1
     nextDialogue: {fileID: 11400000, guid: b2413a40f1000e949a62996b873aaac3, type: 2}
-    options: []
+    options:
+    - optionText: '[Continue]'
+      nextDialogue: {fileID: 11400000, guid: b2413a40f1000e949a62996b873aaac3, type: 2}
+      requiredFlags: []
+      setFlags: []
+      actions:
+      - actionType: 4
+        item: {fileID: 0}
+        itemQuantity: 0
+        teleportLocation: {fileID: 0}
+        soundToPlay: {fileID: 8300000, guid: eaa46167e82612647a565560b1887e2f, type: 3}
+        objectiveName: 
+        objectiveType: 0
+        objectiveAmount: 0
+        targetObject: {fileID: 0}
+        spawnLocation: {fileID: 0}
+        sceneName: 
+        customAction:
+          m_PersistentCalls:
+            m_Calls: []
     requiredFlags: []
   speakerName: Henry
