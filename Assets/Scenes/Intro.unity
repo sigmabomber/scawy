@@ -1495,7 +1495,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d51b33e3333d22d4bb31bb18b2a674e8, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  dialogue: {fileID: 11400000, guid: 7d0df009bb7bd304d81011efb601f18c, type: 2}
+  dialogue: {fileID: 11400000, guid: 3fb5a240228e7ef4ebf772f69bfca98b, type: 2}
 --- !u!23 &2200466133074617576
 MeshRenderer:
   m_ObjectHideFlags: 0

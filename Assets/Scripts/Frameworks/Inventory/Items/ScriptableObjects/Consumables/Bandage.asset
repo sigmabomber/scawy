@@ -15,7 +15,7 @@ MonoBehaviour:
   icon: {fileID: 21300000, guid: c3ce091251dc5464bbd391edecfeeccf, type: 3}
   itemName: Bandage
   maxStack: 0
-  prefab: {fileID: 3364318055041882371, guid: 1a98364076db58c4c98ae235c15e6be7, type: 3}
+  prefab: {fileID: 2940825567811139095, guid: ea62f346bf24ee9408b7ae4a8d8e940a, type: 3}
   priority: 0
   healAmount: 1
   maxUses: 0

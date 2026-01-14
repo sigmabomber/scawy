@@ -13,8 +13,7 @@ MonoBehaviour:
   m_Name: Dialouges. 6
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: "<shake(1,2) No\u2026 \u201Cwait a second or 2\u201D not over the
-      phone.>"
+    dialogueText: "<shake(1,2) No\u2026> <shake(1,2) delay(1) not over the phone>"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 8300000, guid: 299a25a5459121543aa826c11c6f271d, type: 3}

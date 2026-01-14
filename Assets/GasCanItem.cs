@@ -1,18 +1,14 @@
+using Doody.InventoryFramework;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class GasCanItem : MonoBehaviour
+public class GasCanItem : MonoBehaviour, IEquippable
 {
-    // Start is called before the first frame update
-    void Start()
+   public void OnEquip(Transform transform) { }
+   public void OnUnequip() { }
+    public GameObject GetGameObject()
     {
-        
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
+        return null;
     }
 }

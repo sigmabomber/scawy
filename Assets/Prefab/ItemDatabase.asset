@@ -37,3 +37,6 @@ MonoBehaviour:
   - id: pistol
     itemData: {fileID: 11400000, guid: bc8d5cbb6cd4f7548a614926006a585d, type: 2}
     slotPriority: 1
+  - id: gascan
+    itemData: {fileID: 11400000, guid: 733b794b8118b2949ad556488df50eeb, type: 2}
+    slotPriority: 0

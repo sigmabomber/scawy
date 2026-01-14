@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Dialouges. 1
   m_EditorClassIdentifier: 
   dialogue:
-    dialogueText: "Hey, my name is Darla. I need you to look into something for me.\r"
+    dialogueText: "Private invetigator J Wilson here. How can I help?\r"
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 0}
