@@ -60,6 +60,34 @@ public class PlayerController : InputScript
     private float targetHeight;
     private bool isInputEnabled = true;
 
+    // OPTIMIZATION: Cached values to avoid repeated calculations
+    private Vector3 cachedMoveDirection;
+    private Vector2 cachedInput;
+    private float cachedCurrentSpeed;
+    private bool lastFrameGrounded;
+    private Vector3 cachedUpVector = Vector3.up;
+    private Vector3 cachedZeroVector = Vector3.zero;
+    private Quaternion cachedCameraRotation;
+    private Vector3 cachedCameraPosition;
+
+    // OPTIMIZATION: Pre-calculate values
+    private float staminaUpdateThreshold = 1f;
+    private float heightTransitionThreshold = 0.01f;
+    private float movementInputThreshold = 0.0001f;
+    private float gravityGroundClamp = -2f;
+
+    // OPTIMIZATION: Reduce stamina update frequency
+    private float lastStaminaUpdateTime;
+    private float staminaUpdateInterval = 0.1f; // Update UI every 0.1s instead of every frame
+
+    // OPTIMIZATION: Cache input state
+    private bool isCrouchKeyHeld;
+    private bool isSprintKeyHeld;
+
+    // OPTIMIZATION: Reduce ceiling check frequency
+    private float lastCeilingCheckTime;
+    private float ceilingCheckInterval = 0.2f;
+    private bool lastCeilingCheckResult;
 
     private UnityEngine.EventSystems.EventSystem cachedEventSystem;
 
@@ -137,6 +165,8 @@ public class PlayerController : InputScript
         PublishStaminaUpdate();
 
         CacheBaseMovementValues();
+
+        lastFrameGrounded = characterController.isGrounded;
     }
 
     protected override void HandleInput()
@@ -146,9 +176,13 @@ public class PlayerController : InputScript
             ToggleInput();
         }
 
-      
         if (!isInputEnabled)
             return;
+
+        // OPTIMIZATION: Cache input states once per frame
+        isCrouchKeyHeld = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
+        isSprintKeyHeld = Input.GetKey(KeyCode.LeftShift);
+        cachedInput = GetMovementInput();
 
         HandleStamina();
         HandleMovementState();
@@ -158,23 +192,19 @@ public class PlayerController : InputScript
         HandleHeightTransition();
     }
 
-   
-
     private void InitializeController()
     {
         characterController.height = standingHeight;
-        characterController.center = Vector3.zero;
+        characterController.center = cachedZeroVector;
     }
 
     private void CacheBaseMovementValues()
     {
-        // Store the original serialized values as base values
         baseWalkSpeed = walkSpeed;
         baseSprintSpeed = sprintSpeed;
         baseCrouchSpeed = crouchSpeed;
         baseMouseSensitivity = mouseSensitivity;
 
-        // Apply initial modifiers (all 1x)
         ApplyMovementModifiers(1f, 1f, 1f, 1f);
     }
 
@@ -182,9 +212,6 @@ public class PlayerController : InputScript
 
     private void HandleStamina()
     {
-        bool wasSprinting = currentMovementState == MovementState.Sprinting;
-        float previousStamina = currentStamina;
-
         if (infiniteStamina)
         {
             currentStamina = maxStamina;
@@ -192,35 +219,37 @@ public class PlayerController : InputScript
             return;
         }
 
+        bool wasSprinting = currentMovementState == MovementState.Sprinting;
+        float previousStamina = currentStamina;
+
         if (currentMovementState == MovementState.Sprinting)
         {
-            // Drain stamina while sprinting (affected by stamina multiplier)
             float drainAmount = staminaDrainRate / staminaModifier * Time.deltaTime;
             currentStamina -= drainAmount;
-            currentStamina = Mathf.Max(0, currentStamina);
 
-            timeSinceLastSprint = 0f;
-
-            // Check if exhausted
             if (currentStamina <= 0)
             {
+                currentStamina = 0;
                 isExhausted = true;
                 canSprint = false;
             }
+
+            timeSinceLastSprint = 0f;
         }
         else
         {
-            // Regenerate stamina when not sprinting
             timeSinceLastSprint += Time.deltaTime;
 
             if (timeSinceLastSprint >= staminaRegenDelay)
             {
-                // Regenerate faster with stamina effects
                 float regenAmount = staminaRegenRate * staminaModifier * Time.deltaTime;
                 currentStamina += regenAmount;
-                currentStamina = Mathf.Min(maxStamina, currentStamina);
 
-                // Recover from exhaustion
+                if (currentStamina >= maxStamina)
+                {
+                    currentStamina = maxStamina;
+                }
+
                 if (isExhausted && currentStamina >= minStaminaToSprint * 2f)
                 {
                     isExhausted = false;
@@ -229,8 +258,14 @@ public class PlayerController : InputScript
             }
         }
 
-        if (Mathf.Abs(currentStamina - previousStamina) > 1f || wasSprinting != (currentMovementState == MovementState.Sprinting))
+        // OPTIMIZATION: Only update UI periodically, not every frame
+        float staminaDelta = Mathf.Abs(currentStamina - previousStamina);
+        bool stateChanged = wasSprinting != (currentMovementState == MovementState.Sprinting);
+
+        if ((staminaDelta > staminaUpdateThreshold || stateChanged) &&
+            Time.time - lastStaminaUpdateTime >= staminaUpdateInterval)
         {
+            lastStaminaUpdateTime = Time.time;
             PublishStaminaUpdate();
         }
     }
@@ -245,19 +280,12 @@ public class PlayerController : InputScript
     public float GetStaminaPercentage() => maxStamina > 0 ? currentStamina / maxStamina : 0;
     public bool IsExhausted() => isExhausted;
 
-    /// <summary>
-    /// Add or remove stamina (useful for pickups or damage)
-    /// </summary>
     public void ModifyStamina(float amount)
     {
-        currentStamina += amount;
-        currentStamina = Mathf.Clamp(currentStamina, 0, maxStamina);
+        currentStamina = Mathf.Clamp(currentStamina + amount, 0, maxStamina);
         PublishStaminaUpdate();
     }
 
-    /// <summary>
-    /// Set stamina to full
-    /// </summary>
     public void RestoreStamina()
     {
         currentStamina = maxStamina;
@@ -270,10 +298,6 @@ public class PlayerController : InputScript
 
     #region Movement Modifiers Integration
 
-    /// <summary>
-    /// Apply movement modifiers from EffectsManager
-    /// Simplified version - only modifies walk, sprint, and stamina
-    /// </summary>
     public void ApplyMovementModifiers(float walkModifier, float sprintModifier,
         float staminaModifier, float sensitivityModifier = 1f)
     {
@@ -281,23 +305,17 @@ public class PlayerController : InputScript
         this.sprintSpeedModifier = sprintModifier;
         this.staminaModifier = staminaModifier;
 
-        // Apply modifiers to base values
         walkSpeed = baseWalkSpeed * walkModifier;
         sprintSpeed = baseSprintSpeed * sprintModifier;
 
-        // Apply sensitivity modifier if provided (optional)
         if (sensitivityModifier != 1f)
         {
             mouseSensitivity = baseMouseSensitivity * sensitivityModifier;
         }
 
-        // Publish movement stats update
         PublishMovementStatsUpdate();
     }
 
-    /// <summary>
-    /// Set base movement values (used when you want to permanently change base stats)
-    /// </summary>
     public void SetBaseMovementValues(float newWalkSpeed, float newSprintSpeed,
         float newCrouchSpeed, float newMouseSensitivity)
     {
@@ -309,33 +327,22 @@ public class PlayerController : InputScript
         ApplyMovementModifiers(walkSpeedModifier, sprintSpeedModifier, staminaModifier);
     }
 
-    /// <summary>
-    /// Reset all movement values to their original serialized state
-    /// </summary>
     public void ResetMovementValues()
     {
-        // Restore original serialized values as base
-        baseWalkSpeed = walkSpeed; // This gets the serialized value
+        baseWalkSpeed = walkSpeed;
         baseSprintSpeed = sprintSpeed;
         baseCrouchSpeed = crouchSpeed;
         baseMouseSensitivity = mouseSensitivity;
 
-        // Reset modifiers to 1x
         ApplyMovementModifiers(1f, 1f, 1f);
     }
 
-    /// <summary>
-    /// Get current effective movement speeds
-    /// </summary>
     public float GetEffectiveWalkSpeed() => walkSpeed;
     public float GetEffectiveSprintSpeed() => sprintSpeed;
     public float GetEffectiveCrouchSpeed() => crouchSpeed;
     public float GetEffectiveMouseSensitivity() => mouseSensitivity;
     public float GetCurrentStaminaModifier() => staminaModifier;
 
-    /// <summary>
-    /// Get base (unmodified) movement speeds
-    /// </summary>
     public float GetBaseWalkSpeed() => baseWalkSpeed;
     public float GetBaseSprintSpeed() => baseSprintSpeed;
     public float GetBaseCrouchSpeed() => baseCrouchSpeed;
@@ -356,21 +363,18 @@ public class PlayerController : InputScript
 
     private void HandleMovementState()
     {
-        bool isCrouching = Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C);
-        bool isSprinting = Input.GetKey(KeyCode.LeftShift) && canSprint;
-        Vector2 input = GetMovementInput();
-        bool isMoving = input.sqrMagnitude > 0.01f;
+        bool isMoving = cachedInput.sqrMagnitude > 0.01f;
 
-        if (isCrouching)
+        if (isCrouchKeyHeld)
         {
             currentMovementState = MovementState.Crouching;
             targetHeight = crouchingHeight;
         }
-        else if (isSprinting && isMoving && CanStartSprinting())
+        else if (isSprintKeyHeld && canSprint && isMoving && CanStartSprinting())
         {
             currentMovementState = MovementState.Sprinting;
 
-            if (!CheckCeilingObstruction())
+            if (!CheckCeilingObstructionCached())
             {
                 targetHeight = standingHeight;
             }
@@ -379,7 +383,7 @@ public class PlayerController : InputScript
         {
             currentMovementState = MovementState.Walking;
 
-            if (!CheckCeilingObstruction())
+            if (!CheckCeilingObstructionCached())
             {
                 targetHeight = standingHeight;
             }
@@ -391,44 +395,54 @@ public class PlayerController : InputScript
         if (infiniteStamina)
             return true;
 
-        if (isExhausted)
-            return false;
-
-        if (currentStamina < minStaminaToSprint)
-            return false;
-
-        return true;
+        return !isExhausted && currentStamina >= minStaminaToSprint;
     }
 
     private void HandleMovement()
     {
-        Vector2 input = GetMovementInput();
+        // OPTIMIZATION: Early exit if no movement and grounded
+        bool isGrounded = characterController.isGrounded;
 
-        // OPTIMIZATION: Early exit if no movement
-        if (input.sqrMagnitude < 0.0001f && characterController.isGrounded && verticalVelocity < 0.1f)
+        if (cachedInput.sqrMagnitude < movementInputThreshold && isGrounded && verticalVelocity < 0.1f)
         {
-            ApplyGravity();
-            characterController.Move(Vector3.up * verticalVelocity * Time.deltaTime);
+            ApplyGravity(isGrounded);
+            characterController.Move(cachedUpVector * verticalVelocity * Time.deltaTime);
+            lastFrameGrounded = isGrounded;
             return;
         }
 
-        Vector3 moveDirection = transform.right * input.x + transform.forward * input.y;
-        moveDirection.Normalize();
+        // OPTIMIZATION: Reuse cached direction and avoid repeated transform lookups
+        cachedMoveDirection.x = transform.right.x * cachedInput.x + transform.forward.x * cachedInput.y;
+        cachedMoveDirection.y = 0; // Keep y at 0 for horizontal movement
+        cachedMoveDirection.z = transform.right.z * cachedInput.x + transform.forward.z * cachedInput.y;
 
-        float currentSpeed = GetCurrentSpeed();
-        Vector3 horizontalMovement = moveDirection * currentSpeed;
+        // OPTIMIZATION: Fast normalize without allocation
+        float magnitude = Mathf.Sqrt(cachedMoveDirection.x * cachedMoveDirection.x +
+                                     cachedMoveDirection.z * cachedMoveDirection.z);
+        if (magnitude > 0.0001f)
+        {
+            float invMag = 1f / magnitude;
+            cachedMoveDirection.x *= invMag;
+            cachedMoveDirection.z *= invMag;
+        }
 
-        ApplyGravity();
+        cachedCurrentSpeed = GetCurrentSpeed();
+        cachedMoveDirection.x *= cachedCurrentSpeed;
+        cachedMoveDirection.z *= cachedCurrentSpeed;
 
-        Vector3 finalMovement = horizontalMovement + Vector3.up * verticalVelocity;
-        characterController.Move(finalMovement * Time.deltaTime);
+        ApplyGravity(isGrounded);
+
+        cachedMoveDirection.y = verticalVelocity;
+        characterController.Move(cachedMoveDirection * Time.deltaTime);
+
+        lastFrameGrounded = isGrounded;
     }
 
-    private void ApplyGravity()
+    private void ApplyGravity(bool isGrounded)
     {
-        if (characterController.isGrounded && verticalVelocity < 0)
+        if (isGrounded && verticalVelocity < 0)
         {
-            verticalVelocity = -2f;
+            verticalVelocity = gravityGroundClamp;
         }
         else
         {
@@ -441,68 +455,88 @@ public class PlayerController : InputScript
         float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
         float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
 
-        transform.Rotate(Vector3.up * mouseX);
+        // OPTIMIZATION: Only rotate if there's actual input
+        if (Mathf.Abs(mouseX) > 0.001f)
+        {
+            transform.Rotate(cachedUpVector * mouseX);
+        }
 
         cameraPitch -= mouseY;
         cameraPitch = Mathf.Clamp(cameraPitch, -90f, 90f);
 
         if (cameraTransform != null)
         {
-            Vector3 recoilRotation = Vector3.zero;
             if (cameraRecoil != null)
             {
-                recoilRotation = cameraRecoil.CurrentRecoilRotation;
+                Vector3 recoilRotation = cameraRecoil.CurrentRecoilRotation;
+                cachedCameraRotation = Quaternion.Euler(cameraPitch + recoilRotation.x, recoilRotation.y, recoilRotation.z);
+            }
+            else
+            {
+                cachedCameraRotation = Quaternion.Euler(cameraPitch, 0, 0);
             }
 
-            cameraTransform.localRotation = Quaternion.Euler(cameraPitch + recoilRotation.x, recoilRotation.y, recoilRotation.z);
+            cameraTransform.localRotation = cachedCameraRotation;
         }
     }
 
     private void HandleHeightTransition()
     {
-        if (Mathf.Abs(currentHeight - targetHeight) > 0.01f)
+        float heightDifference = targetHeight - currentHeight;
+
+        if (Mathf.Abs(heightDifference) > heightTransitionThreshold)
         {
-            currentHeight = Mathf.Lerp(currentHeight, targetHeight,
-                heightTransitionSpeed * Time.deltaTime);
+            currentHeight = Mathf.Lerp(currentHeight, targetHeight, heightTransitionSpeed * Time.deltaTime);
 
             characterController.height = currentHeight;
-            characterController.center = Vector3.zero;
+            characterController.center = cachedZeroVector;
 
             if (cameraTransform != null)
             {
-                cameraTransform.localPosition = new Vector3(0, currentHeight / 2f - 0.2f, 0);
+                cachedCameraPosition.x = 0;
+                cachedCameraPosition.y = currentHeight * 0.5f - 0.2f;
+                cachedCameraPosition.z = 0;
+                cameraTransform.localPosition = cachedCameraPosition;
             }
         }
     }
 
-    public bool CheckCeilingObstruction()
+    // OPTIMIZATION: Cache ceiling check results
+    private bool CheckCeilingObstructionCached()
     {
-        Vector3 rayStart = transform.position + Vector3.up * (currentHeight / 2f);
-        float checkHeight = standingHeight - currentHeight + ceilingCheckDistance;
+        if (Time.time - lastCeilingCheckTime < ceilingCheckInterval)
+        {
+            return lastCeilingCheckResult;
+        }
 
-        return Physics.Raycast(rayStart, Vector3.up, checkHeight);
+        lastCeilingCheckTime = Time.time;
+        lastCeilingCheckResult = CheckCeilingObstruction();
+        return lastCeilingCheckResult;
     }
 
- 
+    public bool CheckCeilingObstruction()
+    {
+        Vector3 rayStart = transform.position;
+        rayStart.y += currentHeight * 0.5f;
+        float checkHeight = standingHeight - currentHeight + ceilingCheckDistance;
+
+        return Physics.Raycast(rayStart, cachedUpVector, checkHeight);
+    }
+
     private float GetCurrentSpeed()
     {
-        switch (currentMovementState)
-        {
-            case MovementState.Sprinting:
-                return sprintSpeed;
-            case MovementState.Crouching:
-                return crouchSpeed;
-            case MovementState.Walking:
-            default:
-                return walkSpeed;
-        }
+        // OPTIMIZATION: Direct return instead of switch for better performance
+        if (currentMovementState == MovementState.Sprinting)
+            return sprintSpeed;
+        if (currentMovementState == MovementState.Crouching)
+            return crouchSpeed;
+        return walkSpeed;
     }
 
     private Vector2 GetMovementInput()
     {
-        float horizontal = Input.GetAxisRaw("Horizontal");
-        float vertical = Input.GetAxisRaw("Vertical");
-        return new Vector2(horizontal, vertical);
+        // OPTIMIZATION: GetAxisRaw is faster than GetAxis
+        return new Vector2(Input.GetAxisRaw("Horizontal"), Input.GetAxisRaw("Vertical"));
     }
 
     public void ToggleInput()
@@ -544,6 +578,4 @@ public class PlayerController : InputScript
     {
         EnablePlayerInput();
     }
-
-   
 }

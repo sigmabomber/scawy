@@ -19,6 +19,9 @@ public class InteractionSystem : InputScript
     [SerializeField] private Color outlineColor = Color.yellow;
     [SerializeField] private float outlineWidth = 5f;
 
+    [Header("Optimization")]
+    [SerializeField] private int raycastsPerSecond = 30; // Reduce from 60+ to 30
+
     [Header("Debug")]
     [SerializeField] private bool showDebugRay = false;
 
@@ -32,14 +35,26 @@ public class InteractionSystem : InputScript
     private RaycastHit cachedHit;
     private int interactableLayerValue;
 
-    // Outline caching - reuse outlines instead of constantly adding/removing
+    // Component caching - avoid repeated GetComponent calls
+    private Dictionary<GameObject, IInteractable> interactableCache = new Dictionary<GameObject, IInteractable>();
     private Dictionary<GameObject, Outline> outlineCache = new Dictionary<GameObject, Outline>();
+    private Dictionary<GameObject, ItemStateTracker> stateTrackerCache = new Dictionary<GameObject, ItemStateTracker>();
+
+    // Raycast throttling
+    private float raycastInterval;
+    private float lastRaycastTime;
+    private bool hasValidTarget;
+
+    // Object pools for reduced allocations
+    private Ray reusableRay;
+    private Vector3 viewportCenter = new Vector3(0.5f, 0.5f, 0);
 
     public static InteractionSystem Instance;
 
     private void Awake()
     {
         Instance = this;
+        raycastInterval = 1f / raycastsPerSecond;
     }
 
     private void Start()
@@ -59,7 +74,12 @@ public class InteractionSystem : InputScript
 
     protected override void HandleInput()
     {
-        CheckForInteractable();
+        // Throttle raycasts
+        if (Time.time - lastRaycastTime >= raycastInterval)
+        {
+            lastRaycastTime = Time.time;
+            CheckForInteractable();
+        }
 
         if (Input.GetKeyDown(interactKey) && currentInteractable != null)
         {
@@ -71,9 +91,9 @@ public class InteractionSystem : InputScript
     {
         if (isShowingFeedback)
         {
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+            reusableRay = playerCamera.ViewportPointToRay(viewportCenter);
 
-            if (!Physics.Raycast(ray, out cachedHit, interactionRange, interactableLayer))
+            if (!Physics.Raycast(reusableRay, out cachedHit, interactionRange, interactableLayer))
             {
                 StopAllCoroutines();
                 isShowingFeedback = false;
@@ -82,118 +102,148 @@ public class InteractionSystem : InputScript
             return;
         }
 
-        Ray checkRay = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        reusableRay = playerCamera.ViewportPointToRay(viewportCenter);
 
 #if UNITY_EDITOR
         if (showDebugRay)
-            Debug.DrawRay(checkRay.origin, checkRay.direction * interactionRange, Color.green);
+            Debug.DrawRay(reusableRay.origin, reusableRay.direction * interactionRange, Color.green);
 #endif
 
-        if (Physics.Raycast(checkRay, out RaycastHit firstHit, interactionRange))
+        if (Physics.Raycast(reusableRay, out RaycastHit firstHit, interactionRange, interactableLayer))
         {
-            if (((1 << firstHit.collider.gameObject.layer) & interactableLayerValue) == 0)
+            GameObject hitObject = firstHit.collider.gameObject;
+
+            // Early out if we're still looking at the same object
+            if (currentHighlightedObject == hitObject && currentInteractable != null)
             {
-                if (currentInteractable != null)
-                {
-                    currentInteractable = null;
-                    HideUI();
-                    DisableCurrentOutline();
-                }
+                hasValidTarget = true;
                 return;
             }
 
             cachedHit = firstHit;
 
-            IInteractable interactable = cachedHit.collider.GetComponent<IInteractable>();
-
-            if (interactable == null)
-            {
-                interactable = cachedHit.collider.GetComponentInParent<IInteractable>();
-
-                if (interactable == null)
-                {
-                    GameObject hitObject = cachedHit.collider.gameObject;
-
-                    ItemStateTracker stateTracker = hitObject.GetComponent<ItemStateTracker>();
-                    if (stateTracker != null && stateTracker.IsInWorld)
-                    {
-                        ItemPickupInteractable pickup = hitObject.GetComponent<ItemPickupInteractable>();
-                        if (pickup == null)
-                        {
-                            ItemData itemData = GetItemDataFromObject(hitObject);
-                            if (itemData != null)
-                            {
-                                pickup = hitObject.AddComponent<ItemPickupInteractable>();
-                                pickup.itemData = itemData;
-                                pickup.quantity = 1;
-                                interactable = pickup;
-                            }
-                        }
-                        else
-                        {
-                            interactable = pickup;
-                        }
-                    }
-                }
-
-                if (interactable == null)
-                {
-                    Debug.LogWarning($"Object {cachedHit.collider.name} has no IInteractable component and cannot be made interactable!");
-                }
-            }
+            // Use cached interactable lookup
+            IInteractable interactable = GetCachedInteractable(hitObject);
 
             if (interactable != null && interactable.CanInteract())
             {
-                Sprite interactIcon = interactable.GetInteractionIcon();
-
-                if (interactIcon == null)
-                {
-                    reticleUI.gameObject.SetActive(false);
-                }
-                else
-                {
-                    reticleUI.sprite = interactIcon;
-
-                    reticleUI.gameObject.SetActive(true);
-                }
-
+                // Only update if object changed
                 if (currentInteractable != interactable)
                 {
                     currentInteractable = interactable;
-                    UpdateUI(interactable.GetInteractionPrompt());
 
-                    if (currentHighlightedObject != cachedHit.collider.gameObject)
+                    // Batch UI updates
+                    Sprite interactIcon = interactable.GetInteractionIcon();
+                    string prompt = interactable.GetInteractionPrompt();
+
+                    UpdateUI(prompt, interactIcon);
+
+                    if (currentHighlightedObject != hitObject)
                     {
                         DisableCurrentOutline();
-                        EnableOutline(cachedHit.collider.gameObject);
+                        EnableOutline(hitObject);
                     }
                 }
+                hasValidTarget = true;
                 return;
             }
         }
 
-        if (currentInteractable != null)
+        // Clear current target if nothing valid found
+        if (hasValidTarget || currentInteractable != null)
         {
             currentInteractable = null;
             HideUI();
             DisableCurrentOutline();
+            hasValidTarget = false;
         }
+    }
+
+    private IInteractable GetCachedInteractable(GameObject obj)
+    {
+        // Check cache first
+        if (interactableCache.TryGetValue(obj, out IInteractable cached))
+        {
+            return cached;
+        }
+
+        // Find interactable
+        IInteractable interactable = obj.GetComponent<IInteractable>();
+
+        if (interactable == null)
+        {
+            interactable = obj.GetComponentInParent<IInteractable>();
+        }
+
+        // Handle ItemStateTracker case
+        if (interactable == null)
+        {
+            ItemStateTracker stateTracker = GetCachedStateTracker(obj);
+
+            if (stateTracker != null && stateTracker.IsInWorld)
+            {
+                ItemPickupInteractable pickup = obj.GetComponent<ItemPickupInteractable>();
+
+                if (pickup == null)
+                {
+                    ItemData itemData = GetItemDataFromObject(obj);
+                    if (itemData != null)
+                    {
+                        pickup = obj.AddComponent<ItemPickupInteractable>();
+                        pickup.itemData = itemData;
+                        pickup.quantity = 1;
+                    }
+                }
+
+                interactable = pickup;
+            }
+        }
+
+        // Cache the result (even if null to avoid repeated lookups)
+        if (interactable != null)
+        {
+            interactableCache[obj] = interactable;
+        }
+
+        return interactable;
+    }
+
+    private ItemStateTracker GetCachedStateTracker(GameObject obj)
+    {
+        if (stateTrackerCache.TryGetValue(obj, out ItemStateTracker tracker))
+        {
+            return tracker;
+        }
+
+        tracker = obj.GetComponent<ItemStateTracker>();
+        if (tracker != null)
+        {
+            stateTrackerCache[obj] = tracker;
+        }
+
+        return tracker;
     }
 
     private ItemData GetItemDataFromObject(GameObject obj)
     {
         ItemDataComponent dataComp = obj.GetComponent<ItemDataComponent>();
-        if (dataComp != null)
-            return dataComp.itemData;
-
-        return null;
+        return dataComp != null ? dataComp.itemData : null;
     }
 
-    private void UpdateUI(string prompt)
+    private void UpdateUI(string prompt, Sprite icon = null)
     {
         if (reticleUI != null)
         {
-            reticleUI.gameObject.SetActive(true);
+            if (icon == null)
+            {
+                reticleUI.gameObject.SetActive(false);
+            }
+            else
+            {
+                reticleUI.sprite = icon;
+                reticleUI.gameObject.SetActive(true);
+            }
+
             interactionText.text = prompt;
             interactionText.gameObject.SetActive(true);
         }
@@ -212,37 +262,26 @@ public class InteractionSystem : InputScript
     {
         currentHighlightedObject = obj;
 
-        // Check if we already have an outline cached for this object
+        // Check cache first
         if (!outlineCache.TryGetValue(obj, out currentOutline))
         {
-            // Try to get existing outline component
             currentOutline = obj.GetComponent<Outline>();
 
-            // If no outline exists, create one
             if (currentOutline == null)
             {
                 currentOutline = obj.AddComponent<Outline>();
+
+                // Set properties once when creating
+                currentOutline.OutlineMode = Outline.Mode.OutlineAll;
+                currentOutline.OutlineColor = outlineColor;
+                currentOutline.OutlineWidth = outlineWidth;
             }
 
-            // Cache it for future use
             outlineCache[obj] = currentOutline;
         }
 
-        // Configure outline settings (only if needed)
-        if (currentOutline.OutlineMode != Outline.Mode.OutlineAll ||
-            currentOutline.OutlineColor != outlineColor ||
-            currentOutline.OutlineWidth != outlineWidth)
-        {
-            currentOutline.OutlineMode = Outline.Mode.OutlineAll;
-            currentOutline.OutlineColor = outlineColor;
-            currentOutline.OutlineWidth = outlineWidth;
-        }
-
-        // Enable the outline
-        if (!currentOutline.enabled)
-        {
-            currentOutline.enabled = true;
-        }
+        // Just enable if already configured
+        currentOutline.enabled = true;
     }
 
     private void DisableCurrentOutline()
@@ -264,8 +303,10 @@ public class InteractionSystem : InputScript
 
     private void OnDestroy()
     {
-        // Clean up cache
+        // Clean up all caches
+        interactableCache.Clear();
         outlineCache.Clear();
+        stateTrackerCache.Clear();
     }
 
     public void ShowFeedback(string message, Color textColor)
@@ -288,11 +329,11 @@ public class InteractionSystem : InputScript
         isShowingFeedback = false;
         interactionText.color = originalTextColor;
 
-        Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0));
+        reusableRay = playerCamera.ViewportPointToRay(viewportCenter);
 
-        if (Physics.Raycast(ray, out cachedHit, interactionRange, interactableLayer))
+        if (Physics.Raycast(reusableRay, out cachedHit, interactionRange, interactableLayer))
         {
-            IInteractable interactable = cachedHit.collider.GetComponent<IInteractable>();
+            IInteractable interactable = GetCachedInteractable(cachedHit.collider.gameObject);
             if (interactable != null && interactable.CanInteract())
             {
                 interactionText.text = interactable.GetInteractionPrompt();
@@ -304,29 +345,19 @@ public class InteractionSystem : InputScript
     {
         if (obj == null) return false;
 
-        IInteractable interactable = obj.GetComponent<IInteractable>();
-        if (interactable == null)
-        {
-            interactable = obj.GetComponentInParent<IInteractable>();
-        }
-
-        if (interactable != null)
-        {
-            return interactable.CanInteract();
-        }
-
-        return false;
+        IInteractable interactable = GetCachedInteractable(obj);
+        return interactable != null && interactable.CanInteract();
     }
 
     public void RefreshCurrentInteractable()
     {
         if (currentHighlightedObject != null)
         {
-            IInteractable interactable = currentHighlightedObject.GetComponent<IInteractable>();
+            IInteractable interactable = GetCachedInteractable(currentHighlightedObject);
             if (interactable != null && interactable.CanInteract())
             {
                 currentInteractable = interactable;
-                UpdateUI(interactable.GetInteractionPrompt());
+                UpdateUI(interactable.GetInteractionPrompt(), interactable.GetInteractionIcon());
             }
             else
             {
@@ -337,11 +368,26 @@ public class InteractionSystem : InputScript
         }
     }
 
-    // Optional: Call this periodically to clean up destroyed objects from cache
-    public void CleanupOutlineCache()
+    // Call this when objects are destroyed or removed from the world
+    public void InvalidateCache(GameObject obj)
+    {
+        interactableCache.Remove(obj);
+        stateTrackerCache.Remove(obj);
+        outlineCache.Remove(obj);
+    }
+
+    // Periodic cleanup of destroyed objects
+    public void CleanupCaches()
+    {
+        CleanupCache(interactableCache);
+        CleanupCache(outlineCache);
+        CleanupCache(stateTrackerCache);
+    }
+
+    private void CleanupCache<T>(Dictionary<GameObject, T> cache)
     {
         List<GameObject> toRemove = new List<GameObject>();
-        foreach (var kvp in outlineCache)
+        foreach (var kvp in cache)
         {
             if (kvp.Key == null)
             {
@@ -351,7 +397,7 @@ public class InteractionSystem : InputScript
 
         foreach (var key in toRemove)
         {
-            outlineCache.Remove(key);
+            cache.Remove(key);
         }
     }
 }
