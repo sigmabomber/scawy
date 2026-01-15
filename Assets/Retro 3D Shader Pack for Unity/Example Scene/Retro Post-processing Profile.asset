@@ -81,7 +81,7 @@ MonoBehaviour:
     value: 0
   PixelScale:
     overrideState: 1
-    value: 2
+    value: 3
   FixedVerticalResolution:
     overrideState: 1
     value: 197
