@@ -21,8 +21,6 @@ public class SaveEventManager : MonoBehaviour
     [SerializeField] private int maxRetryAttempts = 3;
     [SerializeField] private float retryDelaySeconds = 0.5f;
 
-    [SerializeField] private int maxSlots = 4;
-
     [Header("UI Integration")]
     [SerializeField] private bool showUIStatus = true;
 
@@ -40,6 +38,12 @@ public class SaveEventManager : MonoBehaviour
     private HashSet<string> pendingSystems = new HashSet<string>();
     private Coroutine activeOperation;
 
+    // Playtime tracking
+    private float sessionStartTime;
+    private int currentLoadedSlot = -1;
+    private Dictionary<int, float> slotPlaytimes = new Dictionary<int, float>(); // Total playtime per slot
+    private float currentSessionTime = 0f;
+
     void Awake()
     {
         // Singleton with extra safety
@@ -56,12 +60,13 @@ public class SaveEventManager : MonoBehaviour
 
             InitializeSaveDirectories();
             InitializeEventSubscriptions();
+            InitializePlaytimeTracking();
 
         }
         catch (Exception e)
         {
             Debug.LogError($"[SaveSystem] CRITICAL: Awake failed: {e.Message}\n{e.StackTrace}");
-          
+
         }
     }
 
@@ -109,6 +114,12 @@ public class SaveEventManager : MonoBehaviour
         }
     }
 
+    private void InitializePlaytimeTracking()
+    {
+        sessionStartTime = Time.realtimeSinceStartup;
+        currentSessionTime = 0f;
+    }
+
     void OnDestroy()
     {
         isShuttingDown = true;
@@ -140,6 +151,12 @@ public class SaveEventManager : MonoBehaviour
 
         try
         {
+            // Update session time
+            if (currentLoadedSlot > 0)
+            {
+                currentSessionTime += Time.deltaTime;
+            }
+
             if (Input.GetKeyDown(KeyCode.F5))
             {
                 StartSafeQuickSave();
@@ -208,6 +225,73 @@ public class SaveEventManager : MonoBehaviour
             Debug.LogError($"[SaveSystem] Failed to start load: {e.Message}");
             isLoading = false;
         }
+    }
+
+    // ========== PLAYTIME TRACKING API ==========
+
+    public float GetTotalPlaytime(int slotNumber)
+    {
+        try
+        {
+            var info = GetSaveInfo(slotNumber);
+            return info.totalPlaytimeSeconds;
+        }
+        catch
+        {
+            return 0f;
+        }
+    }
+
+    public string GetFormattedPlaytime(int slotNumber)
+    {
+        float totalSeconds = GetTotalPlaytime(slotNumber);
+        return FormatPlaytime(totalSeconds);
+    }
+
+    public DateTime GetLastPlayed(int slotNumber)
+    {
+        try
+        {
+            var info = GetSaveInfo(slotNumber);
+            if (DateTime.TryParse(info.lastPlayedTime, out DateTime lastPlayed))
+            {
+                return lastPlayed;
+            }
+        }
+        catch { }
+
+        return DateTime.MinValue;
+    }
+
+    private string FormatPlaytime(float totalSeconds)
+    {
+        TimeSpan time = TimeSpan.FromSeconds(totalSeconds);
+
+        if (time.TotalHours >= 1)
+        {
+            return $"{(int)time.TotalHours}h {time.Minutes}m";
+        }
+        else if (time.TotalMinutes >= 1)
+        {
+            return $"{(int)time.TotalMinutes}m {time.Seconds}s";
+        }
+        else
+        {
+            return $"{(int)time.TotalSeconds}s";
+        }
+    }
+
+    private float GetCurrentSlotTotalPlaytime()
+    {
+        if (currentLoadedSlot <= 0) return 0f;
+
+        float basePlaytime = 0f;
+        if (slotPlaytimes.ContainsKey(currentLoadedSlot))
+        {
+            basePlaytime = slotPlaytimes[currentLoadedSlot];
+        }
+
+        return basePlaytime + currentSessionTime;
     }
 
     // ========== SAVE/LOAD ==========
@@ -368,7 +452,16 @@ public class SaveEventManager : MonoBehaviour
             collectedSaveData["_empty"] = "{}";
         }
 
-        // 2. Create save package
+        // 2. Calculate total playtime for this slot
+        float totalPlaytime = GetCurrentSlotTotalPlaytime();
+
+        // If this is a new save on this slot, use current session time
+        if (currentLoadedSlot != slotNumber)
+        {
+            totalPlaytime = currentSessionTime;
+        }
+
+        // 3. Create save package
         SavePackage savePackage;
         try
         {
@@ -376,10 +469,12 @@ public class SaveEventManager : MonoBehaviour
             {
                 saveSlot = slotNumber,
                 saveTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
+                lastPlayedTime = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff"),
                 sceneName = GetCurrentSceneName(),
                 totalSystems = collectedSaveData.Count,
                 systemsResponded = collectedSaveData.Count,
-                operationId = Guid.NewGuid().ToString()
+                operationId = Guid.NewGuid().ToString(),
+                totalPlaytimeSeconds = totalPlaytime
             };
 
             savePackage.SetSystemData(collectedSaveData);
@@ -392,7 +487,7 @@ public class SaveEventManager : MonoBehaviour
             yield break;
         }
 
-        // 3. Serialize to JSON
+        // 4. Serialize to JSON
         string json;
         try
         {
@@ -417,7 +512,7 @@ public class SaveEventManager : MonoBehaviour
             yield break;
         }
 
-        // 4. Encrypt (with fallback to plain text)
+        // 5. Encrypt (with fallback to plain text)
         string dataToSave;
         try
         {
@@ -435,7 +530,7 @@ public class SaveEventManager : MonoBehaviour
             dataToSave = json;
         }
 
-        // 5. Atomic file write with comprehensive error handling
+        // 6. Atomic file write with comprehensive error handling
         bool writeSuccess = false;
         try
         {
@@ -486,6 +581,11 @@ public class SaveEventManager : MonoBehaviour
             }
 
             writeSuccess = true;
+
+            // Update playtime tracking
+            slotPlaytimes[slotNumber] = totalPlaytime;
+            currentLoadedSlot = slotNumber;
+            currentSessionTime = 0f; // Reset session time after save
         }
         catch (Exception e)
         {
@@ -526,7 +626,7 @@ public class SaveEventManager : MonoBehaviour
             }
         }
 
-        // 6. Success notification
+        // 7. Success notification
         result.success = true;
         result.message = $"Saved {collectedSaveData.Count} systems";
         result.slotNumber = slotNumber;
@@ -541,7 +641,7 @@ public class SaveEventManager : MonoBehaviour
             operationId = savePackage.operationId
         });
 
-        Debug.Log($"[SaveSystem] Save successful: {collectedSaveData.Count} systems, {json.Length} bytes");
+        Debug.Log($"[SaveSystem] Save successful: {collectedSaveData.Count} systems, {json.Length} bytes, playtime: {FormatPlaytime(totalPlaytime)}");
     }
 
     private IEnumerator LoadGameCoroutine(int slotNumber, LoadOperationResult result)
@@ -638,6 +738,11 @@ public class SaveEventManager : MonoBehaviour
             }
 
             systemData = savePackage.GetSystemData();
+
+            // Load playtime data
+            slotPlaytimes[slotNumber] = savePackage.totalPlaytimeSeconds;
+            currentLoadedSlot = slotNumber;
+            currentSessionTime = 0f; // Reset session time on load
         }
         catch (Exception e)
         {
@@ -733,7 +838,7 @@ public class SaveEventManager : MonoBehaviour
             operationId = savePackage.operationId
         });
 
-        Debug.Log($"[SaveSystem] Load successful: {systemData?.Count ?? 0} systems");
+        Debug.Log($"[SaveSystem] Load successful: {systemData?.Count ?? 0} systems, playtime: {FormatPlaytime(savePackage.totalPlaytimeSeconds)}");
     }
 
     // ========== EVENT HANDLER ==========
@@ -967,7 +1072,10 @@ public class SaveEventManager : MonoBehaviour
             slotNumber = slotNumber,
             exists = false,
             saveTime = "N/A",
-            fileSizeKB = 0
+            fileSizeKB = 0,
+            totalPlaytimeSeconds = 0f,
+            lastPlayedTime = "N/A",
+            formattedPlaytime = "0s"
         };
 
         try
@@ -986,18 +1094,31 @@ public class SaveEventManager : MonoBehaviour
                     string encrypted = File.ReadAllText(primaryPath, Encoding.UTF8);
                     string json = SimpleDecrypt(encrypted);
                     var package = JsonUtility.FromJson<SavePackage>(json);
-                    if (package != null && !string.IsNullOrEmpty(package.saveTime))
+                    if (package != null)
                     {
-                        info.saveTime = package.saveTime;
+                        if (!string.IsNullOrEmpty(package.saveTime))
+                        {
+                            info.saveTime = package.saveTime;
+                        }
+                        else
+                        {
+                            info.saveTime = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
+                        }
+
+                        info.totalPlaytimeSeconds = package.totalPlaytimeSeconds;
+                        info.formattedPlaytime = FormatPlaytime(package.totalPlaytimeSeconds);
+                        info.lastPlayedTime = package.lastPlayedTime ?? package.saveTime;
                     }
                     else
                     {
                         info.saveTime = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
+                        info.lastPlayedTime = info.saveTime;
                     }
                 }
                 catch
                 {
                     info.saveTime = fileInfo.LastWriteTime.ToString("yyyy-MM-dd HH:mm:ss");
+                    info.lastPlayedTime = info.saveTime;
                 }
             }
         }
@@ -1018,6 +1139,18 @@ public class SaveEventManager : MonoBehaviour
             SafeDeleteFile(filePath + backupExtension);
             SafeDeleteFile(filePath + tempExtension);
 
+            // Clear playtime tracking for this slot
+            if (slotPlaytimes.ContainsKey(slotNumber))
+            {
+                slotPlaytimes.Remove(slotNumber);
+            }
+
+            if (currentLoadedSlot == slotNumber)
+            {
+                currentLoadedSlot = -1;
+                currentSessionTime = 0f;
+            }
+
             Debug.Log($"[SaveSystem] Deleted save slot {slotNumber}");
         }
         catch (Exception e)
@@ -1032,7 +1165,7 @@ public class SaveEventManager : MonoBehaviour
         {
             Debug.Log("[SaveSystem] Validating all saves...");
 
-            for (int i = 1; i <= maxSlots; i++)
+            for (int i = 1; i <= 10; i++)
             {
                 if (SaveExists(i))
                 {
@@ -1045,7 +1178,7 @@ public class SaveEventManager : MonoBehaviour
 
                         if (package != null)
                         {
-                            Debug.Log($"[SaveSystem] Slot {i}: OK - {package.systemsResponded} systems, {package.saveTime}");
+                            Debug.Log($"[SaveSystem] Slot {i}: OK - {package.systemsResponded} systems, {package.saveTime}, playtime: {FormatPlaytime(package.totalPlaytimeSeconds)}");
                         }
                         else
                         {
@@ -1063,18 +1196,6 @@ public class SaveEventManager : MonoBehaviour
         {
             Debug.LogError($"[SaveSystem] ValidateAllSaves error: {e.Message}");
         }
-    }
-
-    public bool AnySaveExists()
-    {
-        for (int i = 1; i <= maxSlots; i++)
-        {
-            if (SaveExists(i))
-            {
-                return true;
-            }
-        }
-        return false;
     }
 
     private string GetFilePath(int slotNumber)
@@ -1240,6 +1361,7 @@ public class SavePackage
 {
     public int saveSlot;
     public string saveTime;
+    public string lastPlayedTime;
     public string sceneName;
     public string[] systemNames;
     public string[] systemDataArray;
@@ -1248,6 +1370,7 @@ public class SavePackage
     public string gameVersion;
     public string operationId;
     public int checksum;
+    public float totalPlaytimeSeconds;
 
     public SavePackage()
     {
@@ -1351,7 +1474,10 @@ public class SaveSlotInfo
     public int slotNumber;
     public bool exists;
     public string saveTime;
+    public string lastPlayedTime;
     public int fileSizeKB;
     public bool hasBackup;
     public string status = "Unknown";
+    public float totalPlaytimeSeconds;
+    public string formattedPlaytime;
 }
