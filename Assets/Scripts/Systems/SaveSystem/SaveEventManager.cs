@@ -21,6 +21,8 @@ public class SaveEventManager : MonoBehaviour
     [SerializeField] private int maxRetryAttempts = 3;
     [SerializeField] private float retryDelaySeconds = 0.5f;
 
+    [SerializeField] private int maxSlots = 4;
+
     [Header("UI Integration")]
     [SerializeField] private bool showUIStatus = true;
 
@@ -1030,7 +1032,7 @@ public class SaveEventManager : MonoBehaviour
         {
             Debug.Log("[SaveSystem] Validating all saves...");
 
-            for (int i = 1; i <= 10; i++)
+            for (int i = 1; i <= maxSlots; i++)
             {
                 if (SaveExists(i))
                 {
@@ -1061,6 +1063,18 @@ public class SaveEventManager : MonoBehaviour
         {
             Debug.LogError($"[SaveSystem] ValidateAllSaves error: {e.Message}");
         }
+    }
+
+    public bool AnySaveExists()
+    {
+        for (int i = 1; i <= maxSlots; i++)
+        {
+            if (SaveExists(i))
+            {
+                return true;
+            }
+        }
+        return false;
     }
 
     private string GetFilePath(int slotNumber)
