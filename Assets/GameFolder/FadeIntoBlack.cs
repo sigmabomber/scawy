@@ -1,6 +1,7 @@
 using System.Collections;
 using Doody.Framework.DialogueSystem;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 public class FadeIntoBlack : MonoBehaviour, IDialogueCustomAction
 {
@@ -36,5 +37,17 @@ public class FadeIntoBlack : MonoBehaviour, IDialogueCustomAction
             yield return null;
         }
         canvasGroup.alpha = 1f;
+
+        yield return new WaitForSeconds(1f);
+        int nextLevelIndex = SceneManager.GetActiveScene().buildIndex + 1;
+        SceneManager.LoadScene(nextLevelIndex);
+        foreach (GameObject obj in Object.FindObjectsOfType<GameObject>())
+        {
+            if (obj.transform.parent == null)
+            {
+                Object.Destroy(obj);
+            }
+        }
+
     }
 }

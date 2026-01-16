@@ -16,7 +16,7 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private float swaySmoothing = 8f;
     [SerializeField] private float swayAmount = 0.02f;
     [SerializeField] private float swayResetSpeed = 6f;
-    [SerializeField] private float maxSwayAngle = 10f; // NEW: Maximum sway angle in degrees
+    [SerializeField] private float maxSwayAngle = 10f; 
 
     [Header("Bobbing Settings")]
     [SerializeField] private float effectIntensity = 0.02f;
@@ -115,7 +115,6 @@ public class EquipmentManager : MonoBehaviour
         float rawSwayX = -deltaEuler.y * swayAmount;
         float rawSwayY = -deltaEuler.x * swayAmount;
 
-        // NEW: Clamp sway angles to maximum limit
         float swayX = Mathf.Clamp(rawSwayX, -maxSwayAngle, maxSwayAngle);
         float swayY = Mathf.Clamp(rawSwayY, -maxSwayAngle, maxSwayAngle);
 

@@ -13,8 +13,8 @@ MonoBehaviour:
   m_Name: FenceDoorKey
   m_EditorClassIdentifier: 
   icon: {fileID: 21300000, guid: 9629a5cf3f3ab1f40abfcb9472295699, type: 3}
-  itemName: Fence Door Key
+  itemName: basement
   maxStack: 0
   prefab: {fileID: 6909443637467146833, guid: c1cc14d431be6da4abee4934a9a4c13c, type: 3}
   priority: 0
-  keyID: sigma
+  keyID: basement

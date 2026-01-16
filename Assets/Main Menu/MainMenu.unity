@@ -34,9 +34,9 @@ RenderSettings:
   m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 128
-  m_ReflectionBounces: 0
+  m_ReflectionBounces: 1
   m_ReflectionIntensity: 0
- 
+  m_CustomReflection: {fileID: 0}
   m_Sun: {fileID: 0}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
@@ -8123,6 +8123,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   slotPrefab: {fileID: 5539403164979661663, guid: 3522f2ce8de235b4485f4bddd2af051f, type: 3}
   Container: {fileID: 920839941}
+  fadeInBlack: {fileID: 2121317825}
+  duration: 0.15
 --- !u!114 &488173225
 MonoBehaviour:
   m_ObjectHideFlags: 0

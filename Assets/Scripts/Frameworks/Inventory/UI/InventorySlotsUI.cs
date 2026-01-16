@@ -82,6 +82,8 @@ public class InventorySlotsUI : EventListener,
 
         equipmentManager = EquipmentManager.Instance;
 
+        
+
         if (PlayerController.Instance != null)
             playerTransform = PlayerController.Instance.transform;
     }
@@ -239,6 +241,7 @@ public class InventorySlotsUI : EventListener,
     {
         if (itemData == null || itemData.prefab == null)
         {
+            print("gg");
             return;
         }
 
@@ -257,11 +260,13 @@ public class InventorySlotsUI : EventListener,
 
         if (!hasUsableLogic)
         {
+            print(":(");
             return;
         }
 
         if (equipmentManager == null)
         {
+            print(":(f");
             return;
         }
 
@@ -433,6 +438,7 @@ public class InventorySlotsUI : EventListener,
         {
             if (!useItem)
             {
+                print(":jj");
                 return;
             }
 

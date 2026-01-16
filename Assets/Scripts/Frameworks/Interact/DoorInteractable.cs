@@ -8,14 +8,16 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
 
     [SerializeField] private InventorySystem inventorySystem;
 
+    public bool canUnlockByGun = false;
+
     private bool isUnlocked = false;
     public Sprite interactionIcon;
     private int UnlockHash = Animator.StringToHash("Unlock");
-
+    public AudioSource source;
     public Animator animator;
     private void Start()
     {
-        animator = GetComponentInParent<Animator>();
+        animator = animator == null ?  GetComponentInParent<Animator>() : animator;
 
         if (inventorySystem == null)
         {
@@ -48,6 +50,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
         }
 
         InteractionSystem.Instance.ShowFeedback("No Key!", Color.red);
+        source.Play();
         
     }
 
@@ -59,7 +62,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
     }
     public void OnGunHit(GunData data)
     {
-        if (isUnlocked) return;
+        if (isUnlocked || !canUnlockByGun) return;
         UnlockDoor();
     }
     

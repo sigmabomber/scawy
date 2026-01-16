@@ -1,4 +1,4 @@
-using System.Collections;
+﻿using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
@@ -21,10 +21,24 @@ public class Tween : MonoBehaviour, IPointerEnterHandler, IPointerExitHandler
     }
     public void OnPointerEnter(PointerEventData data)
     {
-        text.DOScale(new Vector2(originalSize.x + hoverSize.x, originalSize.y + hoverSize.y),duration);
+        text.DOScale(
+            new Vector2(
+                originalSize.x + hoverSize.x,
+                originalSize.y + hoverSize.y
+            ),
+            duration
+        ).SetUpdate(true); // ← unscaled time
     }
-    public void OnPointerExit(PointerEventData data )
+
+    public void OnPointerExit(PointerEventData data)
     {
-        text.DOScale(new Vector2(originalSize.x,originalSize.y),duration);
+        text.DOScale(
+            new Vector2(
+                originalSize.x,
+                originalSize.y
+            ),
+            duration
+        ).SetUpdate(true); // ← unscaled time
     }
+
 }

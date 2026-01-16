@@ -11,22 +11,29 @@ public class GeneratorSystem : EventListener, IInteractable
     [SerializeField] private InventorySystem inventorySystem;
     protected int StartFillingUpHash;
     private bool interact = true;
-
+    private AudioSource source;
     private Animator animator;
+
+    public GameObject one;
+    public GameObject two;
 
 
     private void Start()
     {
         animator = GetComponent<Animator>();
-
+        source = GetComponent<AudioSource>();
         StartFillingUpHash = Animator.StringToHash("StartFillingUp");
+
+        if (inventorySystem == null)
+        {
+            inventorySystem = FindObjectOfType<InventorySystem>();
+        }
     }
 
     public void Interact()
     {
         if (inventorySystem == null) return;
         if (inventorySystem.currentlyEquippedSlot == null) return;
-        print(inventorySystem.currentlyEquippedSlot.itemData.itemName);
 
         if(inventorySystem.currentlyEquippedSlot.itemData is GasCanItemData)
         {
@@ -34,6 +41,8 @@ public class GeneratorSystem : EventListener, IInteractable
             InputScript.InputEnabled = false;
             animator.SetTrigger(StartFillingUpHash);
             interact = false;
+            source.Play();
+
         }
         else
         {
@@ -44,6 +53,10 @@ public class GeneratorSystem : EventListener, IInteractable
     public void InteractionComplete()
     {
         InputScript.InputEnabled = true;
+        source.Stop();
+
+        one.SetActive(false);
+        two.SetActive(true);
     }
     public bool CanInteract()
     {

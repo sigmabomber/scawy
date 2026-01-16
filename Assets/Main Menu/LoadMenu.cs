@@ -14,7 +14,9 @@ public class LoadMenu : MonoBehaviour
     private TMP_Text slotCount;
     private TMP_Text lastPlayed;
     private TMP_Text playTime;
+    public CanvasGroup fadeInBlack;
 
+    public float duration = 0.5f;
 
 
     public static LoadMenu Instance;
@@ -53,7 +55,7 @@ public class LoadMenu : MonoBehaviour
         {
             if (SaveEventManager.Instance.SaveExists(i) == false)
             {
-                print(i);
+              
                 return;
             }
 
@@ -90,13 +92,29 @@ public class LoadMenu : MonoBehaviour
 
 
     }
-
-    private void OnButtonClicked(int slotNumber)
+    IEnumerator FadeIn(CanvasGroup canvasGroup, int slotNumber)
     {
+        float t = 0f;
+        while (t < duration)
+        {
+            t += Time.deltaTime;
+            canvasGroup.alpha = Mathf.Lerp(0f, 1f, t / duration);
+            yield return null;
+        }
+        canvasGroup.alpha = 1f;
+
+
+        yield return new WaitForSeconds(0.9f);
+
         int nextLevelIndex = SceneManager.GetActiveScene().buildIndex + 1;
         SceneManager.LoadScene(nextLevelIndex);
 
         SaveEventManager.Instance.selectedSlot = slotNumber;
+    }
+    private void OnButtonClicked(int slotNumber)
+    {
+        StartCoroutine(FadeIn(fadeInBlack, slotNumber));
+      
 
     }
 }

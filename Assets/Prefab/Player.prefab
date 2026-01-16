@@ -353,6 +353,7 @@ GameObject:
   - component: {fileID: 3267626856384255782}
   - component: {fileID: 6847795713560836540}
   - component: {fileID: 1301093156578454735}
+  - component: {fileID: 4906409066069446042}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -501,6 +502,7 @@ MonoBehaviour:
   interactionText: {fileID: 0}
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
   outlineWidth: 10
+  raycastsPerSecond: 15
   showDebugRay: 0
 --- !u!114 &3592659363617418703
 MonoBehaviour:
@@ -810,6 +812,19 @@ MonoBehaviour:
   rotationSpeed: 5
   targetObject: {fileID: 0}
   targetOffset: {x: 0, y: 0, z: 0}
+--- !u!114 &4906409066069446042
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7948546303065143638}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 9efa041745c6a2643aa58bf473265512, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  debugLogs: 1
 --- !u!1 &8586872053062033744
 GameObject:
   m_ObjectHideFlags: 0
