@@ -564,7 +564,7 @@ MonoBehaviour:
     aimRotation: {x: 0, y: 0, z: 0, w: 1}
     aimMovementSpeedMultiplier: 0.5
     aimSensitivityMultiplier: 0.6
-    hasTinnitus: 1
+    hasTinnitus: 0
     tinnitusDuration: 2
     tinnitusVolume: 0.3
   playerCamera: {fileID: 0}

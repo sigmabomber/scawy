@@ -1,7 +1,7 @@
 using UnityEngine;
 using Doody.InventoryFramework;
 
-public class EquippableItem : MonoBehaviour, IEquippable
+public class EquippableItem : MonoBehaviour, IEquippable, IItemUsable
 {
     [Header("Item Settings")]
     [SerializeField] private Vector3 equippedPosition = new Vector3(0.5f, -0.3f, 0.5f);
@@ -64,6 +64,28 @@ public class EquippableItem : MonoBehaviour, IEquippable
     public GameObject GetGameObject()
     {
         return gameObject;
+    }
+    public void OnEquip(InventorySlotsUI slot)
+    {
+
+    }
+    public void OnUse(InventorySlotsUI slot)
+    {
+
+    }
+    public void OnUnequip(InventorySlotsUI slot)
+    {
+
+    }
+
+    public void OnItemStateChanged(ItemState previousState, ItemState newState)
+    {
+
+    }
+
+  public  void OnDroppedInWorld()
+    {
+
     }
 }
 

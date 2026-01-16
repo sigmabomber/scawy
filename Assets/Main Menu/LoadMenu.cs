@@ -15,7 +15,11 @@ public class LoadMenu : MonoBehaviour
     private TMP_Text lastPlayed;
     private TMP_Text playTime;
 
+
+
     public static LoadMenu Instance;
+
+
 
 
     private void Start()
@@ -35,16 +39,24 @@ public class LoadMenu : MonoBehaviour
          ClearAllSlots();
       
         CreateAllSlots();
+
+       
+    }
+    public void GoBack()
+    {
+
     }
 
     private void CreateAllSlots()
     {
         for (int i = 0; i < SaveEventManager.Instance.maxSlots; i++)
         {
-            if (SaveEventManager.Instance.SaveExists(i))
+            if (SaveEventManager.Instance.SaveExists(i) == false)
+            {
+                print(i);
                 return;
+            }
 
-            var data = SaveEventManager.Instance.GetSaveInfo(i);
 
             GameObject newSlot = Instantiate(slotPrefab);
 
@@ -62,9 +74,9 @@ public class LoadMenu : MonoBehaviour
 
 
             slotCount.text = $"Slot {i + 1}";
-            lastPlayed.text = SaveEventManager.Instance.GetLastPlayed(i).ToString();
+            lastPlayed.text = $"Last Played: {SaveEventManager.Instance.GetLastPlayed(i).ToString()}";
             
-            playTime.text = SaveEventManager.Instance.GetFormattedPlaytime(i).ToString();
+            playTime.text = $"Playtime: {SaveEventManager.Instance.GetFormattedPlaytime(i).ToString()}";
 
             
 

@@ -9,6 +9,8 @@ public class NewButtonClicked : MonoBehaviour
 
     public GameObject gameobject;
 
+    public GameObject ReturnObj;
+
 
     private void Start()
     {
@@ -25,7 +27,7 @@ public class NewButtonClicked : MonoBehaviour
         transform.parent.gameObject.SetActive(false);
 
         NewGameMenu.Instance.LoadSlots();
-
+        ReturnObj.SetActive(true);
 
 
 

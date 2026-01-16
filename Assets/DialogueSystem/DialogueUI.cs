@@ -94,7 +94,7 @@ public class DialogueUI : EventListener
     private DialogueTextParser textParser;
 
     // For storing original vertex positions
-    private List<Vector3>[] originalVertices;
+    private Dictionary<int, List<Vector3>> originalVerticesDict = new();
     #endregion
 
     #region Unity Lifecycle
@@ -161,7 +161,7 @@ public class DialogueUI : EventListener
 
             float speed = node.typewriterSpeed > 0 ? node.typewriterSpeed : defaultTypewriterSpeed;
             typewriterCoroutine = StartCoroutine(TypewriterEffect(node.dialogueText, node.options, speed));
-           
+
         }
         else
         {
@@ -175,7 +175,7 @@ public class DialogueUI : EventListener
     {
         var tokens = textParser.ParseText(dialogueText);
         ApplyTokensToText(tokens);
-        StartEffectsCoroutine();
+        StartEffectsCoroutineIfNeeded();
     }
 
     private void HideDialogue()
@@ -185,7 +185,7 @@ public class DialogueUI : EventListener
         ClearOptions();
         characterEffects.Clear();
         richTextBuilder.Clear();
-        originalVertices = null;
+        originalVerticesDict.Clear();
         waitingForContinue = false;
         currentNode = null;
     }
@@ -209,11 +209,11 @@ public class DialogueUI : EventListener
     #region Typewriter System
     private IEnumerator TypewriterEffect(string fullText, List<DialogueOption> options, float speed)
     {
-        
+
         isTyping = true;
         characterEffects.Clear();
         richTextBuilder.Clear();
-        originalVertices = null;
+        originalVerticesDict.Clear();
 
         var tokens = textParser.ParseText(fullText);
 
@@ -225,7 +225,8 @@ public class DialogueUI : EventListener
         characterCount = 0;
         float delay = 1f / speed;
 
-        StartEffectsCoroutine();
+        // Start effects coroutine once at the beginning
+        StartEffectsCoroutineIfNeeded();
 
         int visualCharIndex = 0;
 
@@ -428,11 +429,10 @@ public class DialogueUI : EventListener
     #endregion
 
     #region Visual Effects (Position Only)
-    private void StartEffectsCoroutine()
+    private void StartEffectsCoroutineIfNeeded()
     {
-        if (effectsCoroutine != null)
-            StopCoroutine(effectsCoroutine);
-        effectsCoroutine = StartCoroutine(UpdateTextEffectsOptimized());
+        if (effectsCoroutine == null)
+            effectsCoroutine = StartCoroutine(UpdateTextEffectsOptimized());
     }
 
     private IEnumerator UpdateTextEffectsOptimized()
@@ -452,24 +452,32 @@ public class DialogueUI : EventListener
             if (textInfo.characterCount == 0)
                 continue;
 
-            // Initialize original vertices storage if needed
-            if (originalVertices == null || originalVertices.Length != textInfo.meshInfo.Length)
-            {
-                originalVertices = new List<Vector3>[textInfo.meshInfo.Length];
-                for (int i = 0; i < textInfo.meshInfo.Length; i++)
-                {
-                    originalVertices[i] = new List<Vector3>();
-                }
-            }
-
-            // Store original vertices for each mesh
+            // Store original vertices only for meshes we haven't captured yet
             for (int meshIndex = 0; meshIndex < textInfo.meshInfo.Length; meshIndex++)
             {
-                var meshInfo = textInfo.meshInfo[meshIndex];
-                var vertices = meshInfo.vertices;
+                if (!originalVerticesDict.ContainsKey(meshIndex))
+                {
+                    var meshInfo = textInfo.meshInfo[meshIndex];
+                    var vertices = meshInfo.vertices;
+                    originalVerticesDict[meshIndex] = new List<Vector3>(vertices);
+                }
+                else
+                {
+                    // Update the original vertices list if mesh size changed
+                    var meshInfo = textInfo.meshInfo[meshIndex];
+                    var currentOriginals = originalVerticesDict[meshIndex];
 
-                originalVertices[meshIndex].Clear();
-                originalVertices[meshIndex].AddRange(vertices);
+                    if (currentOriginals.Count != meshInfo.vertices.Length)
+                    {
+                        // Mesh size changed, store new original positions
+                        // Keep existing ones and add new ones
+                        int oldCount = currentOriginals.Count;
+                        for (int i = oldCount; i < meshInfo.vertices.Length; i++)
+                        {
+                            currentOriginals.Add(meshInfo.vertices[i]);
+                        }
+                    }
+                }
             }
 
             bool meshUpdated = false;
@@ -519,16 +527,17 @@ public class DialogueUI : EventListener
             return false;
 
         // Apply vertex position offset relative to original positions
-        bool hasOriginalData = originalVertices != null && materialIndex < originalVertices.Length &&
-                              originalVertices[materialIndex].Count > vertexIndex + 3;
-
-        if (hasOriginalData)
+        if (originalVerticesDict.ContainsKey(materialIndex))
         {
-            for (int j = 0; j < 4; j++)
+            var originalVerts = originalVerticesDict[materialIndex];
+            if (originalVerts.Count > vertexIndex + 3)
             {
-                vertices[vertexIndex + j] = originalVertices[materialIndex][vertexIndex + j] + offset;
+                for (int j = 0; j < 4; j++)
+                {
+                    vertices[vertexIndex + j] = originalVerts[vertexIndex + j] + offset;
+                }
+                return true;
             }
-            return true;
         }
 
         return false;
@@ -569,7 +578,7 @@ public class DialogueUI : EventListener
     {
         characterEffects.Clear();
         richTextBuilder.Clear();
-        originalVertices = null;
+        // Don't clear originalVerticesDict here - let the effects coroutine handle it
         int visualCharIndex = 0;
 
         foreach (var token in tokens)

@@ -17,7 +17,39 @@ MonoBehaviour:
     voiceLine: {fileID: 0}
     typewriterSpeed: 20
     typeWriterSfx: {fileID: 0}
+    playTypewriterSfx: 1
     nextDialogue: {fileID: 0}
-    options: []
+    options:
+    - optionText: '[End Call]'
+      nextDialogue: {fileID: 0}
+      requiredFlags: []
+      setFlags: []
+      actions:
+      - actionType: 13
+        item: {fileID: 0}
+        itemQuantity: 0
+        teleportLocation: {fileID: 0}
+        soundToPlay: {fileID: 0}
+        objectiveName: 
+        objectiveType: 0
+        objectiveAmount: 0
+        targetObject: {fileID: 0}
+        spawnLocation: {fileID: 0}
+        sceneName: 
+        customAction:
+          m_PersistentCalls:
+            m_Calls:
+            - m_Target: {fileID: 11500000, guid: 26483e44c790da94fbf6acf8c12c37c2, type: 3}
+              m_TargetAssemblyTypeName: 
+              m_MethodName: 
+              m_Mode: 1
+              m_Arguments:
+                m_ObjectArgument: {fileID: 0}
+                m_ObjectArgumentAssemblyTypeName: 
+                m_IntArgument: 0
+                m_FloatArgument: 0
+                m_StringArgument: 
+                m_BoolArgument: 0
+              m_CallState: 2
     requiredFlags: []
   speakerName: Henry

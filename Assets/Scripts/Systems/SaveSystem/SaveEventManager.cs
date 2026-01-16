@@ -646,6 +646,67 @@ public class SaveEventManager : MonoBehaviour
         Debug.Log($"[SaveSystem] Save successful: {collectedSaveData.Count} systems, {json.Length} bytes, playtime: {FormatPlaytime(totalPlaytime)}");
     }
 
+    public void SaveToSlot(int slotNumber)
+    {
+        if (isShuttingDown) return;
+
+        if (isSaving || isLoading)
+        {
+            if (debugMode) Debug.Log("[SaveSystem] Operation in progress, ignoring save request");
+            return;
+        }
+
+        if (activeOperation != null)
+        {
+            StopCoroutine(activeOperation);
+        }
+
+        activeOperation = StartCoroutine(SaveToSlotCoroutine(slotNumber));
+    }
+
+    private IEnumerator SaveToSlotCoroutine(int slotNumber)
+    {
+        isSaving = true;
+        saveStartTime = DateTime.Now;
+
+        Debug.Log($"[SaveSystem] Starting save to slot {slotNumber}...");
+
+        SaveOperationResult result = new SaveOperationResult();
+        ShowUISaving();
+
+        // Retry logic
+        for (int attempt = 0; attempt < maxRetryAttempts; attempt++)
+        {
+            if (isShuttingDown) break;
+
+            if (attempt > 0)
+            {
+                Debug.LogWarning($"[SaveSystem] Retry attempt {attempt + 1}/{maxRetryAttempts}");
+                yield return new WaitForSeconds(retryDelaySeconds);
+            }
+
+            result = new SaveOperationResult();
+            yield return ExecuteWithTimeout(SaveGameCoroutine(slotNumber, result), saveTimeout + 5f);
+
+            if (result.success)
+            {
+                Debug.Log($"[SaveSystem] Save to slot {slotNumber} successful: {result.message}");
+                break;
+            }
+
+            Debug.LogWarning($"[SaveSystem] Save attempt {attempt + 1} failed: {result.message}");
+        }
+
+        if (!result.success)
+        {
+            Debug.LogError($"[SaveSystem] Save to slot {slotNumber} failed after {maxRetryAttempts} attempts");
+            yield return TryRestoreBackup(slotNumber);
+        }
+
+        isSaving = false;
+        activeOperation = null;
+    }
+
     private IEnumerator LoadGameCoroutine(int slotNumber, LoadOperationResult result)
     {
         if (isShuttingDown)
