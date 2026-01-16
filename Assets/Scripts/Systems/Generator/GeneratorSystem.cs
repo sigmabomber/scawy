@@ -35,6 +35,10 @@ public class GeneratorSystem : EventListener, IInteractable
             animator.SetTrigger(StartFillingUpHash);
             interact = false;
         }
+        else
+        {
+            InteractionSystem.Instance.ShowFeedback("Need Gas can!", Color.red);
+        }
     }
 
     public void InteractionComplete()
