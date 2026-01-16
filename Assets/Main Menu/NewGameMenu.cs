@@ -74,7 +74,6 @@ public class NewGameMenu : MonoBehaviour
             newSlot.transform.SetParent(Container, false);
             newSlot.name = i.ToString();
 
-            // Capture the current value of i for the lambda
             int slotIndex = i;
             newSlot.GetComponent<Button>().onClick.AddListener(() => OnButtonClicked(slotIndex, hasSave));
         }
