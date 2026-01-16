@@ -101,7 +101,6 @@ public class DialogueAction
     public ItemData item;
     public int itemQuantity = 1;
 
-
     [Header("Teleport Action")]
     public Transform teleportLocation;
 
@@ -112,7 +111,7 @@ public class DialogueAction
     public string objectiveName;
     public ObjectiveTypes objectiveType;
 
-    [Header ("If objective is boolean ignore")]
+    [Header("If objective is boolean ignore")]
     public int objectiveAmount;
 
     [Header("Object Actions (Spawn/Destroy/Enable/Disable)")]
@@ -123,7 +122,16 @@ public class DialogueAction
     public string sceneName;
 
     [Header("Custom Action")]
+    // Method 1: UnityEvent system (for components in scene)
     public UnityEvent customAction;
+
+    // Method 2: GameObject with IDialogueCustomAction interface
+    [Tooltip("GameObject with IDialogueCustomAction component")]
+    public GameObject customActionTarget;
+
+    // Method 3: String-based event system (NEW FIELD)
+    [Tooltip("Event ID for string-based event system")]
+    public string customEventID;
 }
 
 [System.Serializable]
@@ -205,8 +213,6 @@ public class DialogueActionDrawer : PropertyDrawer
                 DrawField(property, "itemQuantity", x, ref y, width);
                 break;
 
-           
-
             case DialogueActionType.TeleportPlayer:
                 DrawField(property, "teleportLocation", x, ref y, width);
                 break;
@@ -218,15 +224,15 @@ public class DialogueActionDrawer : PropertyDrawer
             case DialogueActionType.StartObjective:
                 DrawField(property, "objectiveName", x, ref y, width);
                 DrawField(property, "objectiveType", x, ref y, width);
-
+                DrawField(property, "objectiveAmount", x, ref y, width);
                 break;
-            case DialogueActionType.CompleteObjective:
 
+            case DialogueActionType.CompleteObjective:
                 DrawField(property, "objectiveName", x, ref y, width);
                 break;
+
             case DialogueActionType.ProgressObjective:
                 DrawField(property, "objectiveName", x, ref y, width);
-               
                 DrawField(property, "objectiveAmount", x, ref y, width);
                 break;
 
@@ -247,6 +253,18 @@ public class DialogueActionDrawer : PropertyDrawer
 
             case DialogueActionType.Custom:
                 DrawField(property, "customAction", x, ref y, width, true);
+
+                // Add a help box
+                EditorGUI.HelpBox(new Rect(x, y, width, 40),
+                    "Choose one method:\n" +
+                    "1. customAction: UnityEvent (scene components only)\n" +
+                    "2. customActionTarget: GameObject with IDialogueCustomAction\n" +
+                    "3. customEventID: String event (register with DialogueEventDispatcher)",
+                    MessageType.Info);
+                y += 42 + EditorGUIUtility.standardVerticalSpacing;
+
+                DrawField(property, "customActionTarget", x, ref y, width);
+                DrawField(property, "customEventID", x, ref y, width);
                 break;
         }
     }
@@ -305,8 +323,6 @@ public class DialogueActionDrawer : PropertyDrawer
                 Add("itemQuantity");
                 break;
 
-         
-
             case DialogueActionType.TeleportPlayer:
                 Add("teleportLocation");
                 break;
@@ -318,17 +334,15 @@ public class DialogueActionDrawer : PropertyDrawer
             case DialogueActionType.StartObjective:
                 Add("objectiveName");
                 Add("objectiveType");
-
+                Add("objectiveAmount");
                 break;
+
             case DialogueActionType.CompleteObjective:
                 Add("objectiveName");
-                
                 break;
 
             case DialogueActionType.ProgressObjective:
-
                 Add("objectiveName");
-           
                 Add("objectiveAmount");
                 break;
 
@@ -349,6 +363,11 @@ public class DialogueActionDrawer : PropertyDrawer
 
             case DialogueActionType.Custom:
                 Add("customAction", true);
+                h += 42 + space; // For help box
+                Add("customTarget");
+                Add("customComponentType");
+                Add("customMethodName");
+                Add("customActionTarget");
                 break;
         }
 

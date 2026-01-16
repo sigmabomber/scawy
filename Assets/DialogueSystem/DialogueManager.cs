@@ -200,15 +200,43 @@ namespace Doody.Framework.DialogueSystem
                     break;
 
                 case DialogueActionType.Custom:
-                    if (action.customAction != null)
-                    {
-                        action.customAction.Invoke();
-                        Debug.Log($"[Dialogue] Executed custom action");
-                    }
+                    ExecuteCustomAction(action);
                     break;
             }
         }
 
+        private void ExecuteCustomAction(DialogueAction action)
+        {
+            // Method 1: Try GameObject with IDialogueCustomAction interface
+            if (action.customActionTarget != null)
+            {
+                var customAction = action.customActionTarget.GetComponent<IDialogueCustomAction>();
+                if (customAction != null)
+                {
+                    customAction.Execute();
+                    Debug.Log($"[Dialogue] Executed custom action via interface");
+                    return;
+                }
+            }
+
+            // Method 2: Try event system
+            if (!string.IsNullOrEmpty(action.customEventID))
+            {
+                DialogueEventDispatcher.Instance.TriggerEvent(action.customEventID);
+                Debug.Log($"[Dialogue] Triggered event: {action.customEventID}");
+                return;
+            }
+
+            // Method 3: Try UnityEvent as fallback
+            if (action.customAction != null && action.customAction.GetPersistentEventCount() > 0)
+            {
+                action.customAction.Invoke();
+                Debug.Log($"[Dialogue] Executed custom action via UnityEvent");
+                return;
+            }
+
+            Debug.LogWarning("[Dialogue] Custom action configured but no valid execution method found");
+        }
         private void StartObjectiveAction(DialogueAction action)
         {
             if (action.objectiveName == null || action.objectiveName.Length == 0)
@@ -222,35 +250,24 @@ namespace Doody.Framework.DialogueSystem
             switch (action.objectiveType)
             {
                 case ObjectiveTypes.Boolean:
-                    string description =  $"Complete: {name}";
-
-               
-                    
-                        Events.Publish(new BooleanObjective(name, description));
-                    
-                    
-                break;
+                    string description = $"Complete: {name}";
+                    Events.Publish(new BooleanObjective(name, description));
+                    break;
 
                 case ObjectiveTypes.Collective:
                 case ObjectiveTypes.Count:
                     string objectiveDescription = name;
 
-                   
-                    
                     if (action.objectiveType == ObjectiveTypes.Count)
                     {
-                       Events.Publish(new CountObjective(name, objectiveDescription, action.objectiveAmount));
+                        Events.Publish(new CountObjective(name, objectiveDescription, action.objectiveAmount));
                     }
                     else
                     {
-                       Events.Publish(new CollectionObjective(name, objectiveDescription, action.objectiveAmount));
+                        Events.Publish(new CollectionObjective(name, objectiveDescription, action.objectiveAmount));
                     }
-                    
-                
-                break;
+                    break;
             }
-
-            
         }
 
         private void ProgressObjectiveAction(DialogueAction action)
@@ -266,28 +283,14 @@ namespace Doody.Framework.DialogueSystem
             switch (action.objectiveType)
             {
                 case ObjectiveTypes.Boolean:
-
-
-
                     Events.Publish(new CompleteObjective(name));
-
-
                     break;
 
                 case ObjectiveTypes.Collective:
                 case ObjectiveTypes.Count:
-                    string objectiveDescription = name;
-
-
-
-                    
-                        Events.Publish(new ProgressObjective(name, action.objectiveAmount));
-                  
-
-
+                    Events.Publish(new ProgressObjective(name, action.objectiveAmount));
                     break;
             }
-
         }
 
         private void CompleteObjectiveAction(DialogueAction action)
@@ -299,24 +302,9 @@ namespace Doody.Framework.DialogueSystem
             }
 
             string name = string.Join(" ", action.objectiveName);
-
-            
-
-
-
             Events.Publish(new CompleteObjective(name));
-
-
-                  
-
-
-
-
-
-
-               
         }
-        
+
         // End the conversation
         public void EndDialogue()
         {
@@ -402,5 +390,11 @@ namespace Doody.Framework.DialogueSystem
             if (Instance == this)
                 Instance = null;
         }
+    }
+
+    // Interface for custom actions that can be attached to GameObjects
+    public interface IDialogueCustomAction
+    {
+        void Execute();
     }
 }
