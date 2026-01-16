@@ -2,15 +2,14 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class PlayButtonClicked : MonoBehaviour
+public class NewButtonClicked : MonoBehaviour
 {
     protected int ClickedHash;
     public Animator animator;
 
     public GameObject gameobject;
-    public CameraMouseRotate rotate;
 
- 
+
     private void Start()
     {
         ClickedHash = Animator.StringToHash("clicked");
@@ -25,11 +24,11 @@ public class PlayButtonClicked : MonoBehaviour
         gameobject.SetActive(true);
         transform.parent.gameObject.SetActive(false);
 
-        LoadMenu.Instance.LoadSlots();
+        NewGameMenu.Instance.LoadSlots();
 
-        
+
 
 
     }
- 
+
 }

@@ -20,7 +20,7 @@ public class SaveEventManager : MonoBehaviour
     [SerializeField] private int maxSaveFileSizeMB = 10;
     [SerializeField] private int maxRetryAttempts = 3;
     [SerializeField] private float retryDelaySeconds = 0.5f;
-
+    public int maxSlots = 4;
     [Header("UI Integration")]
     [SerializeField] private bool showUIStatus = true;
 
@@ -43,6 +43,8 @@ public class SaveEventManager : MonoBehaviour
     private int currentLoadedSlot = -1;
     private Dictionary<int, float> slotPlaytimes = new Dictionary<int, float>(); // Total playtime per slot
     private float currentSessionTime = 0f;
+
+    public int selectedSlot;
 
     void Awake()
     {
@@ -1233,6 +1235,19 @@ public class SaveEventManager : MonoBehaviour
         }
     }
 
+    public bool AnySaveExists()
+    {
+        for(int i = 0; i < maxSlots; i++)
+        {
+            if (SaveExists(i))
+            {
+                return true;
+                
+            }
+        }
+
+        return false;
+    }
     private string SimpleDecrypt(string text)
     {
         if (string.IsNullOrEmpty(text)) return string.Empty;

@@ -7,6 +7,13 @@ public class LampClicked : MonoBehaviour
 #pragma warning disable CS0108
     public GameObject light;
 #pragma warning restore CS0108
+
+    public AudioSource source;
+
+    public Material notOn;
+    public Material On;
+
+    public MeshRenderer lamp;
     void Start()
     {
         Events.Subscribe<ItemClicked>(ToggleLight, this);
@@ -19,6 +26,11 @@ public class LampClicked : MonoBehaviour
 
 
         light.SetActive(!light.activeSelf);
+
+        source.Play();
+
+        lamp.material = light.activeSelf ? On : notOn;
+        
     }
 }
 
