@@ -1343,63 +1343,6 @@ PrefabInstance:
       insertIndex: -1
       addedObject: {fileID: 1603924487}
   m_SourcePrefab: {fileID: 100100000, guid: c1cc14d431be6da4abee4934a9a4c13c, type: 3}
---- !u!1001 &843846648
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 44.96
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 170.31114
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 26.080742
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.7071067
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: -0.7071068
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: -0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: -8679921383154817045, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 919132149155446097, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
-      propertyPath: m_Name
-      value: test (1)
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: ae328155f3e131b4896d001ad23b0ffe, type: 3}
 --- !u!1 &858065834
 GameObject:
   m_ObjectHideFlags: 0
@@ -2934,6 +2877,10 @@ PrefabInstance:
     serializedVersion: 3
     m_TransformParent: {fileID: 0}
     m_Modifications:
+    - target: {fileID: 131058718972427799, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
     - target: {fileID: 646987097149546731, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchorMax.y
       value: 1
@@ -3005,6 +2952,10 @@ PrefabInstance:
     - target: {fileID: 1068608871404033776, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchoredPosition.y
       value: -108.401794
+      objectReference: {fileID: 0}
+    - target: {fileID: 1123963406602270753, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 1350762034092510161, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchorMax.y
@@ -3357,6 +3308,14 @@ PrefabInstance:
     - target: {fileID: 5349221289475525573, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_IsActive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5489003397294855062, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_Enabled
+      value: 1
+      objectReference: {fileID: 0}
+    - target: {fileID: 5569492083747079446, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
+      propertyPath: m_Enabled
+      value: 1
       objectReference: {fileID: 0}
     - target: {fileID: 5808034185328632309, guid: 65f506a04a2b1a6438f82d434b740788, type: 3}
       propertyPath: m_AnchorMax.y
@@ -42147,4 +42106,4 @@ SceneRoots:
   - {fileID: 715050737}
   - {fileID: 103528938}
   - {fileID: 543450653387289832}
-  - {fileID: 843846648}
+  - {fileID: 1889923529}
