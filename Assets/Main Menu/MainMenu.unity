@@ -34,9 +34,9 @@ RenderSettings:
   m_SpotCookie: {fileID: 10001, guid: 0000000000000000e000000000000000, type: 0}
   m_DefaultReflectionMode: 0
   m_DefaultReflectionResolution: 128
-  m_ReflectionBounces: 1
-  m_ReflectionIntensity: 1
-  m_CustomReflection: {fileID: -8983481469407286989, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
+  m_ReflectionBounces: 0
+  m_ReflectionIntensity: 0
+ 
   m_Sun: {fileID: 0}
   m_UseRadianceAmbientProbe: 0
 --- !u!157 &3
