@@ -14,7 +14,7 @@ public class ObjectiveManager : EventListener
 
     public event Action<Objective> OnObjectiveCompleted;
     public event Action<Objective> OnObjectiveAdded;
-
+    
     void Awake()
     {
         if (instance != null && instance != this)

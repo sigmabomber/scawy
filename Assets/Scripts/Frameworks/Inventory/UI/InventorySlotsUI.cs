@@ -7,7 +7,7 @@ using UnityEngine.UI;
 using System.Linq;
 using Doody.InventoryFramework;
 using Doody.GameEvents;
-using System.Runtime.CompilerServices;
+using UnityEngine.InputSystem;
 
 public class InventorySlotsUI : EventListener,
     IBeginDragHandler,
@@ -34,6 +34,17 @@ public class InventorySlotsUI : EventListener,
     // Managers
     private static DragHandlerManager _dragManager;
 
+    [Header("Controller Support")]
+    public Image selectionBorder;
+    public Color selectedColor = new Color(1f, 1f, 0.5f, 0.3f);
+    public Color normalColor = new Color(0f, 0f, 0f, 0f);
+    private bool isSelected = false;
+
+    [Header("Focus Settings")]
+    public Image focusBorder;
+    private Vector3 originalScale = new Vector3(1, 1, 1);
+    private Color originalBorderColor;
+
     [Header("Equipment")]
     private EquipmentManager equipmentManager;
 
@@ -59,9 +70,15 @@ public class InventorySlotsUI : EventListener,
     private const float doubleClickThreshold = 0.3f;
 
     public bool useItem = false;
-    private bool isEquipped = false;
+    public bool isEquipped = false;
     public InventorySystem inventorySystem;
     public SlotPriority slotPriority;
+
+    // X-button dragging
+    private bool isControllerDragging = false;
+    public static InventorySlotsUI controllerDragSource = null;
+    public static GameObject controllerDragIcon = null;
+    private static InventorySlotsUI currentlyHighlightedForDrop = null;
 
     private void Start()
     {
@@ -82,10 +99,343 @@ public class InventorySlotsUI : EventListener,
 
         equipmentManager = EquipmentManager.Instance;
 
-        
-
         if (PlayerController.Instance != null)
             playerTransform = PlayerController.Instance.transform;
+
+        // Initialize selection border
+        if (selectionBorder != null)
+        {
+            selectionBorder.color = normalColor;
+        }
+
+        // Store original values for focus
+        if (focusBorder != null)
+        {
+            originalBorderColor = focusBorder.color;
+            focusBorder.gameObject.SetActive(false);
+        }
+
+        // Add button component if not present (for UI navigation)
+        if (GetComponent<Button>() == null)
+        {
+            var button = gameObject.AddComponent<Button>();
+            button.transition = Selectable.Transition.None;
+            button.onClick.AddListener(OnButtonClick);
+        }
+    }
+
+    private void Update()
+    {
+        // Handle controller dragging if we're the current drag source
+        if (isControllerDragging && controllerDragIcon != null)
+        {
+            UpdateControllerDragPosition();
+
+            // Allow dropping with Y button while dragging
+            if (Gamepad.current != null && Gamepad.current.bButton.wasPressedThisFrame)
+            {
+                EndControllerDrag();
+                DropItemInWorld();
+            }
+        }
+
+        
+    }
+
+    // In InventorySlotsUI.cs, update this method:
+    public void SetControllerFocus(bool focused, Color focusColor, float scaleMultiplier = 1f)
+    {
+        bool usingController = InputDetector.Instance != null && InputDetector.Instance.IsUsingController();
+
+        // IMPORTANT: Allow focus on empty inventory slots when storage is open
+        bool storageOpen = StorageUIManager.Instance != null && StorageUIManager.Instance.IsOpen;
+
+        // If not dragging and slot is empty, don't allow focus when using controller
+        // UNLESS we're in storage mode (then we want to navigate to empty inventory slots)
+        if (controllerDragSource == null && itemData == null && usingController && focused && !storageOpen)
+        {
+            // Skip empty slots when not in storage
+            return;
+        }
+
+        if (focusBorder != null && usingController)
+        {
+            focusBorder.gameObject.SetActive(focused);
+            focusBorder.color = focused ? focusColor : originalBorderColor;
+        }
+
+        transform.localScale = focused ? originalScale * scaleMultiplier : originalScale;
+
+        // Also update selection border for compatibility
+        if (selectionBorder != null)
+        {
+            selectionBorder.color = focused ? selectedColor : normalColor;
+        }
+
+        isSelected = focused;
+
+        // Highlight for drop if we're controller dragging
+        if (controllerDragSource != null && controllerDragSource != this && focused)
+        {
+            // Check if we can drop on this slot
+            bool canDropHere = CanDropOnSlot(this);
+            if (canDropHere)
+            {
+                currentlyHighlightedForDrop = this;
+                HighlightForDrop(true);
+            }
+        }
+        else if (!focused && currentlyHighlightedForDrop == this)
+        {
+            HighlightForDrop(false);
+            currentlyHighlightedForDrop = null;
+        }
+    }
+    public void SetControllerFocus(bool focused)
+    {
+        SetControllerFocus(focused, Color.yellow, 1.05f);
+    }
+
+    private void HighlightForDrop(bool highlight)
+    {
+        if (focusBorder != null)
+        {
+            if (highlight)
+            {
+                // Green for valid drop, yellow for empty slot (with same priority)
+                bool isSamePriority = controllerDragSource != null &&
+                    controllerDragSource.slotPriority == this.slotPriority;
+                focusBorder.color = itemData != null ?
+                    (isSamePriority ? Color.green : Color.red) :
+                    (isSamePriority ? Color.yellow : Color.red);
+            }
+            else
+            {
+                focusBorder.color = originalBorderColor;
+            }
+            focusBorder.gameObject.SetActive(highlight || isSelected);
+        }
+    }
+
+    private bool CanDropOnSlot(InventorySlotsUI targetSlot)
+    {
+        if (controllerDragSource == null || targetSlot == null) return false;
+
+        // Check priority: dedicated items can only go in dedicated slots
+        if (controllerDragSource.slotPriority == SlotPriority.Dedicated &&
+            targetSlot.slotPriority != SlotPriority.Dedicated)
+        {
+            return false;
+        }
+
+        // When dragging, can only focus over slots with the same priority
+        if (controllerDragSource.slotPriority != targetSlot.slotPriority)
+        {
+            return false;
+        }
+
+        return true;
+    }
+
+    public void OnControllerSelect()
+    {
+        if (itemData == null) return;
+
+        if (isControllerDragging)
+        {
+            // Cancel drag if A is pressed while already dragging
+            EndControllerDrag();
+            return;
+        }
+
+        if (isEquipped)
+        {
+            OnUnequip();
+        }
+        else
+        {
+            OnEquip();
+        }
+    }
+
+    public void OnControllerTransfer()
+    {
+        // If we're the drag source and user presses X again, try to drop on highlighted slot
+        if (isControllerDragging && controllerDragSource == this)
+        {
+            if (currentlyHighlightedForDrop != null)
+            {
+                CompleteControllerDrag(currentlyHighlightedForDrop);
+            }
+            else
+            {
+                EndControllerDrag();
+            }
+            return;
+        }
+
+        // If another slot is dragging and we press X on this slot, drop here
+        if (controllerDragSource != null && controllerDragSource != this)
+        {
+            CompleteControllerDrag(this);
+            return;
+        }
+
+        // If not dragging, start drag from this slot
+        if (itemData != null && !isControllerDragging)
+        {
+            StartControllerDrag();
+        }
+    }
+
+    public void OnControllerDrop()
+    {
+        if (itemData == null) return;
+
+        // If we're dragging, cancel first
+        if (isControllerDragging)
+        {
+            EndControllerDrag();
+        }
+
+        StartCoroutine(DropItemWithConfirmation());
+    }
+
+    private void StartControllerDrag()
+    {
+        if (itemData == null || isControllerDragging) return;
+
+        isControllerDragging = true;
+        controllerDragSource = this;
+
+        // Create transparent drag icon at the slot's position
+        controllerDragIcon = new GameObject("ControllerDragIcon");
+        controllerDragIcon.transform.SetParent(canvas.transform, false);
+        controllerDragIcon.transform.SetAsLastSibling();
+
+        var img = controllerDragIcon.AddComponent<Image>();
+        img.sprite = icon.sprite;
+        img.color = new Color(1f, 1f, 1f, 0.5f);
+        img.raycastTarget = false;
+
+        var rt = controllerDragIcon.GetComponent<RectTransform>();
+        rt.sizeDelta = icon.rectTransform.sizeDelta;
+
+        // Position at the current slot
+        rt.position = icon.rectTransform.position;
+
+        // Fade out original icon slightly
+        icon.color = isDragging;
+    }
+
+    private void UpdateControllerDragPosition()
+    {
+        if (controllerDragIcon == null) return;
+
+        // Move drag icon
+        Vector2 position;
+
+        if (InputDetector.Instance != null && !InputDetector.Instance.IsUsingController() && Mouse.current != null)
+        {
+            // Use mouse position for keyboard/mouse
+            position = Mouse.current.position.ReadValue();
+            controllerDragIcon.transform.position = position;
+        }
+        else if (Gamepad.current != null)
+        {
+            // Use right stick for controller movement
+            RectTransform rt = controllerDragIcon.GetComponent<RectTransform>();
+            Vector2 stickInput = Gamepad.current.rightStick.ReadValue();
+
+            if (stickInput.magnitude > 0.1f)
+            {
+                Vector2 newPos = rt.anchoredPosition + (stickInput * 500f * Time.deltaTime);
+
+                // Clamp to screen bounds
+                float halfWidth = rt.rect.width / 2;
+                float halfHeight = rt.rect.height / 2;
+                newPos.x = Mathf.Clamp(newPos.x, halfWidth, canvas.pixelRect.width - halfWidth);
+                newPos.y = Mathf.Clamp(newPos.y, halfHeight, canvas.pixelRect.height - halfHeight);
+
+                rt.anchoredPosition = newPos;
+            }
+        }
+    }
+
+    private void CompleteControllerDrag(InventorySlotsUI targetSlot)
+    {
+        if (controllerDragSource == null || targetSlot == null) return;
+
+        // Check if we can drop here
+        if (!CanDropOnSlot(targetSlot))
+        {
+            // Cannot drop - dedicated item on normal slot or different priorities
+            EndControllerDrag();
+            return;
+        }
+
+        // If target is empty, just move the item
+        if (targetSlot.itemData == null)
+        {
+            targetSlot.SetItem(controllerDragSource.itemData, controllerDragSource.quantity,
+                              controllerDragSource.instantiatedPrefab);
+            controllerDragSource.ClearSlot();
+        }
+        else
+        {
+            // Use the existing drag handler to combine or swap
+            if (_dragManager != null)
+            {
+                _dragManager.TryHandleDrag(controllerDragSource, targetSlot);
+            }
+        }
+
+        EndControllerDrag();
+
+        // Refresh the navigation to update slot list
+        if (InventoryNavigation.Instance != null)
+        {
+            InventoryNavigation.Instance.RefreshSlots();
+        }
+    }
+
+    public void EndControllerDrag()
+    {
+        if (controllerDragIcon != null)
+        {
+            Destroy(controllerDragIcon);
+            controllerDragIcon = null;
+        }
+
+        if (controllerDragSource != null)
+        {
+            controllerDragSource.icon.color = Original;
+            controllerDragSource.isControllerDragging = false;
+            controllerDragSource = null;
+        }
+
+        // Clear any drop highlighting
+        if (currentlyHighlightedForDrop != null)
+        {
+            currentlyHighlightedForDrop.HighlightForDrop(false);
+            currentlyHighlightedForDrop = null;
+        }
+
+    }
+
+    private void OnButtonClick()
+    {
+        // Handle button click (for controller navigation)
+        if (InputDetector.Instance != null && InputDetector.Instance.IsUsingController() && itemData != null)
+        {
+            OnControllerSelect();
+        }
+    }
+
+    private IEnumerator DropItemWithConfirmation()
+    {
+        DropItemInWorld();
+        yield return null;
     }
 
     void IInventorySlotUI.SetItem(ItemData itemData, int quantity, GameObject prefab)
@@ -241,7 +591,6 @@ public class InventorySlotsUI : EventListener,
     {
         if (itemData == null || itemData.prefab == null)
         {
-            print("gg");
             return;
         }
 
@@ -255,18 +604,15 @@ public class InventorySlotsUI : EventListener,
         else
         {
             hasUsableLogic = itemData.prefab.GetComponent<IItemUsable>() != null;
-            print(itemData.prefab.name);
         }
 
         if (!hasUsableLogic)
         {
-            print(":(");
             return;
         }
 
         if (equipmentManager == null)
         {
-            print(":(f");
             return;
         }
 
@@ -417,12 +763,18 @@ public class InventorySlotsUI : EventListener,
 
     public void OnPointerClick(PointerEventData eventData)
     {
+        // Skip mouse clicks when using controller (except for dragging which is handled separately)
+        if (InputDetector.Instance != null && InputDetector.Instance.IsUsingController())
+        {
+            return;
+        }
+
         if (itemData == null)
         {
             return;
         }
 
-        // SHIFT+CLICK to transfer to storage (if storage is open)
+        // SHIFT+CLICK to transfer to storage (if storage is open) - KEEP for mouse users
         if (Input.GetKey(KeyCode.LeftShift))
         {
             if (StorageUIManager.Instance != null && StorageUIManager.Instance.IsOpen)
@@ -438,7 +790,6 @@ public class InventorySlotsUI : EventListener,
         {
             if (!useItem)
             {
-                print(":jj");
                 return;
             }
 
@@ -506,11 +857,16 @@ public class InventorySlotsUI : EventListener,
                 return;
             }
         }
-
     }
 
     public void OnBeginDrag(PointerEventData eventData)
     {
+        // Skip mouse dragging when using controller
+        if (InputDetector.Instance != null && InputDetector.Instance.IsUsingController())
+        {
+            return;
+        }
+
         if (itemData == null)
         {
             return;
@@ -532,6 +888,12 @@ public class InventorySlotsUI : EventListener,
 
     public void OnDrag(PointerEventData eventData)
     {
+        // Skip mouse dragging when using controller
+        if (InputDetector.Instance != null && InputDetector.Instance.IsUsingController())
+        {
+            return;
+        }
+
         if (dragIcon == null)
         {
             return;
@@ -542,6 +904,12 @@ public class InventorySlotsUI : EventListener,
 
     public void OnEndDrag(PointerEventData eventData)
     {
+        // Skip mouse dragging when using controller
+        if (InputDetector.Instance != null && InputDetector.Instance.IsUsingController())
+        {
+            return;
+        }
+
         if (dragIcon != null)
         {
             Destroy(dragIcon);
@@ -571,6 +939,16 @@ public class InventorySlotsUI : EventListener,
             {
                 if (targetSlot != this)
                 {
+                    // Check for dedicated item dropping on normal slot
+                    if (this.slotPriority == SlotPriority.Dedicated &&
+                        targetSlot.slotPriority != SlotPriority.Dedicated)
+                    {
+                        // Cannot drop dedicated item on normal slot
+                        Debug.Log("Cannot drop dedicated item on normal slot");
+                        droppedOnInventorySlot = true;
+                        break;
+                    }
+
                     if (_dragManager != null)
                     {
                         _dragManager.TryHandleDrag(this, targetSlot);

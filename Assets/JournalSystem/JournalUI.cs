@@ -31,7 +31,7 @@ public class JournalUI : MonoBehaviour
     [Header("Settings")]
     public GameObject journal;
     [SerializeField] private KeyCode journalKeycode = KeyCode.J;
-    [SerializeField] private string contentTextName = "ContentText"; // Name of the content text object in prefab
+    [SerializeField] private string contentTextName = "ContentText";
 
     private GameObject objectiveOutline;
     private GameObject noteOutline;
@@ -375,6 +375,7 @@ public class JournalUI : MonoBehaviour
         if (ObjectiveManager.Instance == null)
         {
             Debug.LogWarning("ObjectiveManager instance not found!");
+
             UpdatePageNavigation(0);
             return;
         }

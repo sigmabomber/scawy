@@ -1,180 +1,130 @@
-using System.Collections;
-using System.Collections.Generic;
-using TMPro;
 using UnityEngine;
-using UnityEngine.EventSystems;
-using UnityEngine.SceneManagement;
 using UnityEngine.UI;
 
-public class NewGameMenu : MonoBehaviour
+/// <summary>
+/// Handles creating new game saves with overwrite confirmation
+/// </summary>
+public class NewGameMenu : BaseSlotMenu
 {
-    public GameObject slotPrefab;
-    public Transform Container;
-    private TMP_Text slotCount;
-    private TMP_Text lastPlayed;
-    private TMP_Text playTime;
+    [Header("New Game Specific")]
     public GameObject Confirmation;
-    public CanvasGroup fadeInBlack;
 
-    public float duration = 0.5f;
     public static NewGameMenu Instance;
 
     private int pendingSlotNumber = -1;
     private bool waitingForConfirmation = false;
 
-    private void Start()
+    protected override void Start()
     {
+        base.Start();
         Instance = this;
     }
 
-    private void ClearAllSlots()
-    {
-        for (int i = 0; i < Container.childCount; i++)
-        {
-            if (Container.GetChild(i).name == "Return") continue;
-            Destroy(Container.GetChild(i).gameObject);
-        }
-    }
-
-    public void LoadSlots()
-    {
-        ClearAllSlots();
-        CreateAllSlots();
-    }
-
-    private void CreateAllSlots()
+    protected override void CreateAllSlots()
     {
         for (int i = 0; i < SaveEventManager.Instance.maxSlots; i++)
         {
-            var data = SaveEventManager.Instance.GetSaveInfo(i);
             bool hasSave = SaveEventManager.Instance.SaveExists(i);
-            GameObject newSlot = Instantiate(slotPrefab);
-            Transform parent = hasSave ? newSlot.transform.Find("HasSave") : newSlot.transform.Find("NoSave");
-            slotCount = newSlot.transform.Find("SlotCount").GetComponent<TMP_Text>();
+            GameObject newSlot = CreateSlotObject(i, hasSave);
 
+            // Add hover effects for existing saves
             if (hasSave)
             {
-                lastPlayed = parent.Find("LastPlayed").GetComponent<TMP_Text>();
-                playTime = parent.Find("Playtime").GetComponent<TMP_Text>();
-
-                if (playTime == null || lastPlayed == null || slotCount == null)
+                Transform overrideButton = newSlot.transform.Find("HasSave/Override");
+                if (overrideButton != null)
                 {
-                    Debug.LogError("GameObject is missing!");
-                    return;
+                    var hoverEvent = newSlot.GetComponent<ButtonHoverEvent>();
+                    if (hoverEvent != null)
+                    {
+                        hoverEvent.OnHoverEnter.AddListener(() => OnButtonHovered(overrideButton));
+                        hoverEvent.OnHoverExit.AddListener(() => OnButtonHoveredExit(overrideButton));
+                    }
                 }
-
-                lastPlayed.text = SaveEventManager.Instance.GetLastPlayed(i).ToString();
-                playTime.text = SaveEventManager.Instance.GetFormattedPlaytime(i).ToString();
-
-                newSlot.GetComponent<ButtonHoverEvent>().OnHoverEnter.AddListener(() => OnButtonHovered(parent.Find("Override")));
-                newSlot.GetComponent<ButtonHoverEvent>().OnHoverExit.AddListener(() => OnButtonHoveredExit(parent.Find("Override")));
             }
 
-            slotCount.text = $"Slot {i + 1}";
-            newSlot.transform.SetParent(Container, false);
-            newSlot.name = i.ToString();
-
+            // Set button click listener
             int slotIndex = i;
             newSlot.GetComponent<Button>().onClick.AddListener(() => OnButtonClicked(slotIndex, hasSave));
         }
     }
 
+    #region Hover Effects
+
     private void OnButtonHovered(Transform button)
     {
-        StartCoroutine(FadeIn(button.GetComponent<CanvasGroup>()));
-    }
-
-    IEnumerator FadeIn(CanvasGroup canvasGroup)
-    {
-        float t = 0f;
-        while (t < duration)
+        var canvasGroup = button.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
         {
-            t += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(0f, 1f, t / duration);
-            yield return null;
+            StartCoroutine(FadeIn(canvasGroup));
         }
-        canvasGroup.alpha = 1f;
-    }
-
-    IEnumerator FadeOut(CanvasGroup canvasGroup)
-    {
-        float t = 0f;
-        while (t < duration)
-        {
-            t += Time.deltaTime;
-            canvasGroup.alpha = Mathf.Lerp(1f, 0f, t / duration);
-            yield return null;
-        }
-        canvasGroup.alpha = 0f;
     }
 
     private void OnButtonHoveredExit(Transform button)
     {
-        StartCoroutine(FadeOut(button.GetComponent<CanvasGroup>()));
+        var canvasGroup = button.GetComponent<CanvasGroup>();
+        if (canvasGroup != null)
+        {
+            StartCoroutine(FadeOut(canvasGroup));
+        }
     }
 
-    private void OnButtonClicked(int slotNumber, bool hasSave = false)
+    #endregion
+
+    #region Button Actions
+
+    private void OnButtonClicked(int slotNumber, bool hasSave)
     {
         if (hasSave)
         {
-            // Store the slot number and wait for confirmation
+            // Show confirmation dialog for overwrite
             pendingSlotNumber = slotNumber;
             waitingForConfirmation = true;
             Confirmation.SetActive(true);
         }
         else
         {
-            // No save exists, proceed directly with new game
+            // No save exists, proceed directly
             StartNewGame(slotNumber);
         }
     }
 
-    /// <summary>
-    /// Called by the Confirmation script when user confirms overwriting
-    /// </summary>
     public void OnConfirmOverwrite()
     {
         if (waitingForConfirmation && pendingSlotNumber >= 0)
         {
             StartNewGame(pendingSlotNumber);
         }
-
-        // Reset state
-        waitingForConfirmation = false;
-        pendingSlotNumber = -1;
-        Confirmation.SetActive(false);
+        ResetConfirmationState();
     }
 
-    /// <summary>
-    /// Called by the Confirmation script when user cancels
-    /// </summary>
     public void OnCancelOverwrite()
     {
-        // Reset state
+        ResetConfirmationState();
+    }
+
+    private void ResetConfirmationState()
+    {
         waitingForConfirmation = false;
         pendingSlotNumber = -1;
         Confirmation.SetActive(false);
     }
 
-    /// <summary>
-    /// Starts a new game in the specified slot
-    /// </summary>
+    #endregion
+
+    #region Game Start
+
     private void StartNewGame(int slotNumber)
     {
-        
-
-        // Set the selected slot in SaveEventManager
-        SaveEventManager.Instance.selectedSlot = slotNumber;
-
         // Delete existing save if present
         if (SaveEventManager.Instance.SaveExists(slotNumber))
         {
             SaveEventManager.Instance.DeleteSave(slotNumber);
         }
 
-        StartCoroutine(FadeIn(fadeInBlack));
+        // Save to slot and load next scene
         SaveEventManager.Instance.SaveToSlot(slotNumber);
-        int nextLevelIndex = SceneManager.GetActiveScene().buildIndex + 1;
-        SceneManager.LoadScene(nextLevelIndex);
+        StartCoroutine(FadeAndLoadScene(slotNumber, 0f));
     }
+
+    #endregion
 }

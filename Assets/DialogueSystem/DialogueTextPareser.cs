@@ -19,7 +19,6 @@ public class DialogueTextParser
         if (string.IsNullOrEmpty(rawText))
             return new List<TextToken>();
 
-        Debug.Log($"[DialogueTextParser] Starting to parse: '{rawText}'");
         List<TextToken> tokens = new List<TextToken>();
         int i = 0;
 
@@ -78,13 +77,11 @@ public class DialogueTextParser
             tokens.Add(new TextToken { text = rawText });
         }
 
-        Debug.Log($"[DialogueTextParser] Finished parsing. Total tokens: {tokens.Count}");
         return tokens;
     }
 
     private TextToken ParseFlexibleCombinedEffects(string tagContent)
     {
-        Debug.Log($"[ParseFlexibleCombinedEffects] Parsing: '{tagContent}'");
 
         // Initialize token with defaults
         TextToken token = new TextToken
@@ -121,7 +118,6 @@ public class DialogueTextParser
                     string colorStr = tagContent.Substring(pos + 10, closeParen - pos - 10);
                     token.hasHighlight = true;
                     token.highlightColor = ParseColor(colorStr);
-                    Debug.Log($"[ParseFlexibleCombinedEffects] Applied highlight: '{colorStr}'");
                     pos = closeParen + 1;
                 }
                 else
@@ -143,7 +139,6 @@ public class DialogueTextParser
                     if (shakeParams.Length >= 2)
                         float.TryParse(shakeParams[1].Trim(), out token.shakeSpeed);
 
-                    Debug.Log($"[ParseFlexibleCombinedEffects] Applied shake: intensity={token.shakeIntensity}, speed={token.shakeSpeed}");
                     pos = closeParen + 1;
                 }
                 else
@@ -159,7 +154,6 @@ public class DialogueTextParser
                 {
                     string delayStr = tagContent.Substring(pos + 6, closeParen - pos - 6);
                     float.TryParse(delayStr.Trim(), out token.delayBefore);
-                    Debug.Log($"[ParseFlexibleCombinedEffects] Applied delay: {token.delayBefore}");
                     pos = closeParen + 1;
                 }
                 else
@@ -198,7 +192,6 @@ public class DialogueTextParser
             return null;
         }
 
-        Debug.Log($"[ParseFlexibleCombinedEffects] Successfully parsed: text='{token.text}', highlight={token.hasHighlight}, shake={token.shakeIntensity}, delay={token.delayBefore}");
         return token;
     }
 

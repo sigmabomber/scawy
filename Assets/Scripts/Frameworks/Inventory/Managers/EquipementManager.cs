@@ -23,6 +23,10 @@ public class EquipmentManager : MonoBehaviour
     [SerializeField] private float effectIntensityX = 0.01f;
     [SerializeField] private float effectSpeed = 10f;
 
+    [Header("Velocity Bobbing")]
+   
+    [SerializeField] private float maxVelocityForBob = 6f;
+
     private Vector3 originalEquipPointPosition;
     private float sinTime;
     private Vector3 lastPlayerPosition;
@@ -144,19 +148,28 @@ public class EquipmentManager : MonoBehaviour
 
     private void ApplyWeaponBobbing()
     {
-        sinTime += Time.deltaTime * effectSpeed;
+        // Normalize velocity (0–1)
+        float normalizedVelocity = Mathf.Clamp01(playerVelocity / maxVelocityForBob);
 
-        float bobX = Mathf.Sin(sinTime) * effectIntensityX;
-        float bobY = Mathf.Abs(Mathf.Cos(sinTime)) * effectIntensity;
+        // Scale speed & intensity by velocity
+        float dynamicSpeed = effectSpeed * (0.5f + normalizedVelocity);
+        float dynamicIntensityY = effectIntensity * normalizedVelocity;
+        float dynamicIntensityX = effectIntensityX * normalizedVelocity;
+
+        sinTime += Time.deltaTime * dynamicSpeed;
+
+        float bobX = Mathf.Sin(sinTime) * dynamicIntensityX;
+        float bobY = Mathf.Abs(Mathf.Cos(sinTime)) * dynamicIntensityY;
 
         Vector3 bobOffset = new Vector3(bobX, bobY, 0);
 
         equipPoint.localPosition = Vector3.Lerp(
             equipPoint.localPosition,
             originalEquipPointPosition + bobOffset,
-            Time.deltaTime * 6f
+            Time.deltaTime * 8f
         );
     }
+
 
     public void EquipItem(IEquippable item)
     {

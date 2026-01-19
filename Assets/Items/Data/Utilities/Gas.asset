@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b39908ce67552d408e92066e48d59a6, type: 3}
   m_Name: Gas
   m_EditorClassIdentifier: 
-  icon: {fileID: 0}
+  icon: {fileID: 21300000, guid: 8ce458f620dd68048a9033f6f6bb7153, type: 3}
   itemName: Gas can
   maxStack: 0
   prefab: {fileID: 9050727030060375522, guid: 9f22a981cc6a0344c99eb927b3b61f03, type: 3}

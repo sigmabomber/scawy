@@ -14,11 +14,14 @@ public class DialogueInventoryIntegration : MonoBehaviour
     [Header("Debug")]
     public bool logFlagChanges = true;
 
+    public bool dontDestroyOnLoad = true;
+
     void Awake()
     {
         if (Instance == null)
         {
             Instance = this;
+            if(dontDestroyOnLoad)
             DontDestroyOnLoad(gameObject);
         }
         else

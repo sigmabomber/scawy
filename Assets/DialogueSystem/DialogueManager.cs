@@ -14,12 +14,13 @@ namespace Doody.Framework.DialogueSystem
 
         // Track player's choices
         private HashSet<string> activeFlags = new HashSet<string>();
-
+        public bool dontDestroyOnLoad = true;
         void Awake()
         {
             if (Instance == null)
             {
                 Instance = this;
+                if(dontDestroyOnLoad)
                 DontDestroyOnLoad(gameObject);
             }
             else

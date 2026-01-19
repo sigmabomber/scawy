@@ -98,7 +98,7 @@ public class ItemPickupInteractable : MonoBehaviour, IInteractable
         if (!string.IsNullOrEmpty(customPrompt))
             return customPrompt;
 
-        return $"Pick up {itemData.itemName} \n[E]";
+        return $"{itemData.itemName}";
     }
 
     public Sprite GetInteractionIcon()

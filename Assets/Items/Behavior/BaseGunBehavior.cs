@@ -2,6 +2,7 @@ using System.Collections;
 using UnityEngine;
 using TMPro;
 using UnityEngine.EventSystems;
+using UnityEngine.InputSystem;
 
 
 public abstract class BaseGunBehavior : InputScript, IItemUsable
@@ -208,22 +209,44 @@ public abstract class BaseGunBehavior : InputScript, IItemUsable
     {
         if (isInspecting) return;
 
-        if (Input.GetKey(aimKey) && !isReloading)
+        if (!isReloading)
         {
-            isAiming = true;
-            if (aimReticle != null)
-                aimReticle.gameObject.SetActive(true);
+            bool controllerHeld = Gamepad.current != null && Gamepad.current.leftTrigger.isPressed;
+            bool keyHeld = Input.GetKey(aimKey);
 
-            if (PlayerController.Instance != null)
+            if (keyHeld || controllerHeld)
             {
-                PlayerController.Instance.walkSpeed = 2f;
-                PlayerController.Instance.canSprint = false;
-                PlayerController.Instance.mouseSensitivity = .5f;
+                isAiming = true;
+
+                if (aimReticle != null)
+                    aimReticle.gameObject.SetActive(true);
+
+                if (PlayerController.Instance != null)
+                {
+                    PlayerController.Instance.walkSpeed = 2f;
+                    PlayerController.Instance.canSprint = false;
+                    PlayerController.Instance.mouseSensitivity = 0.5f;
+                }
+            }
+            else
+            {
+                isAiming = false;
+
+                if (aimReticle != null)
+                    aimReticle.gameObject.SetActive(false);
+
+                if (PlayerController.Instance != null)
+                {
+                    PlayerController.Instance.walkSpeed = 5f;
+                    PlayerController.Instance.mouseSensitivity = 2f;
+                    PlayerController.Instance.canSprint = true;
+                }
             }
         }
         else
         {
             isAiming = false;
+
             if (aimReticle != null)
                 aimReticle.gameObject.SetActive(false);
 
@@ -239,10 +262,22 @@ public abstract class BaseGunBehavior : InputScript, IItemUsable
     protected virtual void HandleReloadInput()
     {
         if (isInspecting || isReloading || isShooting) return;
+        bool controllerHeld = false;
+        bool controllerReleased = false;
 
-        if (Input.GetKey(KeyCode.R))
+        if (Gamepad.current != null)
+        {
+            controllerHeld = Gamepad.current.xButton.isPressed;
+            controllerReleased = Gamepad.current.xButton.wasReleasedThisFrame; 
+        }
+
+        bool keyHeld = Input.GetKey(KeyCode.R);
+        bool keyReleased = Input.GetKeyUp(KeyCode.R);
+
+        if (keyHeld || controllerHeld)
         {
             currentTimer += Time.deltaTime;
+
             if (currentTimer >= holdUntilInspect)
             {
                 StartInspect();
@@ -250,30 +285,41 @@ public abstract class BaseGunBehavior : InputScript, IItemUsable
             }
         }
 
-        if (Input.GetKeyUp(KeyCode.R))
+        if (keyReleased || controllerReleased)
         {
             if (currentTimer < holdUntilInspect)
+            {
                 TryStartReload();
+            }
             currentTimer = 0f;
         }
+
     }
 
     protected virtual void HandleShootInput()
     {
         if (isInspecting) return;
+        var gamepadPressed = false;
 
-        if (Input.GetMouseButtonDown(0) && !isShooting)
+        if (Gamepad.current != null)
         {
-            if (EventSystem.current.IsPointerOverGameObject())
-                return;
-
-            if (isReloading && gunData.canCancelReload)
+            gamepadPressed = Gamepad.current.rightTrigger.wasPressedThisFrame; 
+        }
+        if (!isShooting)
+        {
+            if(Input.GetMouseButtonDown(0) || gamepadPressed)
             {
-                isCancelReloading = true;
-                return;
-            }
+                if (EventSystem.current.IsPointerOverGameObject())
+                    return;
 
-            TryShoot();
+                if (isReloading && gunData.canCancelReload)
+                {
+                    isCancelReloading = true;
+                    return;
+                }
+
+                TryShoot();
+            }
         }
     }
     #endregion

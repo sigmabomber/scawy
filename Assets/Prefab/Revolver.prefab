@@ -1001,7 +1001,7 @@ GameObject:
   - component: {fileID: 6012801315995909221}
   - component: {fileID: 6559316693928649088}
   m_Layer: 7
-  m_Name: Text (TMP)
+  m_Name: Ammo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -1054,9 +1054,7 @@ MonoBehaviour:
   m_OnCullStateChanged:
     m_PersistentCalls:
       m_Calls: []
-  m_text: '6
-
-'
+  m_text: 6
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: ff08f1a9656b1304799112276b7b519f, type: 2}
   m_sharedMaterial: {fileID: 2181413351908578262, guid: ff08f1a9656b1304799112276b7b519f, type: 2}

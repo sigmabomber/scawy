@@ -211,7 +211,13 @@ public class StorageContainer : MonoBehaviour, IInteractable
             ClearSlot(i);
         }
     }
+    public void ForceSlotUpdate(int index)
+    {
+        if (index < 0 || index >= storedItems.Count) return;
 
+        var slotData = storedItems[index];
+        Events.Publish(new StorageSlotChangedEvent(storageId, index, slotData.itemData, slotData.quantity));
+    }
     /// <summary>
     /// Get the number of occupied slots
     /// </summary>

@@ -19,7 +19,7 @@ public class InventorySaveHandler : MonoBehaviour
         inventorySystem = FindAnyObjectByType<InventorySystem>();
         if (inventorySystem == null)
         {
-            Debug.LogError("❌ InventorySaveHandler requires InventorySystem component!");
+            Debug.LogError("InventorySaveHandler requires InventorySystem component!");
             return;
         }
 
@@ -27,7 +27,7 @@ public class InventorySaveHandler : MonoBehaviour
         Events.Subscribe<SaveDataRequestEvent>(OnSaveRequested, this);
         Events.Subscribe<LoadDataEvent>(OnLoadRequested, this);
 
-        if (debugMode) Debug.Log($"✅ InventorySaveHandler ready: {systemName}");
+        if (debugMode) Debug.Log($"InventorySaveHandler ready: {systemName}");
     }
 
     void OnDestroy()
@@ -38,7 +38,7 @@ public class InventorySaveHandler : MonoBehaviour
 
     private void OnSaveRequested(SaveDataRequestEvent saveEvent)
     {
-        if (debugMode) Debug.Log($"📤 Inventory saving requested for slot {saveEvent.saveSlot}");
+        if (debugMode) Debug.Log($"Inventory saving requested for slot {saveEvent.saveSlot}");
 
         // Get save data from inventory system
         InventorySaveData saveData = GetInventorySaveData();
@@ -55,12 +55,12 @@ public class InventorySaveHandler : MonoBehaviour
             responseTime = System.DateTime.Now
         });
 
-        if (debugMode) Debug.Log($"📨 Sent inventory save data: {saveData.normalSlots.Count} normal + {saveData.dedicatedSlots.Count} dedicated slots");
+        if (debugMode) Debug.Log($"Sent inventory save data: {saveData.normalSlots.Count} normal + {saveData.dedicatedSlots.Count} dedicated slots");
     }
 
     private void OnLoadRequested(LoadDataEvent loadEvent)
     {
-        if (debugMode) Debug.Log($"📥 Inventory loading requested for slot {loadEvent.saveSlot}");
+        if (debugMode) Debug.Log($"Inventory loading requested for slot {loadEvent.saveSlot}");
 
         // Check if our system data exists in the save
         if (loadEvent.systemData != null && loadEvent.systemData.ContainsKey(systemName))
@@ -75,7 +75,7 @@ public class InventorySaveHandler : MonoBehaviour
                 // Load the inventory data
                 LoadInventoryFromSave(saveData);
 
-                if (debugMode) Debug.Log($"✅ Inventory loaded: {saveData.normalSlots.Count + saveData.dedicatedSlots.Count} slots");
+                if (debugMode) Debug.Log($"Inventory loaded: {saveData.normalSlots.Count + saveData.dedicatedSlots.Count} slots");
             }
         }
     }

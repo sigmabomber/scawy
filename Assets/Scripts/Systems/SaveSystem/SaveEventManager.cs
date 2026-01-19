@@ -28,8 +28,8 @@ public class SaveEventManager : MonoBehaviour
     private readonly string tempExtension = ".temp";
     private readonly string corruptExtension = ".corrupt";
 
-    private bool isSaving = false;
-    private bool isLoading = false;
+    public bool isSaving = false;
+    public bool isLoading = false;
     private bool isShuttingDown = false;
     private string saveDirectory;
     private string fallbackSaveDirectory;
@@ -200,6 +200,93 @@ public class SaveEventManager : MonoBehaviour
         {
             Debug.LogError($"[SaveSystem] Failed to start save: {e.Message}");
             isSaving = false;
+        }
+    }
+    public bool? GetGameProgressBool(int slotNumber, string key)
+    {
+        try
+        {
+            if (!SaveExists(slotNumber))
+            {
+                Debug.Log($"[SaveSystem] Slot {slotNumber} does not exist");
+                return null;
+            }
+
+            string filePath = GetFilePath(slotNumber);
+            string primaryPath = File.Exists(filePath) ? filePath : filePath + backupExtension;
+
+            if (!File.Exists(primaryPath))
+            {
+                Debug.Log($"[SaveSystem] File does not exist: {primaryPath}");
+                return null;
+            }
+
+            // Read and decrypt
+            string encrypted = File.ReadAllText(primaryPath, Encoding.UTF8);
+            Debug.Log($"[SaveSystem] Encrypted length: {encrypted.Length}");
+
+            string json = SimpleDecrypt(encrypted);
+            Debug.Log($"[SaveSystem] Decrypted JSON length: {json.Length}");
+
+            var package = JsonUtility.FromJson<SavePackage>(json);
+
+            if (package == null)
+            {
+                Debug.LogWarning("[SaveSystem] Failed to parse save package");
+                return null;
+            }
+
+            Debug.Log($"[SaveSystem] Package parsed, getting system data...");
+            var systemData = package.GetSystemData();
+
+            Debug.Log($"[SaveSystem] System data count: {systemData.Count}");
+            foreach (var systemKey in systemData.Keys)
+            {
+                Debug.Log($"[SaveSystem] System: {systemKey}");
+            }
+
+            if (!systemData.ContainsKey("GameProgress"))
+            {
+                Debug.LogWarning("[SaveSystem] No GameProgress data in save");
+                return null;
+            }
+
+            // Parse GameProgress data
+            string gameProgressJson = systemData["GameProgress"];
+            Debug.Log($"[SaveSystem] GameProgress JSON: {gameProgressJson}");
+
+            var progressData = JsonUtility.FromJson<GameProgressSaveData>(gameProgressJson);
+
+            if (progressData == null)
+            {
+                Debug.LogWarning("[SaveSystem] Failed to parse GameProgressSaveData");
+                return null;
+            }
+
+            // Now search through the parallel arrays
+            Debug.Log($"[SaveSystem] BoolKeys count: {progressData.boolKeys?.Length ?? 0}");
+
+            if (progressData.boolKeys != null && progressData.boolValues != null)
+            {
+                for (int i = 0; i < progressData.boolKeys.Length; i++)
+                {
+                    Debug.Log($"[SaveSystem] Bool: {progressData.boolKeys[i]} = {progressData.boolValues[i]}");
+
+                    if (progressData.boolKeys[i] == key)
+                    {
+                        Debug.Log($"[SaveSystem] Found {key} = {progressData.boolValues[i]}");
+                        return progressData.boolValues[i];
+                    }
+                }
+            }
+
+            Debug.LogWarning($"[SaveSystem] Key '{key}' not found in boolValues");
+            return null;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SaveSystem] GetGameProgressBool error: {e.Message}\n{e.StackTrace}");
+            return null;
         }
     }
 
@@ -1193,6 +1280,176 @@ public class SaveEventManager : MonoBehaviour
         return info;
     }
 
+    /// <summary>
+    /// Gets a specific variable from a save slot without loading the entire save.
+    /// </summary>
+    /// <param name="slotNumber">The save slot to read from</param>
+    /// <param name="systemName">The name of the system that saved the data</param>
+    /// <param name="variableName">The name of the variable to retrieve</param>
+    /// <returns>The variable value as a string, or null if not found</returns>
+    public string GetSpecificVariable(int slotNumber, string systemName, string variableName)
+    {
+        try
+        {
+            if (!SaveExists(slotNumber))
+            {
+                if (debugMode) Debug.LogWarning($"[SaveSystem] Slot {slotNumber} does not exist");
+                return null;
+            }
+
+            string filePath = GetFilePath(slotNumber);
+            string primaryPath = File.Exists(filePath) ? filePath : filePath + backupExtension;
+
+            if (!File.Exists(primaryPath))
+            {
+                return null;
+            }
+
+            // Read and decrypt the save file
+            string encrypted = File.ReadAllText(primaryPath, Encoding.UTF8);
+            string json = SimpleDecrypt(encrypted);
+            var package = JsonUtility.FromJson<SavePackage>(json);
+
+            if (package == null)
+            {
+                Debug.LogWarning($"[SaveSystem] Failed to parse save package from slot {slotNumber}");
+                return null;
+            }
+
+            // Get the system data dictionary
+            var systemData = package.GetSystemData();
+
+            if (!systemData.ContainsKey(systemName))
+            {
+                if (debugMode) Debug.LogWarning($"[SaveSystem] System '{systemName}' not found in slot {slotNumber}");
+                return null;
+            }
+
+            // Parse the system's JSON data to find the specific variable
+            string systemJson = systemData[systemName];
+
+            // Simple JSON parsing - looks for "variableName":"value" or "variableName":value
+            string searchPattern = $"\"{variableName}\"";
+            int varIndex = systemJson.IndexOf(searchPattern);
+
+            if (varIndex == -1)
+            {
+                if (debugMode) Debug.LogWarning($"[SaveSystem] Variable '{variableName}' not found in system '{systemName}'");
+                return null;
+            }
+
+            // Find the value after the variable name
+            int colonIndex = systemJson.IndexOf(':', varIndex);
+            if (colonIndex == -1) return null;
+
+            // Skip whitespace after colon
+            int valueStart = colonIndex + 1;
+            while (valueStart < systemJson.Length && char.IsWhiteSpace(systemJson[valueStart]))
+            {
+                valueStart++;
+            }
+
+            if (valueStart >= systemJson.Length) return null;
+
+            // Determine if it's a string value (starts with quote) or other type
+            char firstChar = systemJson[valueStart];
+            int valueEnd;
+            string value;
+
+            if (firstChar == '"')
+            {
+                // String value - find closing quote
+                valueEnd = systemJson.IndexOf('"', valueStart + 1);
+                if (valueEnd == -1) return null;
+                value = systemJson.Substring(valueStart + 1, valueEnd - valueStart - 1);
+            }
+            else if (firstChar == '{')
+            {
+                // Object value - find matching closing brace
+                int braceCount = 1;
+                valueEnd = valueStart + 1;
+                while (valueEnd < systemJson.Length && braceCount > 0)
+                {
+                    if (systemJson[valueEnd] == '{') braceCount++;
+                    else if (systemJson[valueEnd] == '}') braceCount--;
+                    valueEnd++;
+                }
+                value = systemJson.Substring(valueStart, valueEnd - valueStart);
+            }
+            else if (firstChar == '[')
+            {
+                // Array value - find matching closing bracket
+                int bracketCount = 1;
+                valueEnd = valueStart + 1;
+                while (valueEnd < systemJson.Length && bracketCount > 0)
+                {
+                    if (systemJson[valueEnd] == '[') bracketCount++;
+                    else if (systemJson[valueEnd] == ']') bracketCount--;
+                    valueEnd++;
+                }
+                value = systemJson.Substring(valueStart, valueEnd - valueStart);
+            }
+            else
+            {
+                // Primitive value (number, bool, null) - find comma or closing brace
+                valueEnd = valueStart;
+                while (valueEnd < systemJson.Length &&
+                       systemJson[valueEnd] != ',' &&
+                       systemJson[valueEnd] != '}' &&
+                       systemJson[valueEnd] != ']')
+                {
+                    valueEnd++;
+                }
+                value = systemJson.Substring(valueStart, valueEnd - valueStart).Trim();
+            }
+
+            return value;
+        }
+        catch (Exception e)
+        {
+            Debug.LogError($"[SaveSystem] GetSpecificVariable error: {e.Message}");
+            return null;
+        }
+    }
+
+    /// <summary>
+    /// Gets a specific variable and attempts to parse it as an integer.
+    /// </summary>
+    public int? GetSpecificVariableInt(int slotNumber, string systemName, string variableName)
+    {
+        string value = GetSpecificVariable(slotNumber, systemName, variableName);
+        if (value != null && int.TryParse(value, out int result))
+        {
+            return result;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets a specific variable and attempts to parse it as a float.
+    /// </summary>
+    public float? GetSpecificVariableFloat(int slotNumber, string systemName, string variableName)
+    {
+        string value = GetSpecificVariable(slotNumber, systemName, variableName);
+        if (value != null && float.TryParse(value, out float result))
+        {
+            return result;
+        }
+        return null;
+    }
+
+    /// <summary>
+    /// Gets a specific variable and attempts to parse it as a boolean.
+    /// </summary>
+    public bool? GetSpecificVariableBool(int slotNumber, string systemName, string variableName)
+    {
+        string value = GetSpecificVariable(slotNumber, systemName, variableName);
+        if (value != null && bool.TryParse(value, out bool result))
+        {
+            return result;
+        }
+        return null;
+    }
     public void DeleteSave(int slotNumber)
     {
         try

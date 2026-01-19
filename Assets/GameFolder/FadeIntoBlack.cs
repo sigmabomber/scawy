@@ -38,16 +38,24 @@ public class FadeIntoBlack : MonoBehaviour, IDialogueCustomAction
         }
         canvasGroup.alpha = 1f;
 
-        yield return new WaitForSeconds(1f);
+        GameProgressTracker.Instance?.SetBool("HasSeenIntro", true);
+
+        // Start the save and wait for it to complete
+        SaveEventManager.Instance.SaveToSlot(SaveEventManager.Instance.selectedSlot);
+
+        // Wait for the save operation to finish
+        while (SaveEventManager.Instance.isSaving)
+        {
+            yield return null;
+        }
+
+        // Small buffer
+        yield return new WaitForSeconds(0.2f);
+
+        // Now it's safe to change scenes
         int nextLevelIndex = SceneManager.GetActiveScene().buildIndex + 1;
         SceneManager.LoadScene(nextLevelIndex);
-        foreach (GameObject obj in Object.FindObjectsOfType<GameObject>())
-        {
-            if (obj.transform.parent == null)
-            {
-                Object.Destroy(obj);
-            }
-        }
+
 
     }
 }
