@@ -41,7 +41,7 @@ public class GeneratorSystem : EventListener, IInteractable
             InputScript.InputEnabled = false;
             animator.SetTrigger(StartFillingUpHash);
             interact = false;
-            source.Play();
+            source?.Play();
 
         }
         else
@@ -53,10 +53,10 @@ public class GeneratorSystem : EventListener, IInteractable
     public void InteractionComplete()
     {
         InputScript.InputEnabled = true;
-        source.Stop();
+        source?.Stop();
 
-        one.SetActive(false);
-        two.SetActive(true);
+        one?.SetActive(false);
+        two?.SetActive(true);
     }
     public bool CanInteract()
     {

@@ -212,8 +212,7 @@ public class NoteManager : EventListener
 
     public void LoadNotes()
     {
-        // Implement your load system here
-        Debug.Log("Loading notes");
+       
     }
 
     protected override void OnDestroy()
