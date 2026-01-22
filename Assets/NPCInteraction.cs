@@ -23,7 +23,7 @@ public class NPCInteraction : EventListener, IInteractable
 
     public bool CanInteract()
     {
-        return !isTalking;
+        return !isTalking && npcDialogues.Length > 0;
     }
 
     public Sprite GetInteractionIcon()
