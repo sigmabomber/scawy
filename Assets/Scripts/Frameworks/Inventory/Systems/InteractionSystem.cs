@@ -26,7 +26,7 @@ public class InteractionSystem : InputScript
 
     [Header("Optimization")]
     [SerializeField] private int raycastsPerSecond = 30;
-    [SerializeField] private int uiUpdatePerSecond = 10; 
+    [SerializeField] private int uiUpdatePerSecond = 10;
 
 
 
@@ -49,7 +49,7 @@ public class InteractionSystem : InputScript
     private float lastRaycastTime;
     private float lastUIUpdateTime;
     private bool hasValidTarget;
-    private bool isCurrentInteractableValid; 
+    private bool isCurrentInteractableValid;
 
     private Ray reusableRay;
     private readonly Vector3 viewportCenter = new(0.5f, 0.5f, 0);
@@ -58,7 +58,10 @@ public class InteractionSystem : InputScript
     private string cachedPrompt = "";
     private Sprite cachedIcon = null;
     private float lastInteractableCheckTime = 0f;
-    private float interactableCheckInterval = 0.2f; 
+    private float interactableCheckInterval = 0.2f;
+
+    // NEW: Single update flag
+    private bool hasUpdatedUIForCurrentTarget = false;
 
     public static InteractionSystem Instance;
 
@@ -91,13 +94,6 @@ public class InteractionSystem : InputScript
         {
             lastRaycastTime = Time.time;
             CheckForInteractable();
-        }
-
-        // Update UI more frequently than raycasts
-        if (Time.time - lastUIUpdateTime >= uiUpdateInterval)
-        {
-            lastUIUpdateTime = Time.time;
-            UpdateCurrentInteractableUI();
         }
 
         if (currentInteractable == null)
@@ -199,7 +195,12 @@ public class InteractionSystem : InputScript
         isCurrentInteractableValid = true;
         lastInteractableCheckTime = Time.time;
 
-        UpdateUIForInteractable(interactable);
+        // Only update UI once when we first look at this interactable
+        if (!hasUpdatedUIForCurrentTarget)
+        {
+            UpdateUIForInteractable(interactable);
+            hasUpdatedUIForCurrentTarget = true;
+        }
 
         if (currentHighlightedObject != hitObject)
         {
@@ -213,6 +214,7 @@ public class InteractionSystem : InputScript
         currentInteractable = null;
         isCurrentInteractableValid = false;
         currentHighlightedObject = null;
+        hasUpdatedUIForCurrentTarget = false; // Reset the flag when clearing
         HideUI();
         DisableCurrentOutline();
     }
@@ -221,8 +223,12 @@ public class InteractionSystem : InputScript
     {
         if (currentInteractable == null || isShowingFeedback) return;
 
-        // Update UI even if we're still looking at the same object
-        UpdateUIForInteractable(currentInteractable);
+        // Only update if we haven't already updated for this target
+        if (!hasUpdatedUIForCurrentTarget)
+        {
+            UpdateUIForInteractable(currentInteractable);
+            hasUpdatedUIForCurrentTarget = true;
+        }
     }
 
     private void UpdateUIForInteractable(IInteractable interactable)
