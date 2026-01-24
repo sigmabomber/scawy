@@ -1,59 +1,105 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Collections.Generic;
+﻿using System.Collections;
+using UnityEngine;
+using UnityEngine.Events;
 
-public class RotaryLockController : MonoBehaviour, IInteractable
+public class PadlockSystem : MonoBehaviour, IInteractable
 {
-    [Header("Lock Combination")]
-    [SerializeField]
-    private DirectionalCombination[] correctCombinations = new DirectionalCombination[]
+    [System.Serializable]
+    public class NumberRotation
     {
-        new DirectionalCombination(7, Direction.Left),
-        new DirectionalCombination(18, Direction.Right),
-        new DirectionalCombination(32, Direction.Left)
-    };
+        public int number;
+        public float rotationDegrees;
+    }
 
-    [Header("Lock Settings")]
-    [SerializeField] private float snapAngle = 9f;
-    [SerializeField] private Transform dialTransform;
+    [System.Serializable]
+    public class CombinationStep
+    {
+        public int number;
+        public RotationDirection requiredDirection;
+    }
 
-    [Header("Audio")]
-    [SerializeField] private AudioSource audioSource;
-    [SerializeField] private AudioClip dialRotateSound;
-    [SerializeField] private AudioClip snapSound;
-    [SerializeField] private AudioClip enterSound;
-    [SerializeField] private AudioClip wrongSound;
-    [SerializeField] private AudioClip unlockSound;
+    public enum RotationDirection
+    {
+        Left,   // Counter-clockwise (A key / Left Arrow)
+        Right   // Clockwise (D key / Right Arrow)
+    }
+
+    [Header("Model References")]
+    [Tooltip("The knob/dial that rotates")]
+    [SerializeField] private Transform knobTransform;
+
+    [Tooltip("Optional: The main lock body for unlock animation")]
+    [SerializeField] private Transform lockBodyTransform;
 
     [Header("Interaction")]
-    [SerializeField] private string interactionPrompt = "Examine Lock";
+    [SerializeField] private string interactionPrompt = "Examine Padlock";
     [SerializeField] private Sprite interactionIcon;
-    [SerializeField] private Transform cameraInteractPosition; // Empty GameObject positioned for lock view
+    [SerializeField] private Transform cameraInteractPosition;
     [SerializeField] private float cameraTransitionDuration = 0.8f;
     [SerializeField] private AnimationCurve cameraTransitionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
-    [SerializeField] private float crouchTilt = 15f; // Camera tilt angle to simulate crouching
+    [SerializeField] private float crouchTilt = 15f;
 
-    [Header("Return to Zero")]
-    [SerializeField] private float returnSpeed = 180f;
-    [SerializeField] private AnimationCurve returnCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [Header("Combination Settings")]
+    [Tooltip("The correct combination with required rotation directions")]
+    [SerializeField]
+    private CombinationStep[] combination = new CombinationStep[]
+    {
+        new CombinationStep { number = 15, requiredDirection = RotationDirection.Left },
+        new CombinationStep { number = 25, requiredDirection = RotationDirection.Right },
+        new CombinationStep { number = 35, requiredDirection = RotationDirection.Left }
+    };
+
+    [Tooltip("Total numbers on the dial (39 for your lock)")]
+    [SerializeField] private int totalNumbers = 39;
+
+    [Header("Number to Rotation Mapping")]
+    [Tooltip("Assign custom rotation for each number. Leave empty to auto-calculate.")]
+    [SerializeField] private NumberRotation[] numberRotations = new NumberRotation[0];
 
     [Header("Rotation Settings")]
-    [SerializeField] private float rotationIncrement = 9f;
-    [SerializeField] private bool rotateToNextNumber = true;
+    [Tooltip("Speed of rotation animation")]
+    [SerializeField] private float rotationSpeed = 200f;
 
-    [Header("Debug")]
-    [SerializeField] private bool enableDebugLogs = true;
+    [Tooltip("Which axis to rotate (Z for front-facing dial, Y for top-down)")]
+    [SerializeField] private RotationAxis rotationAxis = RotationAxis.Z;
 
-    private List<DirectionalCombination> enteredCombination = new List<DirectionalCombination>();
+    [Header("Wrong Combination Shake")]
+    [Tooltip("Enable shake effect on wrong combination")]
+    [SerializeField] private bool enableShake = true;
+
+    [Tooltip("Intensity of the shake")]
+    [SerializeField] private float shakeIntensity = 0.1f;
+
+    [Tooltip("Duration of the shake")]
+    [SerializeField] private float shakeDuration = 0.5f;
+
+    [Header("Audio (Optional)")]
+    [SerializeField] private AudioSource audioSource;
+    [SerializeField] private AudioClip clickSound;
+    [SerializeField] private AudioClip submitSound;
+    [SerializeField] private AudioClip unlockSound;
+    [SerializeField] private AudioClip wrongCombinationSound;
+
+    [Header("Events")]
+    public UnityEvent onUnlock;
+    public UnityEvent onWrongCombination;
+    public UnityEvent onNumberChanged;
+    public UnityEvent onInteractionStart;
+    public UnityEvent onInteractionEnd;
+
+    // State
     private int currentNumber = 0;
-    private float currentRotation = 0f;
+    private int currentStep = 0;
+    private int[] enteredCombination;
+    private RotationDirection[] enteredDirections;
+    private RotationDirection lastRotationDirection = RotationDirection.Right;
+    private int previousNumber = 0;
     private bool isUnlocked = false;
-    private int lastSnappedNumber = 0;
-    private bool isReturningToZero = false;
-    private float returnStartRotation = 0f;
-    private float returnProgress = 0f;
-    private float returnDuration = 0f;
-    private Direction lastRotationDirection = Direction.None;
+    private bool isRotating = false;
+    private float currentRotation = 0f;
+    private float degreesPerNumber;
+    private Vector3 originalPosition;
+    private bool isShaking = false;
 
     // Interaction state
     private bool isInteracting = false;
@@ -62,33 +108,43 @@ public class RotaryLockController : MonoBehaviour, IInteractable
     private Quaternion originalCameraRotation;
     private Transform originalCameraParent;
 
-    [System.Serializable]
-    public class DirectionalCombination
-    {
-        public int number;
-        public Direction direction;
-
-        public DirectionalCombination(int number, Direction direction)
-        {
-            this.number = number;
-            this.direction = direction;
-        }
-    }
-
-    public enum Direction
-    {
-        None,
-        Left,
-        Right
-    }
+    public enum RotationAxis { X, Y, Z }
 
     void Start()
     {
-        UpdateDialRotation(0f);
+        if (knobTransform == null)
+        {
+            Debug.LogError("Knob Transform is not assigned!");
+            enabled = false;
+            return;
+        }
 
         if (cameraInteractPosition == null)
         {
             Debug.LogError("Camera Interact Position not assigned! Please assign an empty GameObject for camera positioning.");
+        }
+
+        enteredCombination = new int[combination.Length];
+        enteredDirections = new RotationDirection[combination.Length];
+        degreesPerNumber = 360f / totalNumbers;
+
+        // Store original position for shake effect
+        originalPosition = transform.localPosition;
+
+        // Initialize at 0
+        currentNumber = 0;
+        previousNumber = 0;
+        UpdateKnobRotation();
+
+        Debug.Log($"Padlock initialized. Combination length: {combination.Length}");
+        Debug.Log($"Total numbers: 0 to {totalNumbers - 1}");
+        Debug.Log("Controls: A/D or Arrow Keys to rotate, SPACE/ENTER to submit, R to reset");
+
+        // Show combination requirements
+        for (int i = 0; i < combination.Length; i++)
+        {
+            string dirText = combination[i].requiredDirection == RotationDirection.Left ? "LEFT" : "RIGHT";
+            Debug.Log($"Step {i + 1}: Number {combination[i].number} - Must approach from {dirText}");
         }
     }
 
@@ -96,26 +152,9 @@ public class RotaryLockController : MonoBehaviour, IInteractable
     {
         if (!isInteracting) return;
 
-        if (isUnlocked) return;
+        if (isUnlocked || isRotating || isShaking) return;
 
-        if (isReturningToZero)
-        {
-            HandleReturnToZero();
-        }
-        else
-        {
-            HandleClickRotation();
-        }
-
-        if (Input.GetKeyDown(KeyCode.E) || Input.GetKeyDown(KeyCode.Space))
-        {
-            EnterCurrentNumber();
-        }
-
-        if (Input.GetKeyDown(KeyCode.R))
-        {
-            ResetLock();
-        }
+        HandleInput();
 
         // Exit interaction
         if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Q))
@@ -130,8 +169,7 @@ public class RotaryLockController : MonoBehaviour, IInteractable
     {
         if (isUnlocked)
         {
-            if (enableDebugLogs)
-                Debug.Log("Lock is already unlocked!");
+            Debug.Log("Lock is already unlocked!");
             return;
         }
 
@@ -184,8 +222,8 @@ public class RotaryLockController : MonoBehaviour, IInteractable
 
         StartCoroutine(TransitionCameraToLock());
 
-        if (enableDebugLogs)
-            Debug.Log("Started lock interaction");
+        onInteractionStart?.Invoke();
+        Debug.Log("Started padlock interaction");
     }
 
     IEnumerator TransitionCameraToLock()
@@ -216,10 +254,13 @@ public class RotaryLockController : MonoBehaviour, IInteractable
     {
         if (!isInteracting) return;
 
+        // Reset the combination when exiting
+        ResetCombination();
+
         StartCoroutine(TransitionCameraBack());
 
-        if (enableDebugLogs)
-            Debug.Log("Exited lock interaction");
+        onInteractionEnd?.Invoke();
+        Debug.Log("Exited padlock interaction. Lock reset.");
     }
 
     IEnumerator TransitionCameraBack()
@@ -243,285 +284,330 @@ public class RotaryLockController : MonoBehaviour, IInteractable
         playerCamera.rotation = originalCameraRotation;
 
         isInteracting = false;
+        InputScript.InputEnabled = true;
     }
 
     #endregion
 
-    #region Lock Mechanics
-
-    void HandleReturnToZero()
+    void HandleInput()
     {
-        if (!isReturningToZero) return;
-
-        returnProgress += Time.deltaTime / returnDuration;
-        returnProgress = Mathf.Clamp01(returnProgress);
-
-        float easedProgress = returnCurve.Evaluate(returnProgress);
-        float newRotation = Mathf.LerpAngle(returnStartRotation, 0f, easedProgress);
-
-        UpdateDialRotation(newRotation);
-
-        if (returnProgress >= 1f)
+        // Rotate left (counter-clockwise) - decrease number
+        if (Input.GetKeyDown(KeyCode.A) || Input.GetKeyDown(KeyCode.LeftArrow))
         {
-            isReturningToZero = false;
-            currentRotation = 0f;
-            currentNumber = 0;
-            SnapToNearestNumber();
+            RotateToNumber(currentNumber - 1, RotationDirection.Left);
+        }
 
-            lastRotationDirection = Direction.None;
+        // Rotate right (clockwise) - increase number
+        if (Input.GetKeyDown(KeyCode.D) || Input.GetKeyDown(KeyCode.RightArrow))
+        {
+            RotateToNumber(currentNumber + 1, RotationDirection.Right);
+        }
 
-            if (enableDebugLogs)
-                Debug.Log("Return to zero complete");
+        // Submit current number
+        if (Input.GetKeyDown(KeyCode.Return) || Input.GetKeyDown(KeyCode.Space))
+        {
+            SubmitNumber();
+        }
+
+        // Reset combination
+        if (Input.GetKeyDown(KeyCode.R))
+        {
+            ResetCombination();
         }
     }
 
-    void HandleClickRotation()
+    void RotateToNumber(int targetNumber, RotationDirection direction)
     {
-        if (Input.GetKeyDown(KeyCode.D))
-        {
-            RotateClockwise();
-            lastRotationDirection = Direction.Right;
-        }
+        // Wrap around (0 to totalNumbers-1)
+        if (targetNumber < 0)
+            targetNumber = totalNumbers - 1;
+        else if (targetNumber >= totalNumbers)
+            targetNumber = 0;
 
-        if (Input.GetKeyDown(KeyCode.A))
+        if (targetNumber != currentNumber)
         {
-            RotateCounterClockwise();
-            lastRotationDirection = Direction.Left;
+            previousNumber = currentNumber;
+            currentNumber = targetNumber;
+            lastRotationDirection = direction;
+
+            StartCoroutine(AnimateRotation());
+            PlaySound(clickSound);
+            onNumberChanged?.Invoke();
+
+            string dirText = direction == RotationDirection.Left ? "LEFT" : "RIGHT";
+            Debug.Log($"Current number: {currentNumber} (approached from {dirText})");
         }
     }
 
-    void RotateClockwise()
+    float GetRotationForNumber(int number)
     {
-        if (rotateToNextNumber)
+        // Check if custom rotation is defined
+        if (numberRotations != null && numberRotations.Length > 0)
         {
-            currentNumber = (currentNumber + 1) % 40;
-            float targetRotation = (40 - currentNumber) % 40 * snapAngle;
-            StartRotationAnimation(currentRotation, targetRotation);
-        }
-        else
-        {
-            float newRotation = currentRotation + rotationIncrement;
-            newRotation = Mathf.Repeat(newRotation, 360f);
-            StartRotationAnimation(currentRotation, newRotation);
-        }
-
-        PlaySound(dialRotateSound);
-
-        if (enableDebugLogs)
-            Debug.Log("Rotated Right (clockwise)");
-    }
-
-    void RotateCounterClockwise()
-    {
-        if (rotateToNextNumber)
-        {
-            currentNumber = (currentNumber - 1 + 40) % 40;
-            float targetRotation = (40 - currentNumber) % 40 * snapAngle;
-            StartRotationAnimation(currentRotation, targetRotation);
-        }
-        else
-        {
-            float newRotation = currentRotation - rotationIncrement;
-            newRotation = Mathf.Repeat(newRotation, 360f);
-            StartRotationAnimation(currentRotation, newRotation);
-        }
-
-        PlaySound(dialRotateSound);
-
-        if (enableDebugLogs)
-            Debug.Log("Rotated Left (counter-clockwise)");
-    }
-
-    void StartRotationAnimation(float startRotation, float targetRotation)
-    {
-        currentRotation = targetRotation;
-        UpdateDialRotation(currentRotation);
-
-        int newNumber = GetSnappedNumber(currentRotation);
-        if (newNumber != lastSnappedNumber)
-        {
-            PlaySound(snapSound);
-            lastSnappedNumber = newNumber;
-        }
-
-        if (enableDebugLogs)
-            Debug.Log($"Rotated to: {currentNumber}, Rotation: {currentRotation}°");
-    }
-
-    void UpdateDialRotation(float rotation)
-    {
-        dialTransform.localRotation = Quaternion.Euler(0, rotation, 0);
-
-        int newNumber = GetSnappedNumber(rotation);
-
-        if (newNumber != currentNumber)
-        {
-            currentNumber = newNumber;
-        }
-    }
-
-    int GetSnappedNumber(float rotation)
-    {
-        float normalizedRotation = Mathf.Repeat(rotation, 360f);
-        float rawNumberFloat = normalizedRotation / snapAngle;
-        int rawNumber = Mathf.RoundToInt(rawNumberFloat) % 40;
-        int correctedNumber = (40 - rawNumber) % 40;
-        return correctedNumber;
-    }
-
-    void SnapToNearestNumber()
-    {
-        int nearestNumber = GetSnappedNumber(currentRotation);
-        float visualTargetRotation = (40 - nearestNumber) % 40 * snapAngle;
-        currentRotation = visualTargetRotation;
-        UpdateDialRotation(currentRotation);
-        currentNumber = nearestNumber;
-        PlaySound(snapSound);
-    }
-
-    void EnterCurrentNumber()
-    {
-        if (enteredCombination.Count >= 3 || isReturningToZero)
-        {
-            return;
-        }
-
-        if (lastRotationDirection == Direction.None)
-        {
-            if (enableDebugLogs)
-                Debug.Log("Must rotate before entering number");
-            return;
-        }
-
-        int currentIndex = enteredCombination.Count;
-
-        if (currentIndex >= correctCombinations.Length)
-        {
-            return;
-        }
-
-        Direction requiredDirection = correctCombinations[currentIndex].direction;
-
-        if (lastRotationDirection != requiredDirection)
-        {
-            if (enableDebugLogs)
-                Debug.Log($"Wrong direction! Need {requiredDirection}, got {lastRotationDirection}");
-            PlaySound(wrongSound);
-            return;
-        }
-
-        DirectionalCombination entry = new DirectionalCombination(currentNumber, lastRotationDirection);
-        enteredCombination.Add(entry);
-        PlaySound(enterSound);
-
-        if (enableDebugLogs)
-            Debug.Log($"Entered: {currentNumber} with direction {lastRotationDirection}");
-
-        if (enteredCombination.Count == 3)
-        {
-            CheckCombination();
-        }
-    }
-
-    void StartReturnToZero()
-    {
-        isReturningToZero = true;
-        returnStartRotation = currentRotation;
-        returnProgress = 0f;
-        float shortestAngle = Mathf.DeltaAngle(currentRotation, 0f);
-        float distance = Mathf.Abs(shortestAngle);
-        returnDuration = distance / returnSpeed;
-
-        if (enableDebugLogs)
-            Debug.Log($"Starting return to zero from {currentRotation}°, duration: {returnDuration:F2}s");
-    }
-
-    void CheckCombination()
-    {
-        bool correct = true;
-
-        for (int i = 0; i < correctCombinations.Length; i++)
-        {
-            if (i >= enteredCombination.Count)
+            foreach (var nr in numberRotations)
             {
-                correct = false;
-                break;
-            }
-
-            if (enteredCombination[i].number != correctCombinations[i].number ||
-                enteredCombination[i].direction != correctCombinations[i].direction)
-            {
-                correct = false;
-                break;
+                if (nr.number == number)
+                {
+                    return -nr.rotationDegrees; // Negative for clockwise
+                }
             }
         }
 
-        if (correct)
+        // Default auto-calculated rotation
+        return -(number * degreesPerNumber);
+    }
+
+    IEnumerator AnimateRotation()
+    {
+        isRotating = true;
+
+        float targetRotation = GetRotationForNumber(currentNumber);
+
+        // Calculate the shortest rotation direction
+        float difference = targetRotation - currentRotation;
+
+        // Normalize the difference to -180 to 180 range
+        while (difference > 180f) difference -= 360f;
+        while (difference < -180f) difference += 360f;
+
+        float finalTarget = currentRotation + difference;
+
+        while (Mathf.Abs(currentRotation - finalTarget) > 0.1f)
         {
-            UnlockSuccess();
+            currentRotation = Mathf.MoveTowards(currentRotation, finalTarget,
+                                                rotationSpeed * Time.deltaTime);
+            UpdateKnobRotation();
+            yield return null;
         }
-        else
+
+        currentRotation = finalTarget;
+        UpdateKnobRotation();
+
+        isRotating = false;
+    }
+
+    void UpdateKnobRotation()
+    {
+        switch (rotationAxis)
         {
-            UnlockFailed();
+            case RotationAxis.X:
+                knobTransform.localRotation = Quaternion.Euler(currentRotation, 0, 0);
+                break;
+            case RotationAxis.Y:
+                knobTransform.localRotation = Quaternion.Euler(0, currentRotation, 0);
+                break;
+            case RotationAxis.Z:
+                knobTransform.localRotation = Quaternion.Euler(0, 0, currentRotation);
+                break;
         }
     }
 
-    void UnlockSuccess()
+    void SubmitNumber()
+    {
+        if (currentStep >= combination.Length)
+        {
+            Debug.Log("All numbers already entered. Press R to reset.");
+            return;
+        }
+
+        // Always accept and store the number, regardless of correctness
+        PlaySound(submitSound);
+
+        enteredCombination[currentStep] = currentNumber;
+        enteredDirections[currentStep] = lastRotationDirection;
+
+        string dirText = lastRotationDirection == RotationDirection.Left ? "LEFT" : "RIGHT";
+        Debug.Log($"✓ Step {currentStep + 1}/{combination.Length}: Entered {currentNumber} from {dirText}");
+
+        currentStep++;
+
+        // Only check if all 3 numbers have been entered
+        if (currentStep >= combination.Length)
+        {
+            CheckFullCombination();
+        }
+    }
+
+    void CheckFullCombination()
+    {
+        bool allCorrect = true;
+
+        // Check each number and direction
+        for (int i = 0; i < combination.Length; i++)
+        {
+            if (enteredCombination[i] != combination[i].number)
+            {
+                allCorrect = false;
+                Debug.Log($"Step {i + 1} wrong number: Expected {combination[i].number}, got {enteredCombination[i]}");
+            }
+
+            if (enteredDirections[i] != combination[i].requiredDirection)
+            {
+                allCorrect = false;
+                string expectedDir = combination[i].requiredDirection == RotationDirection.Left ? "LEFT" : "RIGHT";
+                string actualDir = enteredDirections[i] == RotationDirection.Left ? "LEFT" : "RIGHT";
+                Debug.Log($"Step {i + 1} wrong direction: Expected {expectedDir}, got {actualDir}");
+            }
+        }
+
+        if (allCorrect)
+        {
+            Unlock();
+        }
+        else
+        {
+            // Wrong combination - shake and reset to 0
+            Debug.Log("✗ Full combination is wrong!");
+            PlaySound(wrongCombinationSound);
+            onWrongCombination?.Invoke();
+
+            if (enableShake)
+            {
+                StartCoroutine(ShakeAndReset());
+            }
+            else
+            {
+                ResetCombination();
+            }
+        }
+    }
+
+    void Unlock()
     {
         isUnlocked = true;
+        Debug.Log("★★★ LOCK OPENED! Correct combination with correct directions! ★★★");
+
         PlaySound(unlockSound);
-        OnUnlocked();
+        onUnlock?.Invoke();
+
+        // Optional: Open the lock visually
+        StartCoroutine(OpenLockAnimation());
 
         // Auto-exit interaction after unlock
         Invoke(nameof(ExitInteraction), 1.5f);
     }
 
-    void UnlockFailed()
+    IEnumerator OpenLockAnimation()
     {
-        ResetLock();
-        PlaySound(wrongSound);
+        if (lockBodyTransform != null)
+        {
+            Vector3 startPos = lockBodyTransform.localPosition;
+            Vector3 endPos = startPos + Vector3.up * 0.5f;
+
+            float elapsed = 0f;
+            float duration = 1f;
+
+            while (elapsed < duration)
+            {
+                elapsed += Time.deltaTime;
+                lockBodyTransform.localPosition = Vector3.Lerp(startPos, endPos, elapsed / duration);
+                yield return null;
+            }
+        }
     }
 
-    void ResetLock()
+    public void ResetCombination()
     {
-        if (isReturningToZero) return;
+        currentStep = 0;
+        enteredCombination = new int[combination.Length];
+        enteredDirections = new RotationDirection[combination.Length];
+        lastRotationDirection = RotationDirection.Right;
 
-        enteredCombination.Clear();
-        lastRotationDirection = Direction.None;
-        StartReturnToZero();
+        // Reset dial to 0
+        currentNumber = 0;
+        previousNumber = 0;
+        StartCoroutine(AnimateRotationToZero());
+
+        Debug.Log("Combination reset. Dial returning to 0.");
+    }
+
+    IEnumerator AnimateRotationToZero()
+    {
+        isRotating = true;
+
+        float targetRotation = 0f;
+
+        // Calculate the shortest rotation direction to 0
+        float difference = targetRotation - currentRotation;
+
+        // Normalize the difference to -180 to 180 range
+        while (difference > 180f) difference -= 360f;
+        while (difference < -180f) difference += 360f;
+
+        float finalTarget = currentRotation + difference;
+
+        while (Mathf.Abs(currentRotation - finalTarget) > 0.1f)
+        {
+            currentRotation = Mathf.MoveTowards(currentRotation, finalTarget,
+                                                rotationSpeed * Time.deltaTime);
+            UpdateKnobRotation();
+            yield return null;
+        }
+
+        currentRotation = finalTarget;
+        UpdateKnobRotation();
+
+        isRotating = false;
+        Debug.Log("Start entering numbers again.");
+    }
+
+    IEnumerator ShakeAndReset()
+    {
+        isShaking = true;
+        float elapsed = 0f;
+
+        while (elapsed < shakeDuration)
+        {
+            elapsed += Time.deltaTime;
+
+            // Random shake offset
+            float offsetX = Random.Range(-shakeIntensity, shakeIntensity);
+            float offsetY = Random.Range(-shakeIntensity, shakeIntensity);
+            float offsetZ = Random.Range(-shakeIntensity, shakeIntensity);
+
+            transform.localPosition = originalPosition + new Vector3(offsetX, offsetY, offsetZ);
+
+            yield return null;
+        }
+
+        // Return to original position
+        transform.localPosition = originalPosition;
+        isShaking = false;
+
+        // Now reset the combination
+        ResetCombination();
     }
 
     void PlaySound(AudioClip clip)
     {
-        if (clip != null && audioSource != null)
+        if (audioSource != null && clip != null)
         {
             audioSource.PlayOneShot(clip);
         }
     }
 
-    protected virtual void OnUnlocked()
+    // Helper method to generate all number rotations automatically
+    [ContextMenu("Generate All Number Rotations")]
+    void GenerateAllNumberRotations()
     {
-        // Override this in derived classes for custom unlock behavior
+        numberRotations = new NumberRotation[totalNumbers];
+        for (int i = 0; i < totalNumbers; i++)
+        {
+            numberRotations[i] = new NumberRotation
+            {
+                number = i,
+                rotationDegrees = i * (360f / totalNumbers)
+            };
+        }
+        Debug.Log($"Generated {totalNumbers} number rotations!");
     }
 
-    #endregion
-
-    #region Public Getters
-
+    // Public getters
     public int GetCurrentNumber() => currentNumber;
+    public int GetCurrentStep() => currentStep;
     public bool IsUnlocked() => isUnlocked;
-    public bool IsReturningToZero() => isReturningToZero;
     public bool IsInteracting() => isInteracting;
-
-    public DirectionalCombination[] GetCurrentCombination()
-    {
-        return correctCombinations;
-    }
-
-    public List<DirectionalCombination> GetEnteredCombination()
-    {
-        return new List<DirectionalCombination>(enteredCombination);
-    }
-
-    #endregion
+    public int[] GetEnteredCombination() => enteredCombination;
+    public CombinationStep[] GetCorrectCombination() => combination;
+    public RotationDirection GetLastRotationDirection() => lastRotationDirection;
 }
