@@ -867,7 +867,7 @@ namespace Doody.Settings
         // Get sprite name for binding
         public string GetBindingSpriteName(string binding)
         {
-            Debug.Log($"{binding} / {ControllerBinding.GetSpriteName(binding, detectedControllerType)}");
+           // Debug.Log($"{binding} / {ControllerBinding.GetSpriteName(binding, detectedControllerType)}");
             return ControllerBinding.GetSpriteName(binding, detectedControllerType);
         }
 

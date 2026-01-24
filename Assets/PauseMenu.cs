@@ -7,6 +7,7 @@ using UnityEngine.SceneManagement;
 public class PauseMenu : EventListener
 {
     public GameObject PuaseMenu;
+    public GameObject SettingsMenu;
     void Start()
     {
         
@@ -55,6 +56,10 @@ public class PauseMenu : EventListener
 
         Cursor.lockState = CursorLockMode.None;
         Cursor.visible = true;
+    }
+    public void SettingsClicked()
+    {
+        Events.Publish(new UIRequestOpenEvent(SettingsMenu));
     }
 
 }

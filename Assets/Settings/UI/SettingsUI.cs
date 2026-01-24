@@ -5,7 +5,7 @@ using Doody.Settings;
 using System.Collections.Generic;
 using System.Linq;
 
-public class SmartSettingsUI : MonoBehaviour
+public class SettingsUI : MonoBehaviour
 {
     [Header("Main Panel")]
     public GameObject settingsPanel;
@@ -250,7 +250,7 @@ public class SmartSettingsUI : MonoBehaviour
     {
         if (dropdownsPopulated) return;
 
-        Debug.Log("Auto-populating dropdowns...");
+       // Debug.Log("Auto-populating dropdowns...");
 
         // 1. Populate Resolution Dropdown
         AutoPopulateResolutionDropdown();
@@ -320,7 +320,7 @@ public class SmartSettingsUI : MonoBehaviour
         {
             resolutionDropdown.value = currentIndex;
             resolutionDropdown.RefreshShownValue();
-            Debug.Log($"Populated resolution dropdown with {options.Count} options. Current: {options[currentIndex]}");
+           // Debug.Log($"Populated resolution dropdown with {options.Count} options. Current: {options[currentIndex]}");
         }
     }
 
@@ -361,7 +361,7 @@ public class SmartSettingsUI : MonoBehaviour
         {
             fullscreenDropdown.value = currentIndex;
             fullscreenDropdown.RefreshShownValue();
-            Debug.Log($"Populated fullscreen dropdown. Current: {options[currentIndex]}");
+           // Debug.Log($"Populated fullscreen dropdown. Current: {options[currentIndex]}");
         }
     }
 

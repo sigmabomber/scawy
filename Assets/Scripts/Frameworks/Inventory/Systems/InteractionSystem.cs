@@ -1,14 +1,15 @@
+using Doody.Settings;
 using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using UnityEngine;
-using UnityEngine.UI;
 using UnityEngine.InputSystem;
+using UnityEngine.UI;
 
 public class InteractionSystem : InputScript
 {
     [Header("Settings")]
-    [SerializeField] private KeyCode interactKey = KeyCode.E;
+
     [SerializeField] private float interactionRange = 3f;
     [SerializeField] private LayerMask interactableLayer;
 
@@ -102,7 +103,7 @@ public class InteractionSystem : InputScript
         if (currentInteractable == null)
             return;
 
-        bool keyboardInteract = Input.GetKeyDown(interactKey);
+        bool keyboardInteract = InputWrapper.Instance.Interact;
         bool gamepadInteract = false;
 
         if (allowGamepadInteraction)
@@ -316,7 +317,7 @@ public class InteractionSystem : InputScript
         if (icon != null)
             reticleUI.sprite = icon;
 
-        interactionText.text = InputDetector.Instance.IsUsingController() ? $"{prompt} \n[<sprite name=xbox_a>]" : $"{prompt}\n [E]";
+        interactionText.text = InputDetector.Instance.IsUsingController() ? $"{prompt} \n[<sprite name=xbox_a>]" : $"{prompt}\n [{SettingsManager.Instance.GetKeyBinding("Interact").ToString()}]";
         interactionText.gameObject.SetActive(true);
     }
 
