@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
+using System.Collections;
 using System.Collections.Generic;
 
-public class RotaryLockController : MonoBehaviour
+public class RotaryLockController : MonoBehaviour, IInteractable
 {
+    [Header("Lock Combination")]
     [SerializeField]
     private DirectionalCombination[] correctCombinations = new DirectionalCombination[]
     {
@@ -11,36 +13,54 @@ public class RotaryLockController : MonoBehaviour
         new DirectionalCombination(32, Direction.Left)
     };
 
+    [Header("Lock Settings")]
     [SerializeField] private float snapAngle = 9f;
-
     [SerializeField] private Transform dialTransform;
-    [SerializeField] private AudioSource audioSource;
 
+    [Header("Audio")]
+    [SerializeField] private AudioSource audioSource;
     [SerializeField] private AudioClip dialRotateSound;
     [SerializeField] private AudioClip snapSound;
     [SerializeField] private AudioClip enterSound;
     [SerializeField] private AudioClip wrongSound;
     [SerializeField] private AudioClip unlockSound;
 
+    [Header("Interaction")]
+    [SerializeField] private string interactionPrompt = "Examine Lock";
+    [SerializeField] private Sprite interactionIcon;
+    [SerializeField] private Transform cameraInteractPosition; // Empty GameObject positioned for lock view
+    [SerializeField] private float cameraTransitionDuration = 0.8f;
+    [SerializeField] private AnimationCurve cameraTransitionCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+    [SerializeField] private float crouchTilt = 15f; // Camera tilt angle to simulate crouching
+
+    [Header("Return to Zero")]
+    [SerializeField] private float returnSpeed = 180f;
+    [SerializeField] private AnimationCurve returnCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
+
+    [Header("Rotation Settings")]
+    [SerializeField] private float rotationIncrement = 9f;
+    [SerializeField] private bool rotateToNextNumber = true;
+
+    [Header("Debug")]
+    [SerializeField] private bool enableDebugLogs = true;
+
     private List<DirectionalCombination> enteredCombination = new List<DirectionalCombination>();
     private int currentNumber = 0;
     private float currentRotation = 0f;
     private bool isUnlocked = false;
     private int lastSnappedNumber = 0;
-
-    [SerializeField] private bool enableDebugLogs = true;
-
-    [SerializeField] private float returnSpeed = 180f;
-    [SerializeField] private AnimationCurve returnCurve = AnimationCurve.EaseInOut(0f, 0f, 1f, 1f);
     private bool isReturningToZero = false;
     private float returnStartRotation = 0f;
     private float returnProgress = 0f;
     private float returnDuration = 0f;
-
-    [SerializeField] private float rotationIncrement = 9f;
-    [SerializeField] private bool rotateToNextNumber = true;
-
     private Direction lastRotationDirection = Direction.None;
+
+    // Interaction state
+    private bool isInteracting = false;
+    private Transform playerCamera;
+    private Vector3 originalCameraPosition;
+    private Quaternion originalCameraRotation;
+    private Transform originalCameraParent;
 
     [System.Serializable]
     public class DirectionalCombination
@@ -65,10 +85,17 @@ public class RotaryLockController : MonoBehaviour
     void Start()
     {
         UpdateDialRotation(0f);
+
+        if (cameraInteractPosition == null)
+        {
+            Debug.LogError("Camera Interact Position not assigned! Please assign an empty GameObject for camera positioning.");
+        }
     }
 
     void Update()
     {
+        if (!isInteracting) return;
+
         if (isUnlocked) return;
 
         if (isReturningToZero)
@@ -89,7 +116,138 @@ public class RotaryLockController : MonoBehaviour
         {
             ResetLock();
         }
+
+        // Exit interaction
+        if (Input.GetKeyDown(KeyCode.Escape) || Input.GetKeyDown(KeyCode.Q))
+        {
+            ExitInteraction();
+        }
     }
+
+    #region IInteractable Implementation
+
+    public void Interact()
+    {
+        if (isUnlocked)
+        {
+            if (enableDebugLogs)
+                Debug.Log("Lock is already unlocked!");
+            return;
+        }
+
+        if (!isInteracting)
+        {
+            StartInteraction();
+        }
+    }
+
+    public bool CanInteract()
+    {
+        return !isInteracting && !isUnlocked;
+    }
+
+    public string GetInteractionPrompt()
+    {
+        if (isUnlocked)
+            return "Unlocked";
+
+        return interactionPrompt;
+    }
+
+    public Sprite GetInteractionIcon()
+    {
+        return interactionIcon;
+    }
+
+    #endregion
+
+    #region Camera Interaction
+
+    void StartInteraction()
+    {
+        if (cameraInteractPosition == null)
+        {
+            Debug.LogError("Cannot start interaction: Camera Interact Position not assigned!");
+            return;
+        }
+
+        // Find the main camera
+        InputScript.InputEnabled = false;
+        playerCamera = Camera.main.transform;
+
+        // Store original camera state
+        originalCameraPosition = playerCamera.position;
+        originalCameraRotation = playerCamera.rotation;
+        originalCameraParent = playerCamera.parent;
+
+        isInteracting = true;
+
+        StartCoroutine(TransitionCameraToLock());
+
+        if (enableDebugLogs)
+            Debug.Log("Started lock interaction");
+    }
+
+    IEnumerator TransitionCameraToLock()
+    {
+        float elapsed = 0f;
+        Vector3 startPos = playerCamera.position;
+        Quaternion startRot = playerCamera.rotation;
+
+        // Calculate target rotation with crouch tilt
+        Quaternion targetRotation = cameraInteractPosition.rotation * Quaternion.Euler(crouchTilt, 0f, 0f);
+
+        while (elapsed < cameraTransitionDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = cameraTransitionCurve.Evaluate(elapsed / cameraTransitionDuration);
+
+            playerCamera.position = Vector3.Lerp(startPos, cameraInteractPosition.position, t);
+            playerCamera.rotation = Quaternion.Slerp(startRot, targetRotation, t);
+
+            yield return null;
+        }
+
+        playerCamera.position = cameraInteractPosition.position;
+        playerCamera.rotation = targetRotation;
+    }
+
+    void ExitInteraction()
+    {
+        if (!isInteracting) return;
+
+        StartCoroutine(TransitionCameraBack());
+
+        if (enableDebugLogs)
+            Debug.Log("Exited lock interaction");
+    }
+
+    IEnumerator TransitionCameraBack()
+    {
+        float elapsed = 0f;
+        Vector3 startPos = playerCamera.position;
+        Quaternion startRot = playerCamera.rotation;
+
+        while (elapsed < cameraTransitionDuration)
+        {
+            elapsed += Time.deltaTime;
+            float t = cameraTransitionCurve.Evaluate(elapsed / cameraTransitionDuration);
+
+            playerCamera.position = Vector3.Lerp(startPos, originalCameraPosition, t);
+            playerCamera.rotation = Quaternion.Slerp(startRot, originalCameraRotation, t);
+
+            yield return null;
+        }
+
+        playerCamera.position = originalCameraPosition;
+        playerCamera.rotation = originalCameraRotation;
+
+        isInteracting = false;
+    }
+
+    #endregion
+
+    #region Lock Mechanics
 
     void HandleReturnToZero()
     {
@@ -259,8 +417,6 @@ public class RotaryLockController : MonoBehaviour
         if (enableDebugLogs)
             Debug.Log($"Entered: {currentNumber} with direction {lastRotationDirection}");
 
-       // StartReturnToZero();
-
         if (enteredCombination.Count == 3)
         {
             CheckCombination();
@@ -315,6 +471,9 @@ public class RotaryLockController : MonoBehaviour
         isUnlocked = true;
         PlaySound(unlockSound);
         OnUnlocked();
+
+        // Auto-exit interaction after unlock
+        Invoke(nameof(ExitInteraction), 1.5f);
     }
 
     void UnlockFailed()
@@ -342,11 +501,17 @@ public class RotaryLockController : MonoBehaviour
 
     protected virtual void OnUnlocked()
     {
+        // Override this in derived classes for custom unlock behavior
     }
+
+    #endregion
+
+    #region Public Getters
 
     public int GetCurrentNumber() => currentNumber;
     public bool IsUnlocked() => isUnlocked;
     public bool IsReturningToZero() => isReturningToZero;
+    public bool IsInteracting() => isInteracting;
 
     public DirectionalCombination[] GetCurrentCombination()
     {
@@ -357,4 +522,6 @@ public class RotaryLockController : MonoBehaviour
     {
         return new List<DirectionalCombination>(enteredCombination);
     }
+
+    #endregion
 }
