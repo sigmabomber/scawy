@@ -7315,7 +7315,7 @@ Transform:
   m_GameObject: {fileID: 780667804}
   serializedVersion: 2
   m_LocalRotation: {x: 0.69914013, y: -0, z: -0, w: 0.71498466}
-  m_LocalPosition: {x: 0, y: 0.002098, z: -0.000326}
+  m_LocalPosition: {x: -0, y: 0.001926, z: -0.00058}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -10909,37 +10909,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: -20, y: 0}
   m_Pivot: {x: 0.5, y: 0.5}
---- !u!1 &1188967874
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1188967875}
-  m_Layer: 7
-  m_Name: GameObject
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1188967875
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1188967874}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0.00244, z: -0.00097}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7974912103601119408}
-  m_LocalEulerAnglesHint: {x: 90, y: 0, z: 0}
 --- !u!1 &1207957027
 GameObject:
   m_ObjectHideFlags: 0
@@ -24392,7 +24361,6 @@ Transform:
   m_Children:
   - {fileID: 4376694113075172167}
   - {fileID: 3861883710253163244}
-  - {fileID: 1188967875}
   - {fileID: 1495017833}
   - {fileID: 780667805}
   - {fileID: 1953798478}
@@ -24414,7 +24382,7 @@ MonoBehaviour:
   lockBodyTransform: {fileID: 7974912103601119408}
   interactionPrompt: Examine Lock
   interactionIcon: {fileID: 0}
-  cameraInteractPosition: {fileID: 1188967875}
+  cameraInteractPosition: {fileID: 780667805}
   cameraTransitionDuration: 0.8
   cameraTransitionCurve:
     serializedVersion: 2
@@ -24448,10 +24416,10 @@ MonoBehaviour:
     requiredDirection: 1
   - number: 35
     requiredDirection: 0
-  totalNumbers: 39
+  totalNumbers: 40
   numberRotations: []
   rotationSpeed: 200
-  rotationAxis: 2
+  rotationAxis: 1
   enableShake: 1
   shakeIntensity: 0.1
   shakeDuration: 0.5
