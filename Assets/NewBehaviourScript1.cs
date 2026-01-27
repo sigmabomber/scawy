@@ -136,15 +136,10 @@ public class PadlockSystem : MonoBehaviour, IInteractable
         previousNumber = 0;
         UpdateKnobRotation();
 
-        Debug.Log($"Padlock initialized. Combination length: {combination.Length}");
-        Debug.Log($"Total numbers: 0 to {totalNumbers - 1}");
-        Debug.Log("Controls: A/D or Arrow Keys to rotate, SPACE/ENTER to submit, R to reset");
-
         // Show combination requirements
         for (int i = 0; i < combination.Length; i++)
         {
             string dirText = combination[i].requiredDirection == RotationDirection.Left ? "LEFT" : "RIGHT";
-            Debug.Log($"Step {i + 1}: Number {combination[i].number} - Must approach from {dirText}");
         }
     }
 
