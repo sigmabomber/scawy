@@ -1,11 +1,11 @@
 using Doody.GameEvents;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 [RequireComponent(typeof(CharacterController))]
 public class PlayerController : InputScript
 {
-    // Singleton
     public static PlayerController Instance { get; private set; }
 
     [Header("Movement Settings")]
@@ -34,9 +34,39 @@ public class PlayerController : InputScript
     [SerializeField] private float heightTransitionSpeed = 10f;
     [SerializeField] private float ceilingCheckDistance = 0.3f;
 
+    [Header("Footstep Sounds")]
+    [SerializeField] private float walkFootstepStrength = 0.3f;
+    [SerializeField] private float sprintFootstepStrength = 0.7f;
+    [SerializeField] private float minFootstepDistance = 0.3f;
+    [SerializeField] private float minTimeBetweenFootsteps = 0.15f;
+    [SerializeField] private float runFootstepMultiplier = 2f;
+    [SerializeField] private float runPitchMultiplier = 1.1f;
+    [SerializeField] private float footstepRaycastDistance = 0.5f;
+    [SerializeField] private LayerMask groundDetectionMask = ~0;
+
+    [Header("Floor Audio Clips")]
+    [SerializeField]
+    private FloorAudioSet[] floorAudioSets = new FloorAudioSet[]
+    {
+        new FloorAudioSet {
+            materialTag = "Concrete",
+            footstepClips = new AudioClip[0],
+            pitchVariation = 0.1f
+        },
+    };
+
+    [System.Serializable]
+    public class FloorAudioSet
+    {
+        public string materialTag;
+        public AudioClip[] footstepClips;
+        public float pitchVariation = 0.1f;
+    }
+
     [Header("References")]
     [SerializeField] private Transform cameraTransform;
     [SerializeField] private CameraRecoil cameraRecoil;
+    [SerializeField] private AudioSource footstepAudioSource;
 
     [Header("Input Settings")]
     [SerializeField] private KeyCode toggleCursorKey = KeyCode.None;
@@ -46,12 +76,10 @@ public class PlayerController : InputScript
     private enum MovementState { Walking, Sprinting, Crouching }
     private MovementState currentMovementState = MovementState.Walking;
 
-    // Stamina system
     public float currentStamina;
     public float timeSinceLastSprint;
     public bool isExhausted = false;
 
-    // Movement modifiers
     private float baseWalkSpeed;
     private float baseSprintSpeed;
     private float baseCrouchSpeed;
@@ -67,7 +95,13 @@ public class PlayerController : InputScript
     private bool isInputEnabled = true;
     private bool isInventoryOpen = false;
 
-    // OPTIMIZATION: Cached values
+    private float distanceSinceLastFootstep = 0f;
+    private float timeSinceLastFootstep = 0f;
+    private string currentGroundTag = "Concrete";
+    private bool isGrounded;
+    private Vector3 lastPosition;
+    private Dictionary<string, FloorAudioSet> floorAudioDictionary;
+
     private Vector3 cachedMoveDirection;
     private Vector2 cachedInput;
     private float cachedCurrentSpeed;
@@ -77,24 +111,23 @@ public class PlayerController : InputScript
     private Quaternion cachedCameraRotation;
     private Vector3 cachedCameraPosition;
 
-    // OPTIMIZATION: Pre-calculate values
     private float staminaUpdateThreshold = 1f;
     private float heightTransitionThreshold = 0.01f;
     private float movementInputThreshold = 0.0001f;
     private float gravityGroundClamp = -2f;
 
-    // OPTIMIZATION: Reduce stamina update frequency
     private float lastStaminaUpdateTime;
     private float staminaUpdateInterval = 0.1f;
 
-    // OPTIMIZATION: Reduce ceiling check frequency
     private float lastCeilingCheckTime;
     private float ceilingCheckInterval = 0.2f;
     private bool lastCeilingCheckResult;
 
+    private float lastGroundCheckTime;
+    private float groundCheckInterval = 0.5f;
+
     private UnityEngine.EventSystems.EventSystem cachedEventSystem;
 
-    // Events for stamina changes
     public class StaminaChangedEvent
     {
         public float CurrentStamina { get; set; }
@@ -111,7 +144,6 @@ public class PlayerController : InputScript
         }
     }
 
-    // Event for movement stat changes
     public class MovementStatsChangedEvent
     {
         public float WalkSpeed { get; }
@@ -145,20 +177,29 @@ public class PlayerController : InputScript
             cameraRecoil = cameraTransform.GetComponent<CameraRecoil>();
         }
 
+        if (footstepAudioSource == null)
+        {
+            footstepAudioSource = gameObject.AddComponent<AudioSource>();
+            footstepAudioSource.spatialBlend = 1f;
+            footstepAudioSource.minDistance = 1f;
+            footstepAudioSource.maxDistance = 50f;
+            footstepAudioSource.playOnAwake = false;
+            footstepAudioSource.loop = false;
+        }
+
         if (Instance == null)
             Instance = this;
         else
             Destroy(gameObject);
 
         InitializeController();
+        InitializeFloorAudioDictionary();
 
-        // OPTIMIZATION: Cache EventSystem reference
         cachedEventSystem = UnityEngine.EventSystems.EventSystem.current;
     }
 
     private void Start()
     {
-        // Start with cursor locked for FPS gameplay
         Cursor.lockState = CursorLockMode.Locked;
         Cursor.visible = false;
 
@@ -171,6 +212,21 @@ public class PlayerController : InputScript
         CacheBaseMovementValues();
 
         lastFrameGrounded = characterController.isGrounded;
+        lastPosition = transform.position;
+    }
+
+    private void InitializeFloorAudioDictionary()
+    {
+        floorAudioDictionary = new Dictionary<string, FloorAudioSet>();
+
+        foreach (var audioSet in floorAudioSets)
+        {
+            if (!string.IsNullOrEmpty(audioSet.materialTag))
+            {
+                string tag = audioSet.materialTag.Trim();
+                floorAudioDictionary[tag] = audioSet;
+            }
+        }
     }
 
     protected override void HandleInput()
@@ -183,12 +239,12 @@ public class PlayerController : InputScript
         if (!isInputEnabled || isInventoryOpen)
             return;
 
-        // Update input cache - NOW ACCEPTS INPUT FROM BOTH SOURCES
         cachedInput = GetMovementInput();
 
         HandleStamina();
         HandleMovementState();
         HandleMovement();
+        HandleFootsteps();
 
         if (Time.timeScale > 0)
             HandleMouseLook();
@@ -212,24 +268,17 @@ public class PlayerController : InputScript
         ApplyMovementModifiers(1f, 1f, 1f, 1f);
     }
 
-    #region Input Handling
-
     private Vector2 GetMovementInput()
     {
         Vector2 input = Vector2.zero;
 
-        // GET INPUT FROM BOTH KEYBOARD AND CONTROLLER SIMULTANEOUSLY
-
-        // Keyboard input
         input.x += Input.GetAxisRaw("Horizontal");
         input.y += Input.GetAxisRaw("Vertical");
 
-        // Controller input (if connected)
         if (Gamepad.current != null)
         {
             Vector2 gamepadInput = Gamepad.current.leftStick.ReadValue();
 
-            // Apply deadzone
             if (gamepadInput.magnitude > controllerDeadzone)
             {
                 input.x += gamepadInput.x;
@@ -237,7 +286,6 @@ public class PlayerController : InputScript
             }
         }
 
-        // Clamp magnitude to prevent faster diagonal movement
         if (input.magnitude > 1f)
         {
             input.Normalize();
@@ -250,18 +298,13 @@ public class PlayerController : InputScript
     {
         Vector2 lookInput = Vector2.zero;
 
-        // GET LOOK INPUT FROM BOTH MOUSE AND CONTROLLER SIMULTANEOUSLY
-
-        // Mouse input
         lookInput.x += Input.GetAxis("Mouse X");
         lookInput.y += Input.GetAxis("Mouse Y");
 
-        // Controller input (if connected)
         if (Gamepad.current != null)
         {
             Vector2 gamepadLook = Gamepad.current.rightStick.ReadValue();
 
-            // Apply deadzone
             if (gamepadLook.magnitude > controllerLookDeadzone)
             {
                 lookInput.x += gamepadLook.x;
@@ -269,18 +312,15 @@ public class PlayerController : InputScript
             }
         }
 
-        // Apply sensitivity - controller gets different sensitivity
         float mouseX = lookInput.x * mouseSensitivity;
         float mouseY = lookInput.y * mouseSensitivity;
 
-        // Scale controller sensitivity separately if needed
         if (Gamepad.current != null && Gamepad.current.rightStick.ReadValue().magnitude > controllerLookDeadzone)
         {
             mouseX = lookInput.x * controllerLookSensitivity;
             mouseY = lookInput.y * controllerLookSensitivity;
         }
 
-        // Apply rotation
         if (Mathf.Abs(mouseX) > 0.001f)
         {
             transform.Rotate(cachedUpVector * mouseX);
@@ -305,17 +345,14 @@ public class PlayerController : InputScript
         }
     }
 
-    // Input check methods - check BOTH sources
     private bool IsSprintPressed()
     {
-        // Keyboard
         if (Input.GetKey(KeyCode.LeftShift))
             return true;
 
-        // Controller
         if (Gamepad.current != null)
         {
-            if ( Gamepad.current.leftStickButton.isPressed)
+            if (Gamepad.current.leftStickButton.isPressed)
                 return true;
         }
 
@@ -324,11 +361,9 @@ public class PlayerController : InputScript
 
     private bool IsCrouchPressed()
     {
-        // Keyboard
         if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C))
             return true;
 
-        // Controller
         if (Gamepad.current != null)
         {
             if (Gamepad.current.rightStickButton.isPressed)
@@ -338,10 +373,207 @@ public class PlayerController : InputScript
         return false;
     }
 
+    private void HandleFootsteps()
+    {
+        isGrounded = characterController.isGrounded;
 
-    #endregion
+        if (!isGrounded)
+        {
+            distanceSinceLastFootstep = 0f;
+            timeSinceLastFootstep = 0f;
+            return;
+        }
 
-    #region Stamina System
+        if (currentMovementState == MovementState.Crouching)
+        {
+            distanceSinceLastFootstep = 0f;
+            timeSinceLastFootstep = 0f;
+            return;
+        }
+
+        float speed = characterController.velocity.magnitude;
+        bool isMoving = speed > 0.1f;
+
+        if (!isMoving)
+        {
+            distanceSinceLastFootstep = 0f;
+            timeSinceLastFootstep += Time.deltaTime;
+            lastPosition = transform.position;
+            return;
+        }
+
+        if (Time.time - lastGroundCheckTime >= groundCheckInterval)
+        {
+            DetectGroundMaterialByTag();
+            lastGroundCheckTime = Time.time;
+        }
+
+        Vector3 currentPosition = transform.position;
+        float frameDistance = Vector3.Distance(currentPosition, lastPosition);
+        lastPosition = currentPosition;
+
+        distanceSinceLastFootstep += frameDistance;
+        timeSinceLastFootstep += Time.deltaTime;
+
+        bool shouldPlayFootstep = CheckFootstepCondition();
+
+        if (shouldPlayFootstep)
+        {
+            PlayFootstep();
+            distanceSinceLastFootstep = 0f;
+            timeSinceLastFootstep = 0f;
+        }
+    }
+
+    private bool CheckFootstepCondition()
+    {
+        if (timeSinceLastFootstep < minTimeBetweenFootsteps)
+            return false;
+
+        float requiredDistance = GetRequiredFootstepDistance();
+        if (distanceSinceLastFootstep >= requiredDistance)
+            return true;
+
+        float speed = characterController.velocity.magnitude;
+        if (speed > 0.1f && timeSinceLastFootstep >= GetTimeBasedThreshold())
+            return true;
+
+        return false;
+    }
+
+    private float GetRequiredFootstepDistance()
+    {
+        float baseDistance = minFootstepDistance;
+        return currentMovementState == MovementState.Sprinting ?
+               baseDistance / runFootstepMultiplier :
+               baseDistance;
+    }
+
+    private float GetTimeBasedThreshold()
+    {
+        float baseTime = 0.6f;
+        return currentMovementState == MovementState.Sprinting ?
+               baseTime / runFootstepMultiplier :
+               baseTime;
+    }
+
+    private float GetFootstepStrength()
+    {
+        return currentMovementState == MovementState.Sprinting ? sprintFootstepStrength : walkFootstepStrength;
+    }
+
+    private void PlayFootstep()
+    {
+        if (floorAudioDictionary.TryGetValue(currentGroundTag, out FloorAudioSet audioSet))
+        {
+            if (audioSet.footstepClips != null && audioSet.footstepClips.Length > 0 && footstepAudioSource != null)
+            {
+                int randomIndex = Random.Range(0, audioSet.footstepClips.Length);
+                AudioClip clip = audioSet.footstepClips[randomIndex];
+
+                if (clip != null)
+                {
+                    bool isRunning = currentMovementState == MovementState.Sprinting;
+
+                    float basePitch = isRunning ? runPitchMultiplier : 1f;
+                    float pitchVariation = Random.Range(-audioSet.pitchVariation, audioSet.pitchVariation);
+                    footstepAudioSource.pitch = Mathf.Clamp(basePitch + pitchVariation, 0.5f, 3f);
+
+                    footstepAudioSource.PlayOneShot(clip);
+
+                    float strength = GetFootstepStrength();
+                    string soundTag = isRunning ? "footstep_run" : "footstep";
+
+                    if (SoundManager.Instance != null)
+                    {
+                        SoundManager.Instance.EmitPlayerSound(transform.position, strength, soundTag);
+                    }
+                }
+            }
+        }
+    }
+
+    private void DetectGroundMaterialByTag()
+    {
+        Vector3 rayStart = transform.position;
+
+        rayStart.y = transform.position.y - (characterController.height * 0.5f) + 0.1f;
+
+        RaycastHit hit;
+
+        if (Physics.Raycast(rayStart, Vector3.down, out hit, footstepRaycastDistance, groundDetectionMask, QueryTriggerInteraction.Ignore))
+        {
+            string newTag = hit.collider.tag;
+            print(newTag);
+
+            if (!string.IsNullOrEmpty(newTag) && floorAudioDictionary.ContainsKey(newTag))
+            {
+                if (newTag != currentGroundTag)
+                {
+                    currentGroundTag = newTag;
+                }
+            }
+            else
+            {
+                if (currentGroundTag != "Concrete")
+                {
+                    currentGroundTag = "Concrete";
+                }
+            }
+        }
+        else
+        {
+            if (currentGroundTag != "Concrete")
+            {
+                currentGroundTag = "Concrete";
+            }
+        }
+    }
+
+    public void PlayLandingSound(float strengthMultiplier = 2.0f)
+    {
+        if (floorAudioDictionary.TryGetValue(currentGroundTag, out FloorAudioSet audioSet))
+        {
+            if (audioSet.footstepClips != null && audioSet.footstepClips.Length > 0 && footstepAudioSource != null)
+            {
+                int randomIndex = Random.Range(0, audioSet.footstepClips.Length);
+                AudioClip clip = audioSet.footstepClips[randomIndex];
+
+                if (clip != null)
+                {
+                    footstepAudioSource.pitch = 1f + Random.Range(-0.05f, 0.05f);
+                    footstepAudioSource.volume = 1f * strengthMultiplier;
+                    footstepAudioSource.PlayOneShot(clip);
+
+                    distanceSinceLastFootstep = 0f;
+                    timeSinceLastFootstep = 0f;
+
+                    float strength = GetFootstepStrength() * strengthMultiplier;
+                    if (SoundManager.Instance != null)
+                    {
+                        SoundManager.Instance.EmitPlayerSound(transform.position, strength, "footstep_land");
+                    }
+                }
+            }
+        }
+    }
+
+    public void AddFloorAudioSet(string materialTag, AudioClip[] footstepClips, float pitchVariation = 0.1f)
+    {
+        FloorAudioSet newSet = new FloorAudioSet
+        {
+            materialTag = materialTag,
+            footstepClips = footstepClips,
+            pitchVariation = pitchVariation
+        };
+
+        System.Array.Resize(ref floorAudioSets, floorAudioSets.Length + 1);
+        floorAudioSets[floorAudioSets.Length - 1] = newSet;
+
+        floorAudioDictionary[materialTag] = newSet;
+    }
+
+    public string GetCurrentGroundTag() => currentGroundTag;
 
     private void HandleStamina()
     {
@@ -391,7 +623,6 @@ public class PlayerController : InputScript
             }
         }
 
-        // Only update UI periodically
         float staminaDelta = Mathf.Abs(currentStamina - previousStamina);
         bool stateChanged = wasSprinting != (currentMovementState == MovementState.Sprinting);
 
@@ -426,10 +657,6 @@ public class PlayerController : InputScript
         canSprint = true;
         PublishStaminaUpdate();
     }
-
-    #endregion
-
-    #region Movement Modifiers Integration
 
     public void ApplyMovementModifiers(float walkModifier, float sprintModifier,
         float staminaModifier, float sensitivityModifier = 1f)
@@ -493,16 +720,12 @@ public class PlayerController : InputScript
         ));
     }
 
-    #endregion
-
     private void HandleMovementState()
     {
         bool isMoving = cachedInput.sqrMagnitude > 0.01f;
 
-        // Check crouch input from BOTH sources
         bool crouchPressed = IsCrouchPressed();
 
-        // Check sprint input from BOTH sources
         bool sprintPressed = IsSprintPressed();
 
         if (crouchPressed)
@@ -540,7 +763,6 @@ public class PlayerController : InputScript
 
     private void HandleMovement()
     {
-        // Early exit if no movement and grounded
         bool isGrounded = characterController.isGrounded;
 
         if (cachedInput.sqrMagnitude < movementInputThreshold && isGrounded && verticalVelocity < 0.1f)
@@ -551,12 +773,10 @@ public class PlayerController : InputScript
             return;
         }
 
-        // Calculate movement direction
         cachedMoveDirection.x = transform.right.x * cachedInput.x + transform.forward.x * cachedInput.y;
         cachedMoveDirection.y = 0;
         cachedMoveDirection.z = transform.right.z * cachedInput.x + transform.forward.z * cachedInput.y;
 
-        // Normalize
         float magnitude = Mathf.Sqrt(cachedMoveDirection.x * cachedMoveDirection.x +
                                      cachedMoveDirection.z * cachedMoveDirection.z);
         if (magnitude > 0.0001f)
@@ -611,7 +831,6 @@ public class PlayerController : InputScript
         }
     }
 
-    // Cache ceiling check results
     private bool CheckCeilingObstructionCached()
     {
         if (Time.time - lastCeilingCheckTime < ceilingCheckInterval)
@@ -648,14 +867,12 @@ public class PlayerController : InputScript
 
         if (isInventoryOpen)
         {
-            // When inventory opens, unlock cursor
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
             isInputEnabled = false;
         }
         else
         {
-            // When inventory closes, lock cursor for gameplay
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
             isInputEnabled = true;

@@ -1,5 +1,99 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!1 &2565922269607553034
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1684784985130504428}
+  - component: {fileID: 9052140962049520959}
+  m_Layer: 7
+  m_Name: Flashlight Light
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 0
+--- !u!4 &1684784985130504428
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2565922269607553034}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0.006939057, y: -0.014503326, z: 0.015242397, w: 0.99975455}
+  m_LocalPosition: {x: -0.00027, y: 0.02047, z: 0.00009}
+  m_LocalScale: {x: 0.0102585945, y: 0.03349277, z: 0.03293515}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 3860548821114330040}
+  m_LocalEulerAnglesHint: {x: -0.77, y: -1.674, z: 1.758}
+--- !u!108 &9052140962049520959
+Light:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2565922269607553034}
+  m_Enabled: 1
+  serializedVersion: 10
+  m_Type: 0
+  m_Shape: 0
+  m_Color: {r: 1, g: 1, b: 1, a: 1}
+  m_Intensity: 1.58
+  m_Range: 23.7
+  m_SpotAngle: 73.6
+  m_InnerSpotAngle: 2.8
+  m_CookieSize: 10
+  m_Shadows:
+    m_Type: 2
+    m_Resolution: -1
+    m_CustomResolution: -1
+    m_Strength: 1
+    m_Bias: 0.05
+    m_NormalBias: 0.4
+    m_NearPlane: 0.2
+    m_CullingMatrixOverride:
+      e00: 1
+      e01: 0
+      e02: 0
+      e03: 0
+      e10: 0
+      e11: 1
+      e12: 0
+      e13: 0
+      e20: 0
+      e21: 0
+      e22: 1
+      e23: 0
+      e30: 0
+      e31: 0
+      e32: 0
+      e33: 1
+    m_UseCullingMatrixOverride: 0
+  m_Cookie: {fileID: 2800000, guid: e557eea2ef7255f4195eaa9a16722deb, type: 3}
+  m_DrawHalo: 0
+  m_Flare: {fileID: 0}
+  m_RenderMode: 0
+  m_CullingMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  m_RenderingLayerMask: 1
+  m_Lightmapping: 2
+  m_LightShadowCasterMode: 0
+  m_AreaSize: {x: 1, y: 1}
+  m_BounceIntensity: 1
+  m_ColorTemperature: 6570
+  m_UseColorTemperature: 0
+  m_BoundingSphereOverride: {x: 0, y: 0, z: 0, w: 0}
+  m_UseBoundingSphereOverride: 0
+  m_UseViewFrustumForShadowCasterCull: 1
+  m_ShadowRadius: 0
+  m_ShadowAngle: 0
 --- !u!1 &4358842036962296701
 GameObject:
   m_ObjectHideFlags: 0
@@ -162,6 +256,7 @@ Transform:
   - {fileID: 3157869379274353046}
   - {fileID: 2708627270693458075}
   - {fileID: 7492016692246068196}
+  - {fileID: 1684784985130504428}
   m_Father: {fileID: 7331652008572075859}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!20 &5519537365799408975
@@ -343,17 +438,9 @@ GameObject:
   - component: {fileID: 3592659363617418703}
   - component: {fileID: 8432901657141763341}
   - component: {fileID: 4030003468368452695}
-  - component: {fileID: 8342808248080881829}
-  - component: {fileID: 7861706510370566161}
   - component: {fileID: 5248034682211950707}
-  - component: {fileID: 4948183174106843421}
-  - component: {fileID: 7650239648228228699}
-  - component: {fileID: 1554478200569729253}
-  - component: {fileID: 5653903732411625102}
-  - component: {fileID: 3267626856384255782}
   - component: {fileID: 6847795713560836540}
   - component: {fileID: 1301093156578454735}
-  - component: {fileID: 4906409066069446042}
   m_Layer: 6
   m_Name: Player
   m_TagString: Player
@@ -443,6 +530,9 @@ MonoBehaviour:
   crouchSpeed: 2.5
   mouseSensitivity: 2
   gravity: -9.81
+  controllerLookSensitivity: 1.5
+  controllerDeadzone: 0.1
+  controllerLookDeadzone: 0.05
   maxStamina: 100
   staminaDrainRate: 20
   staminaRegenRate: 15
@@ -453,9 +543,49 @@ MonoBehaviour:
   crouchingHeight: 1
   heightTransitionSpeed: 10
   ceilingCheckDistance: 0.2
+  walkFootstepStrength: 0.3
+  sprintFootstepStrength: 0.7
+  minFootstepDistance: 0.3
+  minTimeBetweenFootsteps: 0.4
+  runFootstepMultiplier: 2
+  runPitchMultiplier: 1.1
+  footstepRaycastDistance: 0.5
+  groundDetectionMask:
+    serializedVersion: 2
+    m_Bits: 4294967295
+  floorAudioSets:
+  - materialTag: Concrete
+    footstepClips:
+    - {fileID: 8300000, guid: fc4a907ba439b4345952e7681f7aecb3, type: 3}
+    - {fileID: 8300000, guid: 4f8ba80e2101c174dadc11981d75dc57, type: 3}
+    - {fileID: 8300000, guid: efc924cebfb219340885b4bafafbfc73, type: 3}
+    - {fileID: 8300000, guid: 810f293d9c37c6c408fd65f14e0e61c4, type: 3}
+    pitchVariation: 0.1
+  - materialTag: Dirt
+    footstepClips:
+    - {fileID: 8300000, guid: 0607346b7cf0d7e4db8d44dc55104587, type: 3}
+    - {fileID: 8300000, guid: 3b969aed38c5303439cc09a33fcc9170, type: 3}
+    - {fileID: 8300000, guid: 21353c1cf2171e24589a3e0f7ae5b425, type: 3}
+    - {fileID: 8300000, guid: 295a2d9b45573354496a91432f0b3f2f, type: 3}
+    pitchVariation: 0.1
+  - materialTag: Wood
+    footstepClips:
+    - {fileID: 8300000, guid: 7a8d90e317757af4fae1c207aab641ad, type: 3}
+    - {fileID: 8300000, guid: 8c5f7ffc4fd37ad49b5bbe48a7a5024c, type: 3}
+    - {fileID: 8300000, guid: 5df8a45cfbea5a145a8d179372b7eddb, type: 3}
+    - {fileID: 8300000, guid: d9b87d2c7dc4d544ea6bcde78fe79ee1, type: 3}
+    pitchVariation: 0.1
+  - materialTag: Slosh
+    footstepClips:
+    - {fileID: 8300000, guid: 22c9cc749c9d42f4f88fb64a667a6406, type: 3}
+    - {fileID: 8300000, guid: 2fcbea52d86f21b4f9951c7d5809eb14, type: 3}
+    - {fileID: 8300000, guid: dc189d177b8230143b400441f14beb6d, type: 3}
+    - {fileID: 8300000, guid: 66785837c26de09428a0ee0571112820, type: 3}
+    pitchVariation: 0.1
   cameraTransform: {fileID: 3860548821114330040}
   cameraRecoil: {fileID: 0}
-  toggleCursorKey: 0
+  footstepAudioSource: {fileID: 6847795713560836540}
+  toggleCursorKey: 274
   canSprint: 1
   currentStamina: 0
   timeSinceLastSprint: 0
@@ -481,6 +611,7 @@ MonoBehaviour:
   effectIntensity: 0.1
   effectIntensityX: 0.1
   effectSpeed: 8
+  maxVelocityForBob: 4
 --- !u!114 &7837067474149532108
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -493,17 +624,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d2acc69cdbe79a04fa093bbc425ebd60, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  interactKey: 101
   interactionRange: 1.85
   interactableLayer:
     serializedVersion: 2
     m_Bits: 128
+  allowGamepadInteraction: 1
   reticleUI: {fileID: 0}
   interactionText: {fileID: 0}
   outlineColor: {r: 1, g: 1, b: 1, a: 1}
   outlineWidth: 10
   raycastsPerSecond: 15
-  showDebugRay: 0
+  uiUpdatePerSecond: 10
 --- !u!114 &3592659363617418703
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -571,38 +702,6 @@ MonoBehaviour:
   pulseSpeed: 2
   minAlpha: 0.3
   maxAlpha: 1
---- !u!114 &8342808248080881829
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 863b92d50e34c5444b333e4885c9610c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  soundRadius: 15
---- !u!114 &7861706510370566161
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 733e29915a16b5948afffb113a8b1966, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  walkSoundRadius: 5
-  sprintSoundRadius: 15
-  crouchSoundRadius: 0
-  soundInterval: 0.5
-  playerController: {fileID: 8002063412949020475}
-  characterController: {fileID: 7383847933113521193}
-  showDebugInfo: 1
 --- !u!114 &5248034682211950707
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -618,85 +717,6 @@ MonoBehaviour:
   showEvents: 1
   maxLogEntries: 10
   showAIStats: 1
---- !u!114 &4948183174106843421
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b17878474cd1be4c9c5f9d4ef974109, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  setupOnStart: 0
-  playerObject: {fileID: 7948546303065143638}
-  aiAgents:
-  - {fileID: 0}
---- !u!114 &7650239648228228699
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 863b92d50e34c5444b333e4885c9610c, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  soundRadius: 15
---- !u!114 &1554478200569729253
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 733e29915a16b5948afffb113a8b1966, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  walkSoundRadius: 5
-  sprintSoundRadius: 15
-  crouchSoundRadius: 0
-  soundInterval: 0.5
-  playerController: {fileID: 8002063412949020475}
-  characterController: {fileID: 7383847933113521193}
-  showDebugInfo: 1
---- !u!114 &5653903732411625102
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: a333c030797c82b4e804c9beb30e6335, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  showEvents: 1
-  maxLogEntries: 10
-  showAIStats: 1
---- !u!114 &3267626856384255782
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 0
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 2b17878474cd1be4c9c5f9d4ef974109, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  setupOnStart: 0
-  playerObject: {fileID: 7948546303065143638}
-  aiAgents:
-  - {fileID: 0}
 --- !u!82 &6847795713560836540
 AudioSource:
   m_ObjectHideFlags: 0
@@ -709,7 +729,7 @@ AudioSource:
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 0}
   m_PlayOnAwake: 1
-  m_Volume: 1
+  m_Volume: 0.541
   m_Pitch: 1
   Loop: 0
   Mute: 0
@@ -812,19 +832,6 @@ MonoBehaviour:
   rotationSpeed: 5
   targetObject: {fileID: 0}
   targetOffset: {x: 0, y: 0, z: 0}
---- !u!114 &4906409066069446042
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7948546303065143638}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 9efa041745c6a2643aa58bf473265512, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  debugLogs: 1
 --- !u!1 &8586872053062033744
 GameObject:
   m_ObjectHideFlags: 0

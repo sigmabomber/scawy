@@ -2,42 +2,87 @@ using Doody.AI.Events;
 using Doody.GameEvents;
 using UnityEngine;
 using UnityEngine.AI;
-
+using System.Collections.Generic;
 
 public class Screamer : BaseAI
 {
+    [Header("Hearing Settings")]
+    [SerializeField] private float baseHearingRange = 25f;
+    [SerializeField] private AnimationCurve hearingFalloff = AnimationCurve.Linear(0, 1, 1, 0);
+    [SerializeField] private LayerMask soundObstructionMask = 1 << 0; // Default layer only
+    
+    [Header("Sound Reactivity")]
+    [SerializeField] private float minHearableStrength = 0.1f;
+    [SerializeField] private float playerSoundMultiplier = 1.5f;
+    [SerializeField] private float alertStateHearingBoost = 1.3f;
+    
+    [Header("Sound Types & Priorities")]
+    [SerializeField] private SoundTypePriority[] soundPriorities = new SoundTypePriority[]
+    {
+        new SoundTypePriority { soundTag = "footstep", priority = 0.5f, rangeMultiplier = 0.8f },
+        new SoundTypePriority { soundTag = "footstep_run", priority = 0.8f, rangeMultiplier = 1.2f },
+        new SoundTypePriority { soundTag = "footstep_crouch", priority = 0.3f, rangeMultiplier = 0.5f },
+        new SoundTypePriority { soundTag = "jump", priority = 0.7f, rangeMultiplier = 1.0f },
+        new SoundTypePriority { soundTag = "door", priority = 0.9f, rangeMultiplier = 1.5f },
+        new SoundTypePriority { soundTag = "gunshot", priority = 1.0f, rangeMultiplier = 2.0f },
+        new SoundTypePriority { soundTag = "voice", priority = 0.9f, rangeMultiplier = 1.5f },
+        new SoundTypePriority { soundTag = "item", priority = 0.6f, rangeMultiplier = 0.9f }
+    };
+    
+    [System.Serializable]
+    private class SoundTypePriority
+    {
+        public string soundTag;
+        public float priority;     // 0-1, how important this sound is
+        public float rangeMultiplier; // How far this sound travels
+    }
+    
     [Header("Movement")]
-    [SerializeField] private float rotationSpeed = 90f; 
+    [SerializeField] private float rotationSpeed = 90f;
     [SerializeField] private float chargeSpeed = 8f;
-    [SerializeField] private float normalSpeed = 3.5f;
-    [SerializeField] private float rotationThreshold = 5f; 
-
-    [Header("Sound Detection")]
-    [SerializeField] private float hearingRange = 25f;
-    [SerializeField] private float soundMemoryDuration = 3f;
-
+    [SerializeField] private float normalMoveSpeed = 3.5f;
+    [SerializeField] private float rotationThreshold = 5f;
+    
     [Header("Charge Attack")]
     [SerializeField] private float chargeDuration = 3f;
     [SerializeField] private float chargeStopDistance = 1f;
     [SerializeField] private float chargeRecoveryTime = 1f;
     [SerializeField] private float headbuttDamage = 30f;
     [SerializeField] private float headbuttRange = 2f;
-    [SerializeField] private float collisionAttackCooldown = 1f; 
-
+    [SerializeField] private float collisionAttackCooldown = 1f;
+    
     [Header("Idle Behavior")]
-    [SerializeField] private bool shouldWander = false; 
-    [SerializeField] private float idleRotationSpeed = 15f; 
-    [SerializeField] private float idleMoveInterval = 8f; 
+    [SerializeField] private bool shouldWander = false;
+    [SerializeField] private float idleRotationSpeed = 15f;
+    [SerializeField] private float idleMoveInterval = 8f;
     [SerializeField] private float wanderRadius = 10f;
-
+    
     [Header("Health System")]
     [SerializeField] private float maxHealth = 100f;
-    [SerializeField] private Transform weakSpot; 
-    [SerializeField] private float weakSpotMultiplier = 2f; 
-
+    [SerializeField] private Transform weakSpot;
+    [SerializeField] private float weakSpotMultiplier = 2f;
+    
     [Header("Collision Detection")]
-    [SerializeField] private LayerMask attackLayers; 
-
+    [SerializeField] private LayerMask attackLayers;
+    
+    // Sound memory
+    private class RememberedSound
+    {
+        public Vector3 position;
+        public float strength;
+        public string tag;
+        public GameObject source;
+        public float timeHeard;
+        public float priority;
+        public bool isPlayerSound;
+    }
+    
+    private List<RememberedSound> soundMemory = new List<RememberedSound>();
+    private float soundMemoryDuration = 8f;
+    private float soundCleanupInterval = 2f;
+    private float lastSoundCleanupTime;
+    
+    // Current state
     private float currentHealth;
     private Vector3 targetSoundPosition;
     private float soundMemoryTimer;
@@ -47,52 +92,47 @@ public class Screamer : BaseAI
     private float idleTimer;
     private float lastCollisionAttackTime;
     private GameObject soundSource;
+    private Dictionary<string, SoundTypePriority> soundPriorityLookup;
+
+    // Override to return our normal speed instead of agent.speed
+    protected override float normalSpeed => normalMoveSpeed;
 
     protected override void InitializeAI()
     {
-        currentState = AIState.Patrolling; 
+        currentState = AIState.Patrolling;
         previousState = AIState.Patrolling;
         idlePosition = transform.position;
         currentHealth = maxHealth;
         currentPatrolIndex = 0;
 
-        agent.speed = normalSpeed;
-        agent.angularSpeed = 0; 
+        // Initialize sound priority lookup
+        soundPriorityLookup = new Dictionary<string, SoundTypePriority>();
+        foreach (var priority in soundPriorities)
+        {
+            soundPriorityLookup[priority.soundTag.ToLower()] = priority;
+        }
+
+        // Critical: Disable NavMeshAgent rotation - we handle it manually
+        agent.speed = normalMoveSpeed;
+        agent.angularSpeed = 0;
         agent.acceleration = 15f;
-        agent.updateRotation = false; 
+        agent.updateRotation = false;
         agent.autoBraking = true;
 
         if (HasPatrolPoints())
         {
             GoToNextPatrolPoint();
         }
+        
+        Debug.Log($"{gameObject.name}: Screamer initialized with hearing range {baseHearingRange}m");
     }
 
     protected override void UpdateState()
     {
-        switch (currentState)
-        {
-            case AIState.Patrolling: 
-                if (HasPatrolPoints())
-                {
-                    HandlePatrollingWithRotation();
-                }
-                else
-                {
-                    HandleIdle();
-                }
-                break;
-            case AIState.Investigating: 
-                HandleRotatingToSound();
-                break;
-            case AIState.Chasing: 
-                HandleCharging();
-                break;
-            case AIState.Searching: 
-                HandleSearching();
-                break;
-        }
+        // Always increment state timer
+        stateTimer += Time.deltaTime;
 
+        // Handle sound memory
         if (soundMemoryTimer > 0)
         {
             soundMemoryTimer -= Time.deltaTime;
@@ -102,7 +142,36 @@ public class Screamer : BaseAI
             }
         }
 
-        stateTimer += Time.deltaTime;
+        // Clean up old sounds periodically
+        if (Time.time - lastSoundCleanupTime > soundCleanupInterval)
+        {
+            CleanupOldSounds();
+            lastSoundCleanupTime = Time.time;
+        }
+
+        // Execute state-specific behavior
+        switch (currentState)
+        {
+            case AIState.Patrolling:
+                if (HasPatrolPoints())
+                {
+                    HandlePatrolling();
+                }
+                else
+                {
+                    HandleIdle();
+                }
+                break;
+            case AIState.Investigating:
+                HandleInvestigating();
+                break;
+            case AIState.Chasing:
+                HandleChasing();
+                break;
+            case AIState.Searching:
+                HandleSearching();
+                break;
+        }
     }
 
     protected override void CheckForTargets()
@@ -113,16 +182,295 @@ public class Screamer : BaseAI
         }
     }
 
-    #region Patrol with Rotation (Screamer-specific)
+    #region Hearing System
 
-    void HandlePatrollingWithRotation()
+    private void OnEnable()
     {
-        if (!IsAgentReady()) return;
+        // Subscribe to sound events from SoundManager
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.OnSoundPlayed += OnSoundDetected;
+        }
+    }
 
-        if (agent.hasPath && agent.velocity.sqrMagnitude > 0.1f)
+    private void OnDisable()
+    {
+        // Unsubscribe from sound events
+        if (SoundManager.Instance != null)
+        {
+            SoundManager.Instance.OnSoundPlayed -= OnSoundDetected;
+        }
+    }
+
+    /// <summary>
+    /// Main method that handles all sounds from the SoundManager
+    /// </summary>
+    private void OnSoundDetected(SoundInfo soundInfo)
+    {
+        // Don't react to our own sounds
+        if (soundInfo.source == gameObject) return;
+        
+        // Calculate if we can hear this sound
+        float hearableStrength = CalculateHearableStrength(soundInfo);
+        
+        if (hearableStrength >= minHearableStrength)
+        {
+            // Remember this sound
+            RememberSound(soundInfo, hearableStrength);
+            
+            // React to it
+            ReactToSound(soundInfo, hearableStrength);
+        }
+    }
+
+    /// <summary>
+    /// Calculate how well we can hear this specific sound
+    /// </summary>
+    private float CalculateHearableStrength(SoundInfo soundInfo)
+    {
+        // Get distance to sound
+        float distance = Vector3.Distance(transform.position, soundInfo.position);
+        
+        // Get sound type priority
+        float rangeMultiplier = 1f;
+        float priority = 0.5f;
+        
+        if (soundPriorityLookup.TryGetValue(soundInfo.soundTag.ToLower(), out SoundTypePriority soundPriority))
+        {
+            rangeMultiplier = soundPriority.rangeMultiplier;
+            priority = soundPriority.priority;
+        }
+        
+        // Calculate effective hearing range for this sound
+        float effectiveRange = baseHearingRange * rangeMultiplier;
+        
+        // Apply state boost
+        if (currentState == AIState.Alerted || currentState == AIState.Chasing || currentState == AIState.Searching)
+        {
+            effectiveRange *= alertStateHearingBoost;
+        }
+        
+        // Check if sound is within range
+        if (distance > effectiveRange)
+        {
+            return 0f; // Too far to hear
+        }
+        
+        // Check for obstructions
+        float obstructionFactor = CheckSoundObstruction(soundInfo.position);
+        if (obstructionFactor <= 0.05f)
+        {
+            return 0f; // Completely blocked
+        }
+        
+        // Calculate falloff based on distance (closer = louder)
+        float distanceRatio = distance / effectiveRange;
+        float falloff = hearingFalloff.Evaluate(distanceRatio);
+        
+        // Base strength from sound info
+        float baseStrength = soundInfo.strength * priority * falloff * obstructionFactor;
+        
+        // Boost player sounds
+        if (soundInfo.isPlayerSound)
+        {
+            baseStrength *= playerSoundMultiplier;
+        }
+        
+        return Mathf.Clamp01(baseStrength);
+    }
+
+    /// <summary>
+    /// Check if there are walls/obstacles between us and the sound
+    /// </summary>
+    private float CheckSoundObstruction(Vector3 soundPosition)
+    {
+        Vector3 fromPosition = transform.position + Vector3.up * 1f; // Ear height
+        Vector3 toPosition = soundPosition + Vector3.up * 1f;
+        Vector3 direction = toPosition - fromPosition;
+        float distance = direction.magnitude;
+        
+        RaycastHit hit;
+        if (Physics.Raycast(fromPosition, direction.normalized, out hit, distance, soundObstructionMask))
+        {
+            // Something is blocking the sound
+            // Return a value between 0.1 and 1 based on how much is blocked
+            float obstructionDistance = hit.distance;
+            float ratio = obstructionDistance / distance;
+            
+            // Sounds through walls are muffled but not completely silent
+            return Mathf.Lerp(0.1f, 1f, ratio);
+        }
+        
+        return 1f; // No obstruction
+    }
+
+    /// <summary>
+    /// Store the sound in memory
+    /// </summary>
+    private void RememberSound(SoundInfo soundInfo, float hearableStrength)
+    {
+        RememberedSound memory = new RememberedSound
+        {
+            position = soundInfo.position,
+            strength = hearableStrength,
+            tag = soundInfo.soundTag,
+            source = soundInfo.source,
+            timeHeard = Time.time,
+            priority = GetSoundPriority(soundInfo.soundTag),
+            isPlayerSound = soundInfo.isPlayerSound
+        };
+        
+        soundMemory.Add(memory);
+        
+        // Keep memory manageable
+        if (soundMemory.Count > 20)
+        {
+            // Remove oldest sound
+            soundMemory.RemoveAt(0);
+        }
+        
+        // Debug log
+        if (hearableStrength > 0.3f)
+        {
+            string sourceName = soundInfo.source ? soundInfo.source.name : "unknown";
+            Debug.Log($"{gameObject.name}: Heard {soundInfo.soundTag} ({hearableStrength:F2}) from {sourceName} at {Vector3.Distance(transform.position, soundInfo.position):F1}m");
+        }
+    }
+
+    /// <summary>
+    /// Decide how to react to a sound
+    /// </summary>
+    private void ReactToSound(SoundInfo soundInfo, float hearableStrength)
+    {
+        // Don't react if we're recovering from a charge
+        if (isRecovering) return;
+        
+        // Don't interrupt charging for weak sounds
+        if (isCharging && hearableStrength < 0.7f) return;
+        
+        // Update our target sound position
+        targetSoundPosition = soundInfo.position;
+        soundMemoryTimer = Mathf.Lerp(2f, soundMemoryDuration, hearableStrength);
+        
+        if (soundInfo.source != null)
+        {
+            soundSource = soundInfo.source;
+        }
+        
+        // Determine reaction based on sound strength and current state
+        if (hearableStrength >= 0.7f)
+        {
+            // Loud sound - immediate investigation or charge
+            if (!isCharging)
+            {
+                if (soundInfo.isPlayerSound)
+                {
+                    // Player sound - start charge immediately if we're facing roughly the right direction
+                    Vector3 directionToSound = (targetSoundPosition - transform.position).normalized;
+                    float angle = Vector3.Angle(transform.forward, directionToSound);
+                    
+                    if (angle < 60f) // Within 60 degree cone
+                    {
+                        StartCharge();
+                    }
+                    else
+                    {
+                        ChangeState(AIState.Investigating);
+                        agent.ResetPath();
+                    }
+                }
+                else
+                {
+                    ChangeState(AIState.Investigating);
+                    agent.ResetPath();
+                }
+            }
+        }
+        else if (hearableStrength >= 0.3f && currentState == AIState.Patrolling)
+        {
+            // Moderate sound - investigate if we're just patrolling
+            ChangeState(AIState.Investigating);
+            agent.ResetPath();
+        }
+        // Weak sounds (< 0.3) are remembered but don't cause immediate state change
+    }
+
+    /// <summary>
+    /// Get priority for a sound type
+    /// </summary>
+    private float GetSoundPriority(string soundTag)
+    {
+        if (soundPriorityLookup.TryGetValue(soundTag.ToLower(), out SoundTypePriority priority))
+        {
+            return priority.priority;
+        }
+        return 0.5f; // Default
+    }
+
+    /// <summary>
+    /// Remove old sounds from memory
+    /// </summary>
+    private void CleanupOldSounds()
+    {
+        float currentTime = Time.time;
+        
+        for (int i = soundMemory.Count - 1; i >= 0; i--)
+        {
+            float age = currentTime - soundMemory[i].timeHeard;
+            
+            // Sounds fade from memory after a while
+            if (age > soundMemoryDuration)
+            {
+                soundMemory.RemoveAt(i);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Find the most recent/important sound in memory
+    /// </summary>
+    private RememberedSound GetMostImportantSound()
+    {
+        if (soundMemory.Count == 0) return null;
+        
+        RememberedSound bestSound = null;
+        float bestScore = 0f;
+        
+        foreach (var sound in soundMemory)
+        {
+            float age = Time.time - sound.timeHeard;
+            float ageFactor = Mathf.Clamp01(1f - (age / soundMemoryDuration));
+            
+            // Score = priority * strength * recency
+            float score = sound.priority * sound.strength * ageFactor;
+            
+            if (sound.isPlayerSound)
+            {
+                score *= 2f; // Player sounds are more important
+            }
+            
+            if (score > bestScore)
+            {
+                bestScore = score;
+                bestSound = sound;
+            }
+        }
+        
+        return bestSound;
+    }
+
+    #endregion
+
+    #region Movement & Rotation Core
+
+    private void RotateTowardsMovement(float speedMultiplier = 1f)
+    {
+        if (!IsAgentReady() || !agent.hasPath) return;
+
+        if (agent.velocity.sqrMagnitude > 0.1f)
         {
             Vector3 direction = agent.velocity.normalized;
-            direction.y = 0; 
+            direction.y = 0;
 
             if (direction.sqrMagnitude > 0.01f)
             {
@@ -130,59 +478,111 @@ public class Screamer : BaseAI
                 transform.rotation = Quaternion.RotateTowards(
                     transform.rotation,
                     targetRotation,
-                    rotationSpeed * Time.deltaTime
+                    rotationSpeed * speedMultiplier * Time.deltaTime
                 );
             }
         }
+    }
 
+    private void RotateTowardsTarget(Vector3 targetPosition, float speedMultiplier = 1f)
+    {
+        Vector3 direction = (targetPosition - transform.position).normalized;
+        direction.y = 0;
+
+        if (direction.sqrMagnitude > 0.01f)
+        {
+            Quaternion targetRotation = Quaternion.LookRotation(direction);
+            transform.rotation = Quaternion.RotateTowards(
+                transform.rotation,
+                targetRotation,
+                rotationSpeed * speedMultiplier * Time.deltaTime
+            );
+        }
+    }
+
+    private void RotateInPlace()
+    {
+        transform.Rotate(Vector3.up, idleRotationSpeed * Time.deltaTime);
+    }
+
+    #endregion
+
+    #region State: Patrolling
+
+    void HandlePatrolling()
+    {
+        if (!IsAgentReady()) return;
+
+        // Ensure we're at normal speed
+        if (agent.speed != normalMoveSpeed)
+        {
+            agent.speed = normalMoveSpeed;
+        }
+
+        // Rotate towards movement direction while moving
+        RotateTowardsMovement();
+
+        // Check if reached patrol point
         if (!agent.pathPending && agent.remainingDistance <= pointReachedDistance)
         {
-            stateTimer += Time.deltaTime;
-
-            if (stateTimer >= patrolWaitTime)
+            // Wait at patrol point and rotate in place
+            if (stateTimer < patrolWaitTime)
             {
-                transform.Rotate(Vector3.up, idleRotationSpeed * Time.deltaTime);
-
-                if (stateTimer >= patrolWaitTime)
-                {
-                    GoToNextPatrolPoint();
-                    stateTimer = 0f;
-                }
+                RotateInPlace();
+            }
+            else
+            {
+                // Move to next patrol point
+                GoToNextPatrolPoint();
+                stateTimer = 0f;
             }
         }
     }
 
     #endregion
 
-    #region Idle State (When no patrol points)
+    #region State: Idle & Wandering
 
     void HandleIdle()
     {
-        if (agent.hasPath)
+        // Ensure we're at normal speed
+        if (agent.speed != normalMoveSpeed)
         {
-            agent.ResetPath();
-        }
-
-        if (idleTimer < 0.5f)
-        {
-            transform.Rotate(Vector3.up, idleRotationSpeed * Time.deltaTime);
+            agent.speed = normalMoveSpeed;
         }
 
         if (shouldWander && !HasPatrolPoints())
         {
             idleTimer += Time.deltaTime;
 
-            if (idleTimer >= idleMoveInterval)
+            if (agent.hasPath)
             {
-                WanderToNewPosition();
-                idleTimer = 0f;
-            }
+                RotateTowardsMovement();
 
-            if (agent.hasPath && HasReachedDestination(1.5f))
+                if (HasReachedDestination(1.5f))
+                {
+                    agent.ResetPath();
+                    idleTimer = idleMoveInterval - 2f;
+                }
+            }
+            else
+            {
+                RotateInPlace();
+
+                if (idleTimer >= idleMoveInterval)
+                {
+                    WanderToNewPosition();
+                    idleTimer = 0f;
+                }
+            }
+        }
+        else
+        {
+            if (agent.hasPath)
             {
                 agent.ResetPath();
-                idleTimer = idleMoveInterval - 2f; 
             }
+            RotateInPlace();
         }
     }
 
@@ -193,36 +593,53 @@ public class Screamer : BaseAI
         if (NavMesh.SamplePosition(randomPoint, out NavMeshHit hit, wanderRadius, NavMesh.AllAreas))
         {
             agent.SetDestination(hit.position);
-            Debug.Log($"{gameObject.name}: Wandering to new position");
         }
     }
 
     #endregion
 
-    #region Sound Response
+    #region State: Investigating (Rotating to Sound)
 
-    void HandleRotatingToSound()
+    void HandleInvestigating()
     {
         if (!IsAgentReady()) return;
 
-        agent.ResetPath();
+        // Stop any movement
+        if (agent.hasPath)
+        {
+            agent.ResetPath();
+        }
 
+        // Rotate towards sound position
+        RotateTowardsTarget(targetSoundPosition);
+
+        // Check if facing the sound
         Vector3 directionToSound = (targetSoundPosition - transform.position).normalized;
         directionToSound.y = 0;
-
-        Quaternion targetRotation = Quaternion.LookRotation(directionToSound);
-
-        transform.rotation = Quaternion.RotateTowards(
-            transform.rotation,
-            targetRotation,
-            rotationSpeed * Time.deltaTime
-        );
-
         float angleToTarget = Vector3.Angle(transform.forward, directionToSound);
 
         if (angleToTarget <= rotationThreshold)
         {
             StartCharge();
+        }
+        
+        // If we've been investigating too long without hearing anything new
+        if (stateTimer > 5f)
+        {
+            // Check if there are any recent sounds in memory
+            RememberedSound recentSound = GetMostImportantSound();
+            if (recentSound != null && (Time.time - recentSound.timeHeard) < 3f)
+            {
+                // Update to most recent sound
+                targetSoundPosition = recentSound.position;
+                soundMemoryTimer = 3f;
+                stateTimer = 0f;
+            }
+            else
+            {
+                // Give up and search
+                ChangeState(AIState.Searching);
+            }
         }
     }
 
@@ -252,37 +669,19 @@ public class Screamer : BaseAI
 
     #endregion
 
-    #region Charging State
+    #region State: Chasing (Charging)
 
-    void HandleCharging()
+    void HandleChasing()
     {
         if (!IsAgentReady()) return;
 
-        stateTimer += Time.deltaTime;
-
-        if (agent.velocity.sqrMagnitude > 0.1f)
+        // Ensure we're at charge speed
+        if (agent.speed != chargeSpeed)
         {
-            Vector3 direction = agent.velocity.normalized;
-            direction.y = 0;
-            if (direction.sqrMagnitude > 0.01f)
-            {
-                Quaternion targetRotation = Quaternion.LookRotation(direction);
-                transform.rotation = Quaternion.RotateTowards(
-                    transform.rotation,
-                    targetRotation,
-                    rotationSpeed * 2f * Time.deltaTime 
-                );
-            }
+            agent.speed = chargeSpeed;
         }
 
-        if (stateTimer >= chargeDuration || HasReachedDestination(chargeStopDistance))
-        {
-            StopCharge();
-            return;
-        }
-
-        CheckHeadbuttCollision();
-
+        // Update destination if tracking moving target
         if (currentTarget != null)
         {
             agent.SetDestination(currentTarget.transform.position);
@@ -293,6 +692,18 @@ public class Screamer : BaseAI
         {
             agent.SetDestination(targetSoundPosition);
         }
+
+        // Rotate towards movement direction (2x speed for aggressive charging)
+        RotateTowardsMovement(2f);
+
+        // Check for headbutt collisions
+        CheckHeadbuttCollision();
+
+        // Check if charge should end
+        if (stateTimer >= chargeDuration || HasReachedDestination(chargeStopDistance))
+        {
+            StopCharge();
+        }
     }
 
     void StopCharge()
@@ -300,7 +711,7 @@ public class Screamer : BaseAI
         isCharging = false;
         isRecovering = true;
         agent.ResetPath();
-        agent.speed = normalSpeed;
+        agent.speed = normalMoveSpeed;
 
         Debug.Log($"{gameObject.name}: Charge ended, recovering...");
 
@@ -350,20 +761,40 @@ public class Screamer : BaseAI
 
     #endregion
 
-    #region Searching State
+    #region State: Searching
 
     void HandleSearching()
     {
+        // Ensure we're at normal speed
+        if (agent.speed != normalMoveSpeed)
+        {
+            agent.speed = normalMoveSpeed;
+        }
+
+        // Stop any movement
         if (agent.hasPath)
         {
             agent.ResetPath();
         }
 
+        // Rotate in place while searching
         if (!isRecovering)
         {
-            transform.Rotate(Vector3.up, idleRotationSpeed * Time.deltaTime);
+            RotateInPlace();
         }
 
+        // Check memory for recent sounds
+        RememberedSound recentSound = GetMostImportantSound();
+        if (recentSound != null && (Time.time - recentSound.timeHeard) < 3f)
+        {
+            // Found something to investigate
+            targetSoundPosition = recentSound.position;
+            soundMemoryTimer = 3f;
+            ChangeState(AIState.Investigating);
+            return;
+        }
+
+        // Return to patrol after search timeout
         if (stateTimer >= 5f)
         {
             ChangeState(AIState.Patrolling);
@@ -374,37 +805,8 @@ public class Screamer : BaseAI
 
     #endregion
 
-    #region Sound Detection
-
-    protected override void OnSoundHeard(SoundHeardEvent evt)
-    {
-        base.OnSoundHeard(evt);
-
-        float distance = Vector3.Distance(transform.position, evt.SoundPosition);
-
-        if (distance <= hearingRange)
-        {
-            Debug.Log($"{gameObject.name}: Heard sound at {distance:F1}m!");
-
-            targetSoundPosition = evt.SoundPosition;
-            soundMemoryTimer = soundMemoryDuration;
-
-            if (evt.AI != null && evt.AI != gameObject)
-            {
-                soundSource = evt.AI;
-            }
-
-            if (currentState != AIState.Chasing && !isRecovering)
-            {
-                ChangeState(AIState.Investigating);
-                agent.ResetPath(); 
-            }
-        }
-    }
-
     void OnSoundForgotten()
     {
-        Debug.Log($"{gameObject.name}: Forgot sound location");
         soundSource = null;
 
         if (currentState == AIState.Investigating)
@@ -417,15 +819,13 @@ public class Screamer : BaseAI
         }
     }
 
-    #endregion
-
     #region Alert Response
 
     protected override void OnAlertReceived(AlertRaisedEvent evt)
     {
         float distance = Vector3.Distance(transform.position, evt.Position);
 
-        if (distance <= hearingRange && !isRecovering)
+        if (distance <= baseHearingRange && !isRecovering)
         {
             Debug.Log($"{gameObject.name}: Heard alert from {evt.Source.name}");
             targetSoundPosition = evt.Position;
@@ -518,6 +918,7 @@ public class Screamer : BaseAI
         currentHealth -= actualDamage;
         Debug.Log($"{gameObject.name}: Took {actualDamage} damage. Health: {currentHealth}/{maxHealth}");
 
+        // Make a sound when hit (so other AI can hear)
         InvestigateSound(transform.position, 1f);
 
         if (currentState != AIState.Chasing && !isRecovering)
@@ -562,41 +963,79 @@ public class Screamer : BaseAI
 
     protected override void DrawCustomGizmos()
     {
-        Gizmos.color = Color.cyan;
-        Gizmos.DrawWireSphere(transform.position, hearingRange);
+        // Hearing range
+        Gizmos.color = new Color(0, 1, 1, 0.1f);
+        Gizmos.DrawWireSphere(transform.position, baseHearingRange);
+        
+        // Current hearing state
+        float currentRange = baseHearingRange;
+        if (currentState == AIState.Alerted || currentState == AIState.Chasing || currentState == AIState.Searching)
+        {
+            currentRange *= alertStateHearingBoost;
+            Gizmos.color = new Color(1, 0.5f, 0, 0.15f);
+            Gizmos.DrawWireSphere(transform.position, currentRange);
+        }
 
+        // Headbutt range
         Gizmos.color = Color.red;
         Gizmos.DrawWireSphere(transform.position + transform.forward * 0.5f, headbuttRange);
 
+        // Sound memory
+        foreach (var sound in soundMemory)
+        {
+            float alpha = Mathf.Clamp01(sound.strength * 0.7f);
+            if (sound.isPlayerSound)
+            {
+                Gizmos.color = new Color(1, 0, 0, alpha);
+            }
+            else
+            {
+                Gizmos.color = new Color(1, 1, 0, alpha);
+            }
+            Gizmos.DrawWireSphere(sound.position, 0.3f);
+            
+            // Draw line to sound if it's recent
+            if (Time.time - sound.timeHeard < 2f)
+            {
+                Gizmos.DrawLine(transform.position, sound.position);
+            }
+        }
+
+        // Current target sound
         if (soundMemoryTimer > 0)
         {
             Gizmos.color = Color.yellow;
-            Gizmos.DrawWireSphere(targetSoundPosition, 1f);
+            Gizmos.DrawWireSphere(targetSoundPosition, 0.5f);
             Gizmos.DrawLine(transform.position, targetSoundPosition);
         }
 
+        // Charging indicator
         if (isCharging)
         {
             Gizmos.color = Color.red;
             Gizmos.DrawRay(transform.position, transform.forward * 5f);
         }
 
+        // Weak spot
         if (weakSpot != null)
         {
             Gizmos.color = Color.magenta;
             Gizmos.DrawWireSphere(weakSpot.position, 0.3f);
         }
 
+        // Wander radius
         if (currentState == AIState.Patrolling && shouldWander && !HasPatrolPoints())
         {
             Gizmos.color = new Color(0f, 1f, 0f, 0.2f);
             Gizmos.DrawWireSphere(idlePosition, wanderRadius);
         }
 
+        // Forward direction
         Gizmos.color = Color.blue;
         Gizmos.DrawRay(transform.position, transform.forward * 2f);
 
-        if (agent.hasPath && agent.velocity.sqrMagnitude > 0.1f)
+        // Velocity direction
+        if (agent != null && agent.hasPath && agent.velocity.sqrMagnitude > 0.1f)
         {
             Gizmos.color = Color.green;
             Gizmos.DrawRay(transform.position, agent.velocity.normalized * 2f);

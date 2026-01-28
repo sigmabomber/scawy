@@ -3,6 +3,30 @@ using Doody.GameEvents;
 using UnityEngine;
 using UnityEngine.AI;
 
+public enum AIState
+{
+    Patrolling,
+    Investigating,
+    Searching,
+    Returning,
+    Alerted,
+    Chasing
+}
+
+public enum DetectionType
+{
+    Visual,
+    Sound,
+    Alert
+}
+
+public enum AlertLevel
+{
+    Low,
+    Medium,
+    High
+}
+
 /// <summary>
 /// Base AI controller handles common AI functionality including animation
 /// This is your original AI script refactored to be extendable
@@ -133,6 +157,7 @@ public abstract class BaseAI : EventListener
         animator.SetFloat(speedParameter, currentSpeed, animationSmoothTime, Time.deltaTime);
 
         // Update state parameter
+     
         animator.SetInteger(stateParameter, (int)currentState);
 
         // Additional state-specific animation updates
@@ -396,7 +421,7 @@ public abstract class BaseAI : EventListener
     protected virtual void OnSoundHeard(SoundHeardEvent evt)
     {
         if (evt.AI == gameObject) return;
-
+        // Base implementation - override in derived classes
     }
 
     protected virtual void OnAlertRaised(AlertRaisedEvent evt)
@@ -601,38 +626,13 @@ public abstract class BaseAI : EventListener
         DrawCustomGizmos();
     }
 
-   
+
     protected virtual void DrawCustomGizmos() { }
 
     #endregion
 }
 
-
-public enum AIState
-{
-    Patrolling,
-    Investigating,
-    Searching,
-    Returning,
-    Alerted,
-    Chasing
-}
-
-public enum DetectionType
-{
-    Visual,
-    Sound,
-    Alert
-}
-
-public enum AlertLevel
-{
-    Low,
-    Medium,
-    High
-}
-
-// Add these event classes if not already defined
+// Event classes
 public class TargetDetectedEvent
 {
     public GameObject AI;

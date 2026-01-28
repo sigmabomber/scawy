@@ -4,7 +4,7 @@ using Doody.GameEvents;
 using UnityEngine;
 
 [RequireComponent(typeof(SoundEmitter))]
-public class PlayerSoundManager : EventListener
+public class PlayerSoundManagerr : EventListener
 {
     [Header("Sound Settings")]
     [SerializeField] private float walkSoundRadius = 5f;
@@ -19,14 +19,14 @@ public class PlayerSoundManager : EventListener
     [Header("Debug")]
     [SerializeField] private bool showDebugInfo = true;
 
-    private SoundEmitter soundEmitter;
     private float soundTimer;
     private bool isDetected;
     private int detectingAICount = 0;
 
     void Awake()
     {
-        soundEmitter = GetComponent<SoundEmitter>();
+        
+
 
         if (playerController == null)
             playerController = GetComponent<PlayerController>();
@@ -89,7 +89,7 @@ public class PlayerSoundManager : EventListener
 
                 if (radius > 0)
                 {
-                    soundEmitter.EmitSound(transform.position, radius, intensity);
+                  
                 }
 
                 soundTimer = 0f;
