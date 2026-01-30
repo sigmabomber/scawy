@@ -380,7 +380,6 @@ public abstract class BaseAI : EventListener
 
         OnTargetAcquired(target, detectionType);
 
-        Debug.Log($"{gameObject.name}: Target detected - {target.name}");
     }
 
     protected virtual void OnTargetLost()
@@ -401,7 +400,6 @@ public abstract class BaseAI : EventListener
 
         OnTargetLostBehavior();
 
-        Debug.Log($"{gameObject.name}: Lost target - {lostTarget?.name}");
     }
 
     /// <summary>
@@ -451,7 +449,6 @@ public abstract class BaseAI : EventListener
             Level = level
         });
 
-        Debug.Log($"{gameObject.name}: Raised {level} alert at {lastKnownPosition}");
     }
 
     #endregion
@@ -466,8 +463,6 @@ public abstract class BaseAI : EventListener
         // Trigger damage animation
         TriggerDamageAnimation();
 
-        // Override in subclass to implement health system
-        Debug.Log($"{gameObject.name}: Took {damage} damage");
     }
 
     /// <summary>
@@ -485,7 +480,6 @@ public abstract class BaseAI : EventListener
             Position = transform.position
         });
 
-        Debug.Log($"{gameObject.name}: Destroyed!");
     }
 
     #endregion
@@ -561,7 +555,6 @@ public abstract class BaseAI : EventListener
             NewState = newState
         });
 
-        Debug.Log($"{gameObject.name}: State changed from {previousState} to {newState}");
     }
 
     protected Vector3 GetRandomPointInRadius(Vector3 center, float radius)

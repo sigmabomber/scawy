@@ -65,26 +65,26 @@ public class PlayerSoundManagerr : EventListener
             if (soundTimer >= soundInterval)
             {
                 float radius;
-                float intensity;
+            
 
                 // Determine sound based on movement state
                 if (Input.GetKey(KeyCode.LeftControl) || Input.GetKey(KeyCode.C))
                 {
                     // Crouching - silent
                     radius = crouchSoundRadius;
-                    intensity = 0f;
+                 
                 }
                 else if (Input.GetKey(KeyCode.LeftShift) && playerController.canSprint)
                 {
                     // Sprinting - loud
                     radius = sprintSoundRadius;
-                    intensity = 1f;
+          
                 }
                 else
                 {
                     // Walking - normal
                     radius = walkSoundRadius;
-                    intensity = 0.5f;
+                
                 }
 
                 if (radius > 0)

@@ -124,7 +124,6 @@ public class Screamer : BaseAI
             GoToNextPatrolPoint();
         }
         
-        Debug.Log($"{gameObject.name}: Screamer initialized with hearing range {baseHearingRange}m");
     }
 
     protected override void UpdateState()
@@ -333,7 +332,6 @@ public class Screamer : BaseAI
         if (hearableStrength > 0.3f)
         {
             string sourceName = soundInfo.source ? soundInfo.source.name : "unknown";
-            Debug.Log($"{gameObject.name}: Heard {soundInfo.soundTag} ({hearableStrength:F2}) from {sourceName} at {Vector3.Distance(transform.position, soundInfo.position):F1}m");
         }
     }
 
@@ -509,7 +507,7 @@ public class Screamer : BaseAI
 
     #region State: Patrolling
 
-    void HandlePatrolling()
+ protected override void HandlePatrolling()
     {
         if (!IsAgentReady()) return;
 
@@ -664,7 +662,7 @@ public class Screamer : BaseAI
             }
         }
 
-        Debug.Log($"{gameObject.name}: Starting charge towards sound!");
+
     }
 
     #endregion
@@ -713,7 +711,6 @@ public class Screamer : BaseAI
         agent.ResetPath();
         agent.speed = normalMoveSpeed;
 
-        Debug.Log($"{gameObject.name}: Charge ended, recovering...");
 
         Invoke(nameof(FinishRecovery), chargeRecoveryTime);
 
@@ -730,7 +727,6 @@ public class Screamer : BaseAI
     void FinishRecovery()
     {
         isRecovering = false;
-        Debug.Log($"{gameObject.name}: Recovery complete");
     }
 
     void CheckHeadbuttCollision()
@@ -747,7 +743,6 @@ public class Screamer : BaseAI
             {
                 damageable.TakeDamage(headbuttDamage);
                 lastCollisionAttackTime = Time.time;
-                Debug.Log($"{gameObject.name}: Headbutt hit {hit.name}!");
 
                 if (!hasDetectedTarget)
                 {
@@ -827,7 +822,6 @@ public class Screamer : BaseAI
 
         if (distance <= baseHearingRange && !isRecovering)
         {
-            Debug.Log($"{gameObject.name}: Heard alert from {evt.Source.name}");
             targetSoundPosition = evt.Position;
             soundMemoryTimer = soundMemoryDuration;
 
@@ -891,7 +885,6 @@ public class Screamer : BaseAI
             {
                 damageable.TakeDamage(headbuttDamage);
                 lastCollisionAttackTime = Time.time;
-                Debug.Log($"{gameObject.name}: Collision attack on {target.name}!");
 
                 if (!hasDetectedTarget)
                 {
@@ -912,11 +905,9 @@ public class Screamer : BaseAI
         if (isWeakSpotHit && weakSpot != null)
         {
             actualDamage *= weakSpotMultiplier;
-            Debug.Log($"{gameObject.name}: Weak spot hit! {actualDamage} damage");
         }
 
         currentHealth -= actualDamage;
-        Debug.Log($"{gameObject.name}: Took {actualDamage} damage. Health: {currentHealth}/{maxHealth}");
 
         // Make a sound when hit (so other AI can hear)
         InvestigateSound(transform.position, 1f);
@@ -946,7 +937,7 @@ public class Screamer : BaseAI
 
     protected override void Die()
     {
-        Debug.Log($"{gameObject.name}: Destroyed!");
+
 
         Events.Publish(new AIDeathEvent
         {
