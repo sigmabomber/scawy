@@ -6,6 +6,8 @@ using Doody.Framework.NoteSystem;
 using Doody.GameEvents;
 using Doody.Framework.UI;
 using TMPro;
+using Unity.VisualScripting;
+using System.Collections;
 
 public class JournalUI : MonoBehaviour
 {
@@ -42,6 +44,9 @@ public class JournalUI : MonoBehaviour
     private int totalPages = 0;
 
     private List<PhotoEntry> photos = new List<PhotoEntry>();
+
+    private VerticalLayoutGroup savedVertical;
+    private GridLayoutGroup savedGrid;
 
     private void Start()
     {
@@ -112,6 +117,36 @@ public class JournalUI : MonoBehaviour
 
         // Load saved data
         LoadJournalData();
+
+
+        savedVertical = contentContainer.GetComponent<VerticalLayoutGroup>();
+
+        Destroy(contentContainer.GetComponent<VerticalLayoutGroup>());
+
+        StartCoroutine(RestoreVertical());
+    }
+    IEnumerator RestoreVertical()
+    {
+        yield return new WaitForSeconds(4);
+
+        // remove grid FIRST
+        GridLayoutGroup grid =
+            contentContainer.GetComponent<GridLayoutGroup>();
+        if (grid != null)
+            Destroy(grid);
+
+        yield return null; // wait 1 frame so layout system updates
+
+        VerticalLayoutGroup vertical =
+            contentContainer.AddComponent<VerticalLayoutGroup>();
+
+        vertical.padding = savedVertical.padding;
+        vertical.spacing = savedVertical.spacing;
+        vertical.childAlignment = savedVertical.childAlignment;
+        vertical.childControlWidth = savedVertical.childControlWidth;
+        vertical.childControlHeight = savedVertical.childControlHeight;
+        vertical.childForceExpandWidth = savedVertical.childForceExpandWidth;
+        vertical.childForceExpandHeight = savedVertical.childForceExpandHeight;
     }
 
     private void OnDestroy()
