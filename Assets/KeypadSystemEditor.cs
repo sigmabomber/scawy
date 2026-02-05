@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 
+#if UNITY_EDITOR
 [CustomEditor(typeof(KeypadSystem))]
 public class KeypadSystemEditor : Editor
 {
@@ -43,3 +44,5 @@ public class KeypadSystemEditor : Editor
         }
     }
 }
+
+#endif

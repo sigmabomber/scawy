@@ -6,9 +6,6 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/bleh.unity
-    guid: 635fe331d621e354cb61bf529570cddc
-  - enabled: 1
     path: Assets/Main Menu/MainMenu.unity
     guid: 6ad9c2d878429904695728197524e9ec
   - enabled: 1
@@ -17,4 +14,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/Alpha.unity
     guid: 31dfc10ddf40d984597235bcc4b54b24
+  - enabled: 1
+    path: Assets/Scenes/bleh.unity
+    guid: 635fe331d621e354cb61bf529570cddc
   m_configObjects: {}
