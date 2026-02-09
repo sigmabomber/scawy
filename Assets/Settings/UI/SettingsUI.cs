@@ -294,18 +294,31 @@ public class SettingsUI : MonoBehaviour
         foreach (var res in availableResolutions)
         {
             string key = $"{res.width}x{res.height}";
-            if (!uniqueResolutions.ContainsKey(key) || res.refreshRate > uniqueResolutions[key].refreshRate)
+            if (!uniqueResolutions.ContainsKey(key))
             {
                 uniqueResolutions[key] = res;
+            }
+            else
+            {
+                // Compare refresh rates using the RefreshRate struct
+                if (res.refreshRateRatio.value > uniqueResolutions[key].refreshRateRatio.value)
+                {
+                    uniqueResolutions[key] = res;
+                }
             }
         }
 
         // Sort by resolution size (largest first)
-        var sortedResolutions = uniqueResolutions.Values.OrderByDescending(r => r.width * r.height).ThenByDescending(r => r.refreshRate).ToList();
+        var sortedResolutions = uniqueResolutions.Values
+            .OrderByDescending(r => r.width * r.height)
+            .ThenByDescending(r => r.refreshRateRatio.value)
+            .ToList();
 
         foreach (var res in sortedResolutions)
         {
-            string option = $"{res.width} x {res.height} @ {res.refreshRate}Hz";
+            // Get refresh rate as integer for display
+            int refreshRate = Mathf.RoundToInt((float)res.refreshRateRatio.value);
+            string option = $"{res.width} x {res.height} @ {refreshRate}Hz";
             options.Add(option);
 
             if (res.width == currentRes.width && res.height == currentRes.height)
@@ -320,10 +333,9 @@ public class SettingsUI : MonoBehaviour
         {
             resolutionDropdown.value = currentIndex;
             resolutionDropdown.RefreshShownValue();
-           // Debug.Log($"Populated resolution dropdown with {options.Count} options. Current: {options[currentIndex]}");
+            // Debug.Log($"Populated resolution dropdown with {options.Count} options. Current: {options[currentIndex]}");
         }
     }
-
     private void AutoPopulateFullscreenDropdown()
     {
         if (fullscreenDropdown == null)
@@ -808,14 +820,13 @@ public class SettingsUI : MonoBehaviour
                         string refreshStr = parts[2].Replace("Hz", "");
                         if (int.TryParse(refreshStr, out int refreshRate))
                         {
-                            // Store refresh rate if your SettingsManager supports it
+                          
                         }
                     }
                 }
             }
         }
     }
-
     private void OnFullscreenChanged(int index)
     {
         if (settings == null) return;

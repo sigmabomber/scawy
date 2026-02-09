@@ -3,6 +3,7 @@ using UnityEngine.UI;
 using System.Collections.Generic;
 using Doody.Framework.ObjectiveSystem;
 using Doody.Framework.NoteSystem;
+using Doody.Framework.PhotoSystem;
 using Doody.GameEvents;
 using Doody.Framework.UI;
 using TMPro;
@@ -43,10 +44,10 @@ public class JournalUI : MonoBehaviour
     private int currentPage = 0;
     private int totalPages = 0;
 
-    private List<PhotoEntry> photos = new List<PhotoEntry>();
-
     private VerticalLayoutGroup savedVertical;
     private GridLayoutGroup savedGrid;
+
+    public Transform temp;
 
     private void Start()
     {
@@ -112,41 +113,20 @@ public class JournalUI : MonoBehaviour
             NoteManager.Instance.OnNoteDeleted += OnNoteDeleted;
         }
 
+        // Subscribe to photo events
+        if (PhotosManager.Instance != null)
+        {
+            PhotosManager.Instance.OnPhotoAdded += OnPhotoAdded;
+        }
+
         // Show objectives section by default
         ShowSection(JournalSection.Objectives);
 
         // Load saved data
         LoadJournalData();
 
-
         savedVertical = contentContainer.GetComponent<VerticalLayoutGroup>();
-
-        Destroy(contentContainer.GetComponent<VerticalLayoutGroup>());
-
-        StartCoroutine(RestoreVertical());
-    }
-    IEnumerator RestoreVertical()
-    {
-        yield return new WaitForSeconds(4);
-
-        // remove grid FIRST
-        GridLayoutGroup grid =
-            contentContainer.GetComponent<GridLayoutGroup>();
-        if (grid != null)
-            Destroy(grid);
-
-        yield return null; // wait 1 frame so layout system updates
-
-        VerticalLayoutGroup vertical =
-            contentContainer.AddComponent<VerticalLayoutGroup>();
-
-        vertical.padding = savedVertical.padding;
-        vertical.spacing = savedVertical.spacing;
-        vertical.childAlignment = savedVertical.childAlignment;
-        vertical.childControlWidth = savedVertical.childControlWidth;
-        vertical.childControlHeight = savedVertical.childControlHeight;
-        vertical.childForceExpandWidth = savedVertical.childForceExpandWidth;
-        vertical.childForceExpandHeight = savedVertical.childForceExpandHeight;
+        savedGrid = temp.GetComponent<GridLayoutGroup>();
     }
 
     private void OnDestroy()
@@ -164,6 +144,12 @@ public class JournalUI : MonoBehaviour
             NoteManager.Instance.OnNoteAdded -= OnNoteAdded;
             NoteManager.Instance.OnNoteUpdated -= OnNoteUpdated;
             NoteManager.Instance.OnNoteDeleted -= OnNoteDeleted;
+        }
+
+        // Unsubscribe from photo events
+        if (PhotosManager.Instance != null)
+        {
+            PhotosManager.Instance.OnPhotoAdded -= OnPhotoAdded;
         }
     }
 
@@ -245,10 +231,25 @@ public class JournalUI : MonoBehaviour
         }
     }
 
+    // Add photo event handler
+    private void OnPhotoAdded(Photo photo)
+    {
+        if (currentSection == JournalSection.Photos)
+        {
+            LoadPhotosContent();
+        }
+    }
+
     public void ShowSection(JournalSection section)
     {
         currentSection = section;
         currentPage = 0; // Reset to first page when changing sections
+
+        // Switch layout based on section
+        if (section == JournalSection.Photos)
+            StartCoroutine(UseGridLayout());
+        else
+            StartCoroutine(UseVerticalLayout());
 
         // Load the appropriate content
         switch (section)
@@ -265,6 +266,52 @@ public class JournalUI : MonoBehaviour
         }
 
         UpdateButtonStates();
+    }
+
+    private IEnumerator UseVerticalLayout()
+    {
+        // Remove grid if present
+        GridLayoutGroup grid = contentContainer.GetComponent<GridLayoutGroup>();
+        if (grid != null) Destroy(grid);
+        yield return null;
+        // Add VerticalLayoutGroup if not present
+        VerticalLayoutGroup vertical = contentContainer.GetComponent<VerticalLayoutGroup>();
+        if (vertical == null)
+        {
+            vertical = contentContainer.gameObject.AddComponent<VerticalLayoutGroup>();
+            vertical.padding = savedVertical.padding;
+            vertical.spacing = savedVertical.spacing;
+            vertical.childAlignment = savedVertical.childAlignment;
+            vertical.childControlWidth = savedVertical.childControlWidth;
+            vertical.childControlHeight = savedVertical.childControlHeight;
+            vertical.childForceExpandWidth = savedVertical.childForceExpandWidth;
+            vertical.childForceExpandHeight = savedVertical.childForceExpandHeight;
+        }
+    }
+
+    private IEnumerator UseGridLayout()
+    {
+        // Remove vertical if present
+        VerticalLayoutGroup vertical = contentContainer.GetComponent<VerticalLayoutGroup>();
+        if (vertical != null) Destroy(vertical);
+
+        yield return null;
+        // Add GridLayoutGroup from temp if not present
+        GridLayoutGroup grid = contentContainer.GetComponent<GridLayoutGroup>();
+        if (grid == null && savedGrid != null)
+        {
+            grid = contentContainer.gameObject.AddComponent<GridLayoutGroup>();
+
+            // Copy all properties from temp savedGrid
+            grid.cellSize = savedGrid.cellSize;
+            grid.spacing = savedGrid.spacing;
+            grid.padding = savedGrid.padding;
+            grid.startAxis = savedGrid.startAxis;
+            grid.startCorner = savedGrid.startCorner;
+            grid.childAlignment = savedGrid.childAlignment;
+            grid.constraint = savedGrid.constraint;
+            grid.constraintCount = savedGrid.constraintCount;
+        }
     }
 
     private void ChangePage(int direction)
@@ -526,31 +573,18 @@ public class JournalUI : MonoBehaviour
     #endregion
 
     #region Photos Section
-    public void AddPhoto(Sprite photoSprite, string caption)
+    public void AddPhoto(Sprite photoSprite, string description, string date = "")
     {
-        PhotoEntry photo = new PhotoEntry
+        // Use the PhotosManager instead of local list
+        if (PhotosManager.Instance != null)
         {
-            id = System.Guid.NewGuid().ToString(),
-            sprite = photoSprite,
-            caption = caption,
-            dateCreated = System.DateTime.Now
-        };
-
-        photos.Add(photo);
-
-        // Refresh if currently viewing photos
-        if (currentSection == JournalSection.Photos)
+            PhotosManager.Instance.AddPhoto(photoSprite, description, date);
+        }
+        else
         {
-            LoadPhotosContent();
+            Debug.LogError("PhotosManager.Instance is null!");
         }
 
-        SaveJournalData();
-    }
-
-    public void DeletePhoto(string id)
-    {
-        photos.RemoveAll(p => p.id == id);
-        LoadPhotosContent();
         SaveJournalData();
     }
 
@@ -558,7 +592,15 @@ public class JournalUI : MonoBehaviour
     {
         ClearContent();
 
-        int totalEntries = photos.Count;
+        if (PhotosManager.Instance == null)
+        {
+            Debug.LogWarning("PhotosManager instance not found!");
+            UpdatePageNavigation(0);
+            return;
+        }
+
+        List<Photo> allPhotos = PhotosManager.Instance.GetAllPhotos();
+        int totalEntries = allPhotos.Count;
         UpdatePageNavigation(totalEntries);
 
         // Get photos for current page
@@ -573,7 +615,7 @@ public class JournalUI : MonoBehaviour
                 PhotoEntryUI entryUI = entry.GetComponent<PhotoEntryUI>();
                 if (entryUI != null)
                 {
-                    entryUI.Setup(photos[i], this);
+                    entryUI.Setup(allPhotos[i], this);
                 }
 
                 // Extract and move content text from prefab to content container
@@ -591,6 +633,12 @@ public class JournalUI : MonoBehaviour
         {
             NoteManager.Instance.SaveNotes();
         }
+
+        if (PhotosManager.Instance != null)
+        {
+            PhotosManager.Instance.SavePhotos();
+        }
+
         Debug.Log("Journal data saved");
     }
 
@@ -601,50 +649,19 @@ public class JournalUI : MonoBehaviour
         {
             NoteManager.Instance.LoadNotes();
         }
+
+        if (PhotosManager.Instance != null)
+        {
+            PhotosManager.Instance.LoadPhotos();
+        }
     }
     #endregion
 }
 
-// Keep these enums/classes, but NoteEntryUI needs to be updated
+// Keep these enums
 public enum JournalSection
 {
     Objectives,
     Notes,
     Photos
-}
-
-[System.Serializable]
-public class PhotoEntry
-{
-    public string id;
-    public Sprite sprite;
-    public string caption;
-    public System.DateTime dateCreated;
-}
-
-// Helper UI component for photo entries
-public class PhotoEntryUI : MonoBehaviour
-{
-    public Image photoImage;
-    public Text captionText;
-    public Text dateText;
-    public Button deleteButton;
-    private PhotoEntry data;
-    private JournalUI journal;
-
-    public void Setup(PhotoEntry photo, JournalUI journalUI)
-    {
-        data = photo;
-        journal = journalUI;
-
-        if (photoImage) photoImage.sprite = photo.sprite;
-        if (captionText) captionText.text = photo.caption;
-        if (dateText) dateText.text = photo.dateCreated.ToString("MMM dd, yyyy");
-        if (deleteButton) deleteButton.onClick.AddListener(OnDelete);
-    }
-
-    private void OnDelete()
-    {
-        journal.DeletePhoto(data.id);
-    }
 }

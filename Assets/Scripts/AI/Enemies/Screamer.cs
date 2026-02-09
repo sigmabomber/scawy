@@ -363,7 +363,6 @@ public class Screamer : BaseAI
             {
                 if (soundInfo.isPlayerSound)
                 {
-                    // Player sound - start charge immediately if we're facing roughly the right direction
                     Vector3 directionToSound = (targetSoundPosition - transform.position).normalized;
                     float angle = Vector3.Angle(transform.forward, directionToSound);
                     
@@ -879,7 +878,7 @@ public class Screamer : BaseAI
         {
             if (Time.time - lastCollisionAttackTime < collisionAttackCooldown)
                 return;
-
+            print(":E");
             IDamageable damageable = target.GetComponent<IDamageable>();
             if (damageable != null)
             {

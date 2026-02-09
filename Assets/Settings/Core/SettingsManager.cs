@@ -1018,7 +1018,9 @@ namespace Doody.Settings
             Resolution nativeRes = GetNativeResolution();
             ScreenWidth = new IntSetting("ScreenWidth", nativeRes.width, 640, 7680);
             ScreenHeight = new IntSetting("ScreenHeight", nativeRes.height, 480, 4320);
+#pragma warning disable CS0618 // Type or member is obsolete
             TargetFrameRate = new IntSetting("TargetFrameRate", nativeRes.refreshRate, 30, 240);
+#pragma warning restore CS0618 // Type or member is obsolete
             FullscreenMode = new EnumSetting<FullScreenMode>("FullscreenMode", FullScreenMode.FullScreenWindow);
             VSync = new BoolSetting("VSync", true);
 
