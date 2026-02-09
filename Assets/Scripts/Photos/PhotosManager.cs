@@ -27,6 +27,9 @@ public class PhotosManager : EventListener
             Destroy(gameObject);
             return;
         }
+
+     
+
         instance = this;
         DontDestroyOnLoad(gameObject);
 

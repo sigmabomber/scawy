@@ -32,6 +32,10 @@ public class PhotoEntryUI : MonoBehaviour
     private Vector2 collapsedSize;
     private Vector2 expandedSize;
 
+
+    public GameObject photoInspectionScreen;
+    public Image photoInspectionImage;
+
     public void Setup(Photo photoData, JournalUI journalUI)
     {
         photo = photoData;
@@ -109,23 +113,9 @@ public class PhotoEntryUI : MonoBehaviour
         isExpanded = true;
         currentExpandedPhoto = this;
 
-        // Place content container directly under the prefab in the parent container
-        if (contentContainer != null)
-        {
-            ExtractContentUnderPrefab();
-        }
 
-        // Stop any running coroutines
-        StopAllCoroutines();
 
-        // Animate content height
-        if (contentContainer != null)
-        {
-            animationCoroutine = StartCoroutine(AnimateContentHeight(true));
-        }
 
-        // Scale up photo
-        StartCoroutine(AnimatePhotoScale(true));
     }
 
     private void CollapsePhoto(bool immediate = false)

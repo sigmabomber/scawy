@@ -603,7 +603,7 @@ public class JournalUI : MonoBehaviour
         int totalEntries = allPhotos.Count;
         UpdatePageNavigation(totalEntries);
 
-        // Get photos for current page
+        
         int startIndex = currentPage * entriesPerPage;
         int endIndex = Mathf.Min(startIndex + entriesPerPage, totalEntries);
 
@@ -613,12 +613,31 @@ public class JournalUI : MonoBehaviour
             {
                 GameObject entry = Instantiate(photoEntryPrefab, contentContainer);
                 PhotoEntryUI entryUI = entry.GetComponent<PhotoEntryUI>();
+
+
+
+
+
+
+
+                float z = Random.Range(-10f, 10f);
+                entry.transform.rotation =
+                    Quaternion.Euler(
+                        entry.transform.eulerAngles.x,
+                        entry.transform.eulerAngles.y,
+                        z
+                    );
+
+
+
                 if (entryUI != null)
                 {
                     entryUI.Setup(allPhotos[i], this);
                 }
 
-                // Extract and move content text from prefab to content container
+
+
+                
                 ExtractAndMoveContentText(entry);
             }
         }
