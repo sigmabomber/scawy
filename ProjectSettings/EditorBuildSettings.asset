@@ -17,4 +17,7 @@ EditorBuildSettings:
   - enabled: 1
     path: Assets/Scenes/bleh.unity
     guid: 635fe331d621e354cb61bf529570cddc
+  - enabled: 1
+    path: Assets/ElevatorTesting.unity
+    guid: 4ab44dc74f38eee4ea361aa74bb9568e
   m_configObjects: {}

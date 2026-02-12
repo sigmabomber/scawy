@@ -247,9 +247,11 @@ namespace Doody.Framework.DialogueSystem
             }
 
             string name = string.Join(" ", action.objectiveName);
-
+            
             switch (action.objectiveType)
             {
+
+
                 case ObjectiveTypes.Boolean:
                     string description = $"Complete: {name}";
                     Events.Publish(new BooleanObjective(name, description));

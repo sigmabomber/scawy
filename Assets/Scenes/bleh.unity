@@ -20251,7 +20251,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 176e387be6d4df44dba4f391974d36e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  InsideButton: 1
   interactionIcon: {fileID: 21300000, guid: 1146672272e8e5e43a0df65db722e9f3, type: 3}
+  targetScene: 1
 --- !u!114 &8276938456838525756
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -20578,7 +20580,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 176e387be6d4df44dba4f391974d36e4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  InsideButton: 0
   interactionIcon: {fileID: 21300000, guid: 1146672272e8e5e43a0df65db722e9f3, type: 3}
+  targetScene: 0
 --- !u!114 &8529207087616559131
 MonoBehaviour:
   m_ObjectHideFlags: 0
