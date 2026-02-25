@@ -1,7 +1,7 @@
 using UnityEngine;
 using System.Collections;
 
-public class KeypadKey : MonoBehaviour
+public class KeypadKey : MonoBehaviour, IInteractable
 {
     [Header("Animation Settings")]
     [SerializeField] private float pressDepth = 0.1f;
@@ -23,10 +23,7 @@ public class KeypadKey : MonoBehaviour
         originalPos = transform.localPosition;
     }
 
-    void OnMouseDown()
-    {
-        PressKey();
-    }
+  
     //
 
     public void PressKey()
@@ -39,6 +36,7 @@ public class KeypadKey : MonoBehaviour
 
     private IEnumerator PressAnimation()
     {
+
         isAnimating = true;
 
         if (keypadSystem != null)
@@ -75,5 +73,27 @@ public class KeypadKey : MonoBehaviour
 
         transform.localPosition = originalPos;
         isAnimating = false;
+    }
+
+    public void Interact()
+    {
+        
+        
+        PressKey();
+    }
+
+    public bool CanInteract()
+    {
+        return true;
+    }
+
+    public string GetInteractionPrompt()
+    {
+        return "Press Key " + keyNumber;
+    }
+
+    public Sprite GetInteractionIcon()
+    {
+        return null;
     }
 }

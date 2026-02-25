@@ -1,10 +1,14 @@
 using UnityEngine;
+using Doody.GameEvents;
+using JetBrains.Annotations;
+
+
 
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
 
-public class KeypadSystem : MonoBehaviour
+public class KeypadSystem : EventListener
 {
     [Header("Keypad Layout")]
     [HideInInspector] public GameObject key1;
@@ -16,6 +20,9 @@ public class KeypadSystem : MonoBehaviour
     [HideInInspector] public GameObject key7;
     [HideInInspector] public GameObject key8;
     [HideInInspector] public GameObject key9;
+
+
+    public string id;
   
 
     [Header("Settings")]
@@ -51,7 +58,7 @@ public class KeypadSystem : MonoBehaviour
 
     private void OnCodeCorrect()
     {
-    
+        Events.Publish(new KeypadEvent(id));
     }
 
     private void OnCodeIncorrect()
@@ -63,5 +70,15 @@ public class KeypadSystem : MonoBehaviour
     {
         currentInput = "";
         Debug.Log("Input cleared");
+    }
+}
+
+
+public class KeypadEvent
+{
+    public string Id { get; private set; }
+    public KeypadEvent(string id)
+    {
+        Id = id;
     }
 }
