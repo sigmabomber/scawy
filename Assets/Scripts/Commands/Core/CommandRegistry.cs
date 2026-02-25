@@ -1179,8 +1179,7 @@ namespace Doody.Debugging
                     if (note.Title.Equals(title, StringComparison.OrdinalIgnoreCase))
                     {
                         ConsoleUI.PrintWarning($"A note with title \"{title}\" already exists. Continue? (y/n)");
-                        // You'd need to handle confirmation here, or just proceed
-                        // For simplicity, we'll proceed with a warning
+                      
                         break;
                     }
                 }
@@ -1188,7 +1187,7 @@ namespace Doody.Debugging
 
             // Add the note using event system
             Events.Publish(new AddNoteEvent(title, content, date));
-
+            
             ConsoleUI.PrintSuccess($"Note added: \"{title}\"");
             if (!string.IsNullOrEmpty(date))
             {

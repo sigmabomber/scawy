@@ -504,7 +504,7 @@ public class PlayerController : InputScript
         if (Physics.Raycast(rayStart, Vector3.down, out hit, footstepRaycastDistance, groundDetectionMask, QueryTriggerInteraction.Ignore))
         {
             string newTag = hit.collider.tag;
-            print(newTag);
+            
 
             if (!string.IsNullOrEmpty(newTag) && floorAudioDictionary.ContainsKey(newTag))
             {
