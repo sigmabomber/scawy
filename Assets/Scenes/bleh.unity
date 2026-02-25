@@ -14649,7 +14649,7 @@ GameObject:
   - component: {fileID: 5915808400196177695}
   - component: {fileID: 7881208434681733704}
   - component: {fileID: 7881208434681733705}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 3
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -14804,7 +14804,7 @@ GameObject:
   - component: {fileID: 700398222936321298}
   - component: {fileID: 6166177661838297723}
   - component: {fileID: 6166177661838297724}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 8
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -15369,7 +15369,8 @@ GameObject:
   - component: {fileID: 5540825257513033878}
   - component: {fileID: 7390348738251769179}
   - component: {fileID: 7390348738251769180}
-  m_Layer: 0
+  - component: {fileID: 7390348738251769181}
+  m_Layer: 7
   m_Name: keypad_2.006
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -15509,7 +15510,7 @@ GameObject:
   - component: {fileID: 3901852513830022863}
   - component: {fileID: 3901852513830022864}
   - component: {fileID: 3901852513830022865}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 7
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -17819,7 +17820,7 @@ GameObject:
   - component: {fileID: 1608201678391355020}
   - component: {fileID: 5947415983523970784}
   - component: {fileID: 5947415983523970785}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 1
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -17839,7 +17840,7 @@ GameObject:
   - component: {fileID: 7863741630563179935}
   - component: {fileID: 7863741630563179936}
   - component: {fileID: 7863741630563179937}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 5
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18026,7 +18027,7 @@ GameObject:
   - component: {fileID: 480141239982505070}
   - component: {fileID: 6127347362133416400}
   - component: {fileID: 6127347362133416401}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 9
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -18101,7 +18102,7 @@ GameObject:
   - component: {fileID: 6843451407642404936}
   - component: {fileID: 8134934931965023374}
   - component: {fileID: 8134934931965023375}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: keypad_2.005
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19181,7 +19182,7 @@ GameObject:
   - component: {fileID: 836293615906437016}
   - component: {fileID: 7234880402745673376}
   - component: {fileID: 7234880402745673377}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 4
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -19366,8 +19367,29 @@ MonoBehaviour:
   pressDuration: 0.1
   releaseDuration: 0.1
   keyNumber: 0
-  keypadSystem: {fileID: 0}
+  keypadSystem: {fileID: 8416680087085743509}
   audioSource: {fileID: 0}
+--- !u!65 &7390348738251769181
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1051438648939756568}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 64
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.0002152293, y: 0.000072, z: 0.00021242454}
+  m_Center: {x: 0.00000044764963, y: 0.0000026382038, z: -0.00000022899256}
 --- !u!4 &7420278382455325330
 Transform:
   m_ObjectHideFlags: 0
@@ -20312,7 +20334,8 @@ MonoBehaviour:
   key7: {fileID: 1245377520121748894}
   key8: {fileID: 531929741409806550}
   key9: {fileID: 6127347362133416399}
-  correctCode: 1234
+  id: 
+  correctCode: 306370
 --- !u!4 &8467200954344584903
 Transform:
   m_ObjectHideFlags: 0
@@ -20481,7 +20504,7 @@ GameObject:
   - component: {fileID: 7007949847720453150}
   - component: {fileID: 9006606232626320797}
   - component: {fileID: 9006606232626320798}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 2
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -20887,7 +20910,7 @@ GameObject:
   - component: {fileID: 6077680233058214166}
   - component: {fileID: 8954606211753785887}
   - component: {fileID: 8954606211753785888}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: 6
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -21009,7 +21032,7 @@ GameObject:
   - component: {fileID: 4161525395803410518}
   - component: {fileID: 6674155668235854094}
   - component: {fileID: 9002038397895000182}
-  m_Layer: 0
+  m_Layer: 7
   m_Name: keypad_2.007
   m_TagString: Untagged
   m_Icon: {fileID: 0}
