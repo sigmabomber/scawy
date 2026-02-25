@@ -1,6 +1,7 @@
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Doody.GameEvents;
 
 public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
 {
@@ -23,6 +24,7 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
         {
             inventorySystem = FindObjectOfType<InventorySystem>();
         }
+        Events.Subscribe<KeypadEvent>(TryUnlockDoorEvent, this);
     }
 
 
@@ -52,6 +54,14 @@ public class DoorInteractable : MonoBehaviour, IInteractable, IGunHit
         InteractionSystem.Instance.ShowFeedback("No Key!", Color.red);
         source.Play();
         
+    }
+
+    private void TryUnlockDoorEvent(KeypadEvent keypadEvent)
+    {
+        if(keypadEvent.Id == doorID)
+        {
+            UnlockDoor();
+        }
     }
 
     public Sprite GetInteractionIcon()
