@@ -40,7 +40,7 @@ public class FlashlightBehavior : MonoBehaviour, IItemUsable
 
             if (SpotLightObj != null)
             {
-                SpotLightObj.SetActive(false);
+    
                 flashlightLight = SpotLightObj.GetComponent<Light>();
 
                 maxIntensity = flashlightLight.intensity;
